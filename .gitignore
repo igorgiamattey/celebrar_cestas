@@ -1,0 +1,6 @@
+.env
+.celebrar-venv/
+node_modules/
+__pycache__/
+*.pyc
+Proj.zip

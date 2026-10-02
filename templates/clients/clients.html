@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block nav_clients %}active{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/clients_styles.css')}}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/modal_styles.css')}}">
+{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-grid">
+	
+	<div class="actions-col">
+		<div class="search-wrapper">
+			<span class="search-icon" id="search-icon"></span>
+			<input
+				class="search-bar"
+				type="text"
+				id="clients-search-bar"
+				placeholder="Pesquise um nome"
+				oninput="handleSearch()"
+			>
+			<button type="button" class="search-clear" id="search-clear" title="Limpar pesquisa"></button>
+		</div>
+		<button class="btn-add" onclick="openNewClientModal()">CADASTRAR NOVO CLIENTE</button>
+	</div>
+
+	<div class="card">
+		<div class="card-body">
+			<div class="table-scroll">
+				<table class="mini-table">
+					<thead>
+						<tr>
+							{% for col in columns %}
+							<th>
+								{{col}}
+							</th>
+							{% endfor %}
+							<th></th>
+						</tr>
+					</thead>
+					<tbody id="clientsTableBody">
+						{% include 'clients/_clients_table_rows.html' %}
+					</tbody>
+				</table>
+			</div>
+			<div class="pagination">
+				{% if page > 1 %}
+					<a href="{{url_for('clients_bp.clients', page=page-1)}}">&laquo;</a>
+				{% endif %}
+
+				<span>{{page}} de {{total_pages}}</span>
+
+				{% if page < total_pages %}
+					<a href="{{url_for('clients_bp.clients', page=page+1)}}">&raquo;</a>
+				{% endif %}
+			</div>
+		</div>
+	</div>
+
+</div>
+{% endblock %}
+
+{% block modals %}
+{% include 'clients/_view_client_modal.html' %}
+{% include 'clients/_register_client_modal.html' %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{url_for('static', filename='js/modal.js')}}"></script>
+<script src="{{url_for('static', filename='js/clients_modal.js')}}"></script>
+<script src="{{url_for('static', filename='js/clients.js')}}"></script>
+{% endblock %}

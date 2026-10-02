@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>{% block title %}Celebrar Cestas Gourmet{% endblock %}</title>
+		<link rel="stylesheet" href="{{ url_for('static', filename='css/base_styles.css')}}">
+		<link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
+		{% block extra_css %}{% endblock %}
+	</head>
+	<body class="fit-viewport">
+		<header>
+			<div class="brand-logo">
+				<a href="{{ url_for('home_bp.home') }}">
+					<img src="{{url_for('static', filename='img/Logo_Simplified.png')}}"/>
+				</a>
+			</div>
+			<nav>
+				<ul>
+					<li><a
+						href="{{ url_for('home_bp.home') }}"
+						class="{% block nav_home %}{% endblock %}"
+						>INÍCIO</a>
+					</li>
+					<li><a
+						href="{{ url_for('clients_bp.clients') }}"
+						class="{% block nav_clients %}{% endblock %}"
+						>CLIENTES</a>
+					</li>
+					<li><a
+						href="{{ url_for('orders_bp.orders') }}"
+						class="{% block nav_orders %}{% endblock %}"
+						>PEDIDOS</a>
+					</li>
+					<li><a
+						href="{{ url_for('catalogue_bp.catalogue') }}"
+						class="{% block nav_catalogue %}{% endblock %}"
+						>CATÁLOGO</a>
+					</li>
+					<li><a
+						href="{{ url_for('storage_bp.storage') }}"
+						class="{% block nav_storage %}{% endblock %}"
+						>ESTOQUE</a>
+					</li>
+					<li><a
+						href="{{ url_for('dispatch_bp.dispatch') }}"
+						class="{% block nav_dispatch %}{% endblock %}"
+						>LOGÍSTICA</a>
+					</li>
+					<li><a
+						href="{{ url_for('financial_bp.financial') }}"
+						class="{% block nav_financial %}{% endblock %}"
+						>FINANCEIRO</a>
+					</li>
+				</ul>
+			</nav>
+			<div class="user-menu">
+				Olá, <strong>{{user}}!</strong> &#9662;
+			</div>
+		</header>
+
+		<div class="dashboard-container">
+			{% block content %}{% endblock %}
+		</div>
+
+		{% block modals %}{% endblock %}
+		{% block scripts %}
+		<script src="{{url_for('static', filename='js/icons.js')}}"></script>
+		<script src="{{url_for('static', filename='js/common.js')}}"></script>
+		{% endblock %}
+
+	</body>
+</html>

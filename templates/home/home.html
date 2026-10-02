@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block nav_home %}active{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/modal_styles.css')}}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home_styles.css')}}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tom-select.default.css')}}">
+{% endblock %}
+
+{% block content %}
+<div class="home-dashboard-grid">
+	<div class="home-card home-order-card">
+		<div class="home-card-header">
+			PRÓXIMOS PEDIDOS
+		</div>
+		<div class="home-card-body home-order-card-body">
+			<table class="home-order-mini-table">
+				<thead>
+					<tr>
+						<th></th>
+						{% for col in columns %}
+						<th>
+							{{col}}
+						</th>
+						{% endfor %}
+					</tr>
+				</thead>
+				<tbody id="ordersTableBody">
+					{% set show_view_button = false %}
+					{% include 'home/_orders_dashboard_table_rows.html' %}
+				</tbody>
+			</table>
+
+			<div class="home-order-pagination">
+				{% if page > 1 %}
+					<a href="{{url_for('home_bp.home', page=page-1)}}">&laquo;</a>
+				{% endif %}
+
+				<span>{{page}} de {{total_pages}}</span>
+
+				{% if page < total_pages %}
+					<a href="{{url_for('home_bp.home', page=page+1)}}">&raquo;</a>
+				{% endif %}
+			</div>
+		</div>
+	</div>
+
+	<div class="home-card">
+		<div class="home-card-header">
+			PAINEL DE AÇÕES RÁPIDAS
+		</div>
+		<div class="home-card-body">
+			<div class="home-actions-grid">
+				<button class="btn-shortcut" onclick="openNewClientModal()">CADASTRAR CLIENTE</button>
+				<button class="btn-shortcut" onclick="openNewBasketModal()">CADASTRAR CESTA</button>
+				<button class="btn-shortcut" onclick="openNewOrderModal()">REGISTRAR PEDIDO</button>
+				<a href="{{ url_for('dispatch_bp.dispatch') }}" class="btn-shortcut">REVISAR EXPEDIÇÃO</a>
+			</div>
+		</div>
+	</div>
+
+	<div class="home-card">
+		<div class="home-card-header">
+			FINANCEIRO DO DIA
+		</div>
+
+		<div class="home-card-body">
+			<table class="home-mini-table">
+				<tbody>
+					<tr>
+						<td><strong>Contas a Receber:</strong></td>
+						<td class="positive-value">{{finances.receivables}}</td>
+					</tr>
+
+					<tr>
+						<td><strong>Taxas de Entrega:</strong></td>
+						<td class="neutral-value">{{finances.delivery_fee}}</td>
+					</tr>
+
+					<tr>
+						<td><strong>Total Faturado:</strong></td>
+						<td class="total-value">{{finances.invoicing}}</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+</div>
+
+<div class="alert-title">
+	<div>
+		<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill=currentColor class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
+			<path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
+		</svg>
+	</div>
+	<div><strong>Alertas:</strong></div>
+</div>
+
+<div class="alert-container">
+	{% if missing_items > 0 %}
+	<div class="alert-banner">
+		<div>
+			Você tem <strong>{{ missing_items }} {{'item' if missing_items == 1 else 'itens'}}</strong> abaixo do estoque mínimo.
+		</div>
+
+		<div>
+			<button id="missItem-lnk" class="alert-btn" onclick="openMissingItemModal()">Ver itens &rsaquo;</button>
+		</div>
+	</div>
+	{% endif %}
+
+	{% if close_orders > 0 %}
+	<div class="alert-banner">
+		<div>
+			Você tem <strong>{{ close_orders }} {{'pedido' if close_orders == 1 else 'pedidos'}}</strong> nos próximos 5 dias!
+		</div>
+	</div>
+	{% endif %}
+
+	{% if late_orders > 0 %}
+	<div class="alert-banner critical">
+		<div>
+			Você tem <strong>{{ late_orders }} {{'pedido atrasado' if late_orders == 1 else 'pedidos atrasados'}}</strong>!
+		</div>
+	</div>
+	{% endif %}
+
+	{% if missing_items == 0 and close_orders == 0 %}
+	<div class="no-alert-msg">
+		Nenhum alerta para você hoje!
+	</div>
+	{% endif %}
+</div>
+{% endblock %}
+
+
+{% block modals %}
+{% include 'home/_order_items_list.html' %}
+{% include 'clients/_register_client_modal.html' %}
+{% include 'catalogue/_register_basket_modal.html' %}
+{% include 'orders/_register_order_modal.html' %}
+{% include 'orders/_baskets_composition_modal.html' %}
+{% include 'storage/_miss_item_modal.html' %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{url_for('static', filename='js/tom-select.complete.js')}}"></script>
+<script src="{{url_for('static', filename='js/modal.js')}}"></script>
+<script src="{{url_for('static', filename='js/clients_modal.js')}}"></script>
+<script src="{{url_for('static', filename='js/catalogue_modal.js')}}"></script>
+<script src="{{url_for('static', filename='js/orders_modal.js')}}"></script>
+<script src="{{url_for('static', filename='js/home.js')}}"></script>
+{% endblock %}

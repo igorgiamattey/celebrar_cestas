@@ -1,0 +1,28 @@
+<div id="newClient-modal" class="modal-overlay" style="display: none;">
+	<div class="modal-box">
+		<div class="modal-header">
+			<h3>Cadastrar Novo Cliente</h3>
+			<button type="button" class="btn-close" onclick="closeModal('newClient-modal')">&times;</button>
+		</div>
+		<form id="newClient-form" method="post" action="{{url_for('clients_bp.new_client')}}">
+			<label>Nome*:</label>
+			<input type="text" id="newClient-name" name="name" oninput="toggleSaveButton(['newClient-name', 'newClient-phone'], 'newClient-saveBtn')">
+			
+			<label>Telefone*:</label>
+			<input type="text" id="newClient-phone" name="phone" oninput="inputPhone(this);toggleSaveButton(['newClient-name', 'newClient-phone'], 'newClient-saveBtn')">
+			
+			<div class="modal-actions">
+				<button
+					type="button"
+					id="newClient-saveBtn"
+					class="btn-modal btn-save push-right"
+					disabled
+					onclick="submitModal('newClient-form')"
+				>
+					Salvar
+				</button>
+			</div>
+
+		</form>
+	</div>
+</div>

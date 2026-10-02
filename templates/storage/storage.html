@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block nav_storage %}active{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/storage_styles.css')}}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/modal_styles.css')}}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tom-select.default.css')}}">
+{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-grid">
+	
+	<div class="actions-col">
+		<div class="search-wrapper">
+			<span class="search-icon" id="search-icon"></span>
+			<input
+				class="search-bar"
+				type="text"
+				id="storage-search-bar"
+				placeholder="Pesquise um item"
+				oninput="handleSearch()"
+			>
+			<button type="button" class="search-clear" id="search-clear" title="Limpar pesquisa"></button>
+		</div>
+		<button class="btn-add" onclick="openNewItemModal()">CADASTRAR NOVO ITEM</button>
+		<button id="mngGroup-btn" class="btn-add" onclick="openManageGroupsModal()">GRUPOS DE ITENS</button>
+		<div style="padding: 50%;"></div>
+		<button id="missItem-btn" class="btn-missing" onclick="openMissingItemModal()" disabled>ITENS FALTANTES</button>
+		
+
+
+	</div>
+
+	<div class="card">
+		<div class="card-body">
+			<div class="table-scroll">
+				<table class="mini-table">
+					<thead>
+						<tr>
+							{% for col in columns %}
+							<th>
+								{{col}}
+							</th>
+							{% endfor %}
+							<th></th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody id="storageTableBody">
+						{% include 'storage/_storage_table_rows.html' %}
+					</tbody>
+				</table>
+			</div>
+			<div class="pagination">
+				{% if page > 1 %}
+					<a href="{{url_for('storage_bp.storage', page=page-1)}}">&laquo;</a>
+				{% endif %}
+
+				<span>{{page}} de {{total_pages}}</span>
+
+				{% if page < total_pages %}
+					<a href="{{url_for('storage_bp.storage', page=page+1)}}">&raquo;</a>
+				{% endif %}
+			</div>
+		</div>
+	</div>
+
+</div>
+{% endblock %}
+
+{% block modals %}
+{% include 'storage/_view_item_modal.html' %}
+{% include 'storage/_register_item_modal.html' %}
+{% include 'storage/_miss_item_modal.html' %}
+{% include 'storage/_manage_groups_modal.html' %}
+{% include 'storage/_show_movements_modal.html' %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{url_for('static', filename='js/tom-select.complete.js')}}"></script>
+<script src="{{url_for('static', filename='js/modal.js')}}"></script>
+<script src="{{url_for('static', filename='js/storage_modal.js')}}"></script>
+<script src="{{url_for('static', filename='js/storage.js')}}"></script>
+<script>toggleMissingButton()</script>
+{% endblock %}

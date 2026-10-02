@@ -1,0 +1,17 @@
+.mini-table th:nth-child(2),
+.mini-table td:nth-child(2) {
+	width: 40%;
+	white-space: nowrap;
+}
+
+.mini-table th:nth-child(3),
+.mini-table td:nth-child(3) {
+	width: 40%;
+	white-space: nowrap;
+}
+
+.mini-table th:last-child,
+.mini-table td:last-child {
+	width: 10%;
+	white-space: nowrap;
+}

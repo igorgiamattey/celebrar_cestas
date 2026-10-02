@@ -1,0 +1,50 @@
+<div id="newBasket-modal" class="modal-overlay" style="display: none;">
+	<div class="modal-box">
+		<div class="modal-header">
+			<h3>Cadastrar Nova Cesta</h3>
+			<button type="button" class="btn-close" onclick="closeModal('newBasket-modal')">&times;</button>
+		</div>
+		<form id="newBasket-form" method="post" action="{{url_for('catalogue_bp.new_basket')}}">
+			<input type="hidden" id="newBasket-items" name="items">
+			<label>Nome*:</label>
+			<input type="text" id="newBasket-name" name="name" oninput="toggleSaveButton(['newBasket-name', 'newBasket-price'], 'newBasket-saveBtn', [newBasketItems])">
+			
+			<label>Adicionar Item*:</label>
+			<div id="newBasket-addItemRow" class="item-selection">
+				<input
+					id="newBasket-itemSelect"
+					data-groups='{{available_groups|tojson}}'
+					data-items='{{available_items|tojson}}'
+					placeholder="Selecione um item...">
+				<input
+					type="text"
+					id="newBasket-itemQty"
+					placeholder="Qtd"
+					oninput="inputNumber(this)"
+				>
+				<button type="button" class="btn-modal btn-edit" onclick="addItemToBasket('new')">
+					+ Adicionar
+				</button>
+			</div>
+
+			<label>Itens presentes*:</label>
+			<div id="newBasket-itemsList" class="basket-items-list"></div>
+			
+			<label>Preço*:</label>
+			<input type="text" id="newBasket-price" name="price" oninput="inputNumber(this);toggleSaveButton(['newBasket-name', 'newBasket-price'], 'newBasket-saveBtn', [newBasketItems])">
+			
+			<div class="modal-actions">
+				<button
+					type="button"
+					id="newBasket-saveBtn"
+					class="btn-modal btn-save push-right"
+					disabled
+					onclick="saveNewBasket()"
+				>
+					Salvar
+				</button>
+			</div>
+
+		</form>
+	</div>
+</div>

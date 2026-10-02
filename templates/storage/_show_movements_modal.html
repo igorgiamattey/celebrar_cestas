@@ -1,0 +1,46 @@
+<div id="stockMovements-modal" class="modal-overlay" style="display: none;">
+	<div class="modal-box">
+		<div class="modal-header">
+			<h3>Movimentações de Estoque</h3>
+			<button type="button" class="btn-close" onclick="closeModal('stockMovements-modal')">&times;</button>
+		</div>
+		<div id="stockMovements-content" class="movements-list"></div>
+
+		<div class="new-move-container">
+			<button type="button" class="btn-modal btn-move" id="newMove-btn" onclick="enableAddMove()">Nova Movimentação</button>
+			<div id="newMove-form" class="new-move-form" style="display: none;">
+				<div class="form-row">
+					<div class="form-group">
+						<label for="newMove-type">Tipo de Movimentação*:</label>
+						<select id="newMove-type" name="type" onchange="toggleSaveButton(['newMove-type','newMove-quantity'], 'newMove-saveBtn')">
+							<option value="">Selecione a movimentação</option>
+							{% for move in available_movements %}
+								<option value="{{move.name}}">{{move.value}}</option>
+							{% endfor %}
+						</select>
+					</div>
+					
+					<div class="form-group">
+						<label for="newMove-quantity">Quantidade*:</label>
+						<input type="text" id="newMove-quantity" name="quantity" oninput="inputNumber(this);toggleSaveButton(['newMove-type','newMove-quantity'], 'newMove-saveBtn')">
+					</div>
+				</div>
+
+				<div class="form-group">
+					<label for="newMove-obs">Observações:</label>
+					<textarea
+						id="newMove-obs"
+						name="obs"
+						rows="2"
+						maxlength="2048"
+					></textarea>
+				</div>
+				
+				<div class="modal-actions">
+					<button type="button" class="btn-modal btn-cancel" id="newMove-cancelBtn" onclick="cancelAddMove()">Cancelar</button>
+					<button type="button" class="btn-modal btn-save" id="newMove-saveBtn" disabled onclick="saveMove()">Salvar</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>

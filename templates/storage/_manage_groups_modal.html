@@ -1,0 +1,61 @@
+<div id="mngGroup-modal" class="modal-overlay" style="display: none;">
+	<div class="modal-box">
+		<div class="modal-header">
+			<h3>Gerenciar Grupos de Itens</h3>
+			<button type="button" class="btn-close" onclick="closeModal('mngGroup-modal')">&times;</button>
+		</div>
+
+		<label>Grupo Existente:</label>
+		<div>
+			<select id="mngGroup-groupSelect">
+				<option value="">Novo Grupo</option>
+				{% for group in existing_groups %}
+				<option value="{{group[0]}}">{{group[1]}}</option>
+				{% endfor %}
+			</select>
+		</div>
+
+		<label>Nome do Grupo:</label>
+		<div>
+			<input type="text" id="mngGroup-name" placeholder="Ex: Suco (laranja ou uva)">
+		</div>
+		
+		<label>Adicionar Item ao Grupo:</label>
+		<div class="item-selection">
+			<select
+				id="mngGroup-itemSelect"
+				data-items='{{available_items|tojson}}'
+				placeholder="Selecione um item..."
+			></select>
+			<input
+				type="text"
+				id="mngGroup-itemQty"
+				placeholder="Qtd"
+				oninput="inputNumber(this)"
+			>
+			<button type="button" class="btn-modal btn-edit" onclick="addItemToGroup()">+ Adicionar</button>
+		</div>
+
+		<div id="mngGroup-itemList" class="basket-items-list"></div>
+
+		<div class="modal-actions">
+			<button
+				type="button"
+				class="btn-modal btn-delete"
+				id="mngGroup-deleteBtn"
+				onclick="deleteGroup()"
+				style="display: none;"
+			>
+				Excluir Grupo
+			</button>
+
+			<button
+				type="button"
+				class="btn-modal btn-save push-right"
+				onclick="saveGroup()"
+			>
+				Salvar
+			</button>
+		</div>
+	</div>
+</div>

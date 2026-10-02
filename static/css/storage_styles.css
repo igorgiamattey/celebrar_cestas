@@ -1,0 +1,75 @@
+.btn-missing {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 14px 20px;
+	border-radius: 6px;
+	text-decoration: none;
+	font-weight: bold;
+	font-size: 0.9rem;
+	color: var(--text-light);
+	text-align: center;
+	transition: opacity 0.2s, transform 0.1s;
+	border: none;
+	cursor: pointer;
+	background-color: var(--primary-color);
+	white-space: nowrap;
+	flex-shrink: 0;
+	margin-top: 5%;
+	width: 100%;
+}
+
+.btn-missing:hover {
+	opacity: 0.9;
+	transform: translateY(-1px);
+}
+
+.btn-missing:disabled {
+	display: none;
+	cursor: not-allowed;
+	opacity: 0.5;
+}
+
+.mini-table th:nth-child(2),
+.mini-table td:nth-child(2) {
+	width: 30%;
+	max-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.mini-table th:nth-child(3) {
+	display: none;
+}
+
+.mini-table td:nth-child(3) {
+	width: 1%;
+	white-space: nowrap;
+}
+
+.mini-table th:nth-child(4),
+.mini-table td:nth-child(4) {
+	width: 20%;
+	white-space: nowrap;
+}
+
+.mini-table th:nth-child(5),
+.mini-table td:nth-child(5) {
+	width: 20%;
+	white-space: nowrap;
+}
+
+.mini-table th:nth-last-child(-n+2),
+.mini-table td:nth-last-child(-n+2) {
+	width: 7%;
+	white-space: nowrap;
+	padding-left: 2px;
+	padding-right: 2px;
+}
+
+.mini-table .action-cell {
+	padding-left: 0px;
+	padding-right: 0px;
+	align-items: center;
+}

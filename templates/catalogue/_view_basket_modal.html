@@ -1,0 +1,51 @@
+<div id="viewBasket-modal" class="modal-overlay" style="display: none;">
+	<div class="modal-box">
+		<div class="modal-header">
+			<h3>Dados da Cesta</h3>
+			<button type="button" class="btn-close" onclick="closeModal('viewBasket-modal')">&times;</button>
+		</div>
+		<form id="viewBasket-form" method="post" action="{{url_for('catalogue_bp.update_basket')}}">
+			<input type="hidden" id="viewBasket-id" name="id">
+			<input type="hidden" id="viewBasket-items" name="items">
+
+			<label>Nome*:</label>
+			<input type="text" id="viewBasket-name" name="name" placeholder="---" disabled oninput="toggleSaveButton(['viewBasket-name', 'viewBasket-price'], 'viewBasket-saveBtn', [viewBasketItems])">
+			
+			<label id="viewBasket-addItemLbl" style="display: none;">Adicionar Item*:</label>
+			<div id="viewBasket-addItemRow" class="item-selection" style="display: none;">
+				<input
+					id="viewBasket-itemSelect"
+					data-items='{{available_items|tojson}}'
+					placeholder="Selecione um item...">
+				<input
+					type="text"
+					id="viewBasket-itemQty"
+					placeholder="Qtd"
+					disabled
+					oninput="inputNumber(this)"
+				>
+				<button type="button" class="btn-modal btn-edit" onclick="addItemToBasket('view')">
+					+ Adicionar
+				</button>
+			</div>
+
+			<label>Itens presentes*:</label>
+			<div id="viewBasket-itemsList" class="basket-items-list"></div>
+			
+			<label>Preço*:</label>
+			<input type="text" id="viewBasket-price" name="price" placeholder="---" disabled oninput="inputNumber(this);toggleSaveButton(['viewBasket-name', 'viewBasket-price'], 'viewBasket-saveBtn', [viewBasketItems])">
+			
+			<div class="modal-actions">
+				<div>
+					<button type="button" class="btn-modal btn-delete" id="viewBasket-deleteBtn" onclick="deleteBasket()">Excluir</button>
+				</div>
+				<div>
+					<button type="button" class="btn-modal btn-edit" id="viewBasket-editBtn" onclick="enableEditBasket()">Editar</button>
+					<button type="button" class="btn-modal btn-save" id="viewBasket-saveBtn" style="display: none;" disabled onclick="updateBasket()">Salvar</button>
+					<button type="button" class="btn-modal btn-cancel" id="viewBasket-cancelBtn" style="display: none;" onclick="cancelEditBasket()">Cancelar</button>
+				</div>
+			</div>
+
+		</form>
+	</div>
+</div>

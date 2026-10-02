@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block nav_orders %}active{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/orders_styles.css')}}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/modal_styles.css')}}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tom-select.default.css')}}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+	
+	<div class="actions-col">
+		<div class="search-wrapper">
+			<span class="search-icon" id="search-icon"></span>
+			<input
+				class="search-bar"
+				type="text"
+				id="orders-search-bar"
+				placeholder="Pesquise cliente/cesta/data"
+				oninput="handleSearch()"
+			>
+			<button type="button" class="search-clear" id="search-clear" title="Limpar pesquisa"></button>
+		</div>
+		<div class="checkbox-container">
+			<input
+				class="checkbox"
+				type="checkbox"
+				id="orders-checkbox"
+			>
+			<label for="orders-checkbox">Mostrar apenas pedidos em aberto</label>
+		</div>
+		<button class="btn-add" onclick="openNewOrderModal()">CADASTRAR NOVO PEDIDO</button>
+	</div>
+
+	<div class="card">
+		<div class="card-body">
+			<div class="table-scroll">
+				<table class="mini-table">
+					<thead>
+						<tr>
+							{% for col in columns %}
+							<th>
+								{{col}}
+							</th>
+							{% endfor %}
+							<th></th>
+						</tr>
+					</thead>
+					<tbody id="ordersTableBody">
+						{% include 'orders/_orders_table_rows.html' %}
+					</tbody>
+				</table>
+			</div>
+			<div class="pagination">
+				{% if page > 1 %}
+					<a href="{{url_for('orders_bp.orders', page=page-1)}}">&laquo;</a>
+				{% endif %}
+
+				<span>{{page}} de {{total_pages}}</span>
+
+				{% if page < total_pages %}
+					<a href="{{url_for('orders_bp.orders', page=page+1)}}">&raquo;</a>
+				{% endif %}
+			</div>
+		</div>
+	</div>
+
+</div>
+{% endblock %}
+
+{% block modals %}
+{% include 'orders/_view_order_modal.html' %}
+{% include 'orders/_register_order_modal.html' %}
+{% include 'orders/_baskets_composition_modal.html' %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{url_for('static', filename='js/tom-select.complete.js')}}"></script>
+<script src="{{url_for('static', filename='js/modal.js')}}"></script>
+<script src="{{url_for('static', filename='js/orders_modal.js')}}"></script>
+<script src="{{url_for('static', filename='js/orders.js')}}"></script>
+{% endblock %}
