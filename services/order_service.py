@@ -267,10 +267,7 @@ def get_orders():
 	page = max(page, 1)
 	search = request.args.get("search", "", type=str)
 	open_only = request.args.get("openonly", "false").lower() == "true"
-	per_page = 10
-
-	where_clause = "WHERE p.isDeleted = 0"
-	params = []
+	per_page = 1000
 
 	where_clause = "WHERE p.isDeleted = 0"
 	params = []
@@ -324,7 +321,7 @@ def get_orders():
 	c.nome_razao AS Cliente,
 	COALESCE(items.summary, '') AS Itens,
 	p.data_entrega AS Entrega,
-	p.valor_total AS Valor,
+	p.valor_pedido AS Valor,
 	p.status_pedido AS Status
 	FROM IGOR_CG_PEDIDOS p
 	JOIN IGOR_CG_CLIENTES c
@@ -343,7 +340,7 @@ def get_orders():
 		AS summary
 	) items
 	{where_clause}
-	ORDER BY Entrega
+	ORDER BY Entrega, p.id_pedido
 	OFFSET ? ROWS
 	FETCH NEXT ? ROWS ONLY
 	""", (*params, offset, per_page))

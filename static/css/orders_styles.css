@@ -28,13 +28,13 @@
 
 .mini-table th:nth-child(2),
 .mini-table td:nth-child(2) {
-	width: 18%;
+	width: 22%;
 	white-space: nowrap;
 }
 
 .mini-table th:nth-child(3),
 .mini-table td:nth-child(3) {
-	width: 30%;
+	width: 22%;
 	white-space: normal;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -42,19 +42,19 @@
 
 .mini-table th:nth-child(4),
 .mini-table td:nth-child(4) {
-	width: 14%;
+	width: 12%;
 	white-space: nowrap;
 }
 
 .mini-table th:nth-child(5),
 .mini-table td:nth-child(5) {
-	width: 14%;
+	width: 12%;
 	white-space: nowrap;
 }
 
 .mini-table th:nth-child(6),
 .mini-table td:nth-child(6) {
-	width: 14%;
+	width: 22%;
 	white-space: nowrap;
 }
 

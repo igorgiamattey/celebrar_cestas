@@ -53,17 +53,19 @@
 					</tbody>
 				</table>
 			</div>
-			<div class="pagination">
-				{% if page > 1 %}
-					<a href="{{url_for('orders_bp.orders', page=page-1)}}">&laquo;</a>
-				{% endif %}
+			{% if total_pages > 1 %}
+				<div class="pagination">
+					{% if page > 1 %}
+						<a href="{{url_for('orders_bp.orders', page=page-1, search=search or None, openonly='true' if open_only else None)}}">&laquo;</a>
+					{% endif %}
 
-				<span>{{page}} de {{total_pages}}</span>
+					<span>{{page}} de {{total_pages}}</span>
 
-				{% if page < total_pages %}
-					<a href="{{url_for('orders_bp.orders', page=page+1)}}">&raquo;</a>
-				{% endif %}
-			</div>
+					{% if page < total_pages %}
+						<a href="{{url_for('orders_bp.orders', page=page+1, search=search or None, openonly='true' if open_only else None)}}">&raquo;</a>
+					{% endif %}
+				</div>
+			{% endif %}
 		</div>
 	</div>
 

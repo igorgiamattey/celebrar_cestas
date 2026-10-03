@@ -41,7 +41,7 @@ def home():
 	c.nome_razao AS Cliente,
 	COALESCE(items.summary, '') AS Itens,
 	p.data_entrega AS Entrega,
-	p.valor_total AS Valor,
+	p.valor_pedido AS Valor,
 	p.status_pedido AS Status
 	FROM IGOR_CG_PEDIDOS p
 	JOIN IGOR_CG_CLIENTES c

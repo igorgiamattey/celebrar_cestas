@@ -15,7 +15,7 @@
 					data-clients='{{available_clients|tojson}}'
 					placeholder="Selecione um cliente..."
 					oninput="toggleSaveButton(
-						['viewOrder-client', 'viewOrder-totalPrice', 'viewOrder-date'],
+						['viewOrder-client', 'viewOrder-orderPrice', 'viewOrder-date'],
 						'viewOrder-saveBtn',
 						[viewOrderBaskets])"
 				>
@@ -30,7 +30,7 @@
 						type="date"
 						onkeydown="return false"
 						oninput="toggleSaveButton(
-							['viewOrder-client', 'viewOrder-totalPrice', 'viewOrder-date'],
+							['viewOrder-client', 'viewOrder-orderPrice', 'viewOrder-date'],
 							'viewOrder-saveBtn',
 							[viewOrderBaskets])"
 					>
@@ -69,13 +69,13 @@
 				<div class="form-group">
 					<label>Valor do Pedido*:</label>
 					<input
-						id="viewOrder-totalPrice"
-						name="totalPrice"
+						id="viewOrder-orderPrice"
+						name="orderPrice"
 						type="text"
 						oninput="
 							inputNumber(this)
 							toggleSaveButton(
-							['viewOrder-client', 'viewOrder-totalPrice', 'viewOrder-date'],
+							['viewOrder-client', 'viewOrder-orderPrice', 'viewOrder-date'],
 							'viewOrder-saveBtn',
 							[viewOrderBaskets])"
 					>

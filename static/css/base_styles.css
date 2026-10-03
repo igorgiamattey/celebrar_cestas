@@ -145,10 +145,16 @@ body.fit-viewport .dashboard-container {
 	align-self: flex-start;
 }
 
+.actions-col:has(.btn-missing) {
+	align-self: stretch;
+}
+
 .table-scroll {
 	flex: 1;
 	min-height: 0;
 	overflow-y: auto;
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
 }
 
 .pagination {
@@ -157,8 +163,12 @@ body.fit-viewport .dashboard-container {
 	justify-content: center;
 	align-items: center;
 	gap: 16px;
-	margin-top: 20px;
+	margin-top: 10px;
+	margin-bottom: 10px;
 	font-size: 0.9rem;
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+	padding: 5px;
 }
 
 .pagination a {
@@ -304,7 +314,7 @@ body.fit-viewport .dashboard-container {
 .card {
 	flex: 1;
 	background: var(--bg-card);
-	border-radius: 8px;
+	border-radius: 14px;
 	border: 1px solid var(--border-color);
 	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 	overflow: hidden;
@@ -315,7 +325,7 @@ body.fit-viewport .dashboard-container {
 }
 
 .card-body {
-	padding: 18px;
+	padding: 8px;
 	flex: 1;
 	min-height: 0;
 	display: flex;
@@ -344,7 +354,7 @@ body.fit-viewport .dashboard-container {
 	background-color: var(--bg-card);
 	color: var(--text-header);
 	font-weight: bold;
-	padding-top: 0;
+	padding-top: 6px;
 }
 
 .mini-table th:first-child,

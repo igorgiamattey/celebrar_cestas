@@ -64,7 +64,7 @@ def new_order():
 			return "Cliente inválido", 400
 		date = validate_date(request.form["date"])
 		deliveryDate = validate_date(request.form["deliveryDate"], date, False)
-		totalPrice = validate_price(request.form["totalPrice"])	
+		orderPrice = validate_price(request.form["orderPrice"])	
 		status = validate_status(orderStatus.PENDING.name)
 		items_payload = validate_order_items(items_payload)	
 	
@@ -76,10 +76,10 @@ def new_order():
 			
 			cursor.execute("""
 			INSERT INTO IGOR_CG_PEDIDOS
-			(id_cliente, data_pedido, data_entrega, status_pedido, valor_total, observacao, itens_pedido)
+			(id_cliente, data_pedido, data_entrega, status_pedido, valor_pedido, observacao, itens_pedido)
 			OUTPUT INSERTED.id_pedido
 			VALUES (?, ?, ?, ?, ?, ?, ?)
-			""", (client, date, deliveryDate, status, totalPrice, obs, items))
+			""", (client, date, deliveryDate, status, orderPrice, obs, items))
 
 			order_id = cursor.fetchone()[0]
 		
@@ -101,7 +101,7 @@ def order_data(id):
 	SELECT
 	p.id_pedido, p.id_cliente, c.nome_razao,
 	p.data_pedido, p.data_entrega, p.status_pedido,
-	p.valor_total, p.observacao, p.itens_pedido
+	p.valor_pedido, p.observacao, p.itens_pedido
 	FROM IGOR_CG_PEDIDOS p
 	JOIN IGOR_CG_CLIENTES c
 	ON p.id_cliente = c.id_cliente
@@ -173,7 +173,7 @@ def update_order():
 	_, data_rows = run_select("""
 	SELECT
 	id_cliente, data_pedido, data_entrega, status_pedido,
-	valor_total, observacao, itens_pedido
+	valor_pedido, observacao, itens_pedido
 	FROM IGOR_CG_PEDIDOS
 	WHERE id_pedido = ?
 	AND isDeleted = 0
@@ -186,7 +186,7 @@ def update_order():
 	current_date = data_rows[0][1]
 	current_deliveryDate = data_rows[0][2]
 	current_status = data_rows[0][3]
-	current_totalPrice = data_rows[0][4]
+	current_orderPrice = data_rows[0][4]
 	current_obs = data_rows[0][5]
 	current_items = data_rows[0][6]
 
@@ -204,7 +204,7 @@ def update_order():
 			if not validate_id(Table.Clients, "id_cliente", client):
 				raise ValueError("Cliente inválido")
 			date = validate_date(request.form["date"])
-			totalPrice = validate_price(request.form["totalPrice"])
+			orderPrice = validate_price(request.form["orderPrice"])
 			items_payload = json.loads(request.form["items"])
 			items_payload = validate_order_items(items_payload)
 		except (KeyError, json.JSONDecodeError):
@@ -219,7 +219,7 @@ def update_order():
 	else:
 		client = current_client
 		date = current_date
-		totalPrice = current_totalPrice
+		orderPrice = current_orderPrice
 		obs = current_obs
 		items = current_items
 
@@ -237,11 +237,11 @@ def update_order():
 			data_pedido = ?,
 			data_entrega = ?,
 			status_pedido = ?,
-			valor_total = ?,
+			valor_pedido = ?,
 			observacao = ?,
 			itens_pedido = ?
 			WHERE id_pedido = ?
-			""", (client, date, deliveryDate, status, totalPrice, obs, items, id))
+			""", (client, date, deliveryDate, status, orderPrice, obs, items, id))
 
 			cursor.execute("""
 			DELETE FROM IGOR_CG_CESTAS_PEDIDO

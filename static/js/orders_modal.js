@@ -124,14 +124,14 @@ if (viewOrderForm) {
 	viewOrderBasketSelector.disable();
 	viewOrderStatusSelector.disable();
 
-	document.getElementById('viewOrder-totalPrice').addEventListener('input', (e) => {
+	document.getElementById('viewOrder-orderPrice').addEventListener('input', (e) => {
 		viewOrderPriceManuallySet = e.target.value.trim() !== '';
 		if (!viewOrderPriceManuallySet)
 			updateSuggestedTotal('view');
 	});
 }
 
-document.getElementById('newOrder-totalPrice').addEventListener('input', (e) => {
+document.getElementById('newOrder-orderPrice').addEventListener('input', (e) => {
 	newOrderPriceManuallySet = e.target.value.trim() !== '';
 	if (!newOrderPriceManuallySet)
 		updateSuggestedTotal('new');
@@ -140,12 +140,12 @@ document.getElementById('newOrder-totalPrice').addEventListener('input', (e) => 
 function saveButton(mode) {
 	mode === 'new'
 		? toggleSaveButton(
-			['newOrder-client', 'newOrder-totalPrice', 'newOrder-date'],
+			['newOrder-client', 'newOrder-orderPrice', 'newOrder-date'],
 			'newOrder-saveBtn',
 			[newOrderBaskets]
 		)
 		: toggleSaveButton(
-			['viewOrder-client', 'viewOrder-totalPrice', 'viewOrder-date'],
+			['viewOrder-client', 'viewOrder-orderPrice', 'viewOrder-date'],
 			'viewOrder-saveBtn',
 			[viewOrderBaskets]
 		)
@@ -184,7 +184,7 @@ function openViewOrderModal(id) {
 			document.getElementById('viewOrder-date').value = data.data_pedido;
 			document.getElementById('viewOrder-deliveryDate').value = data.data_entrega;
 			document.getElementById('viewOrder-obs').value = data.observacao;
-			document.getElementById('viewOrder-totalPrice').value = data.valor_total;
+			document.getElementById('viewOrder-orderPrice').value = data.valor_pedido;
 
 			viewOrderBaskets = data.itens_pedido || [];
 			viewOrderPriceManuallySet = false;
@@ -195,7 +195,7 @@ function openViewOrderModal(id) {
 				data_pedido: data.data_pedido,
 				data_entrega: data.data_entrega,
 				observacao: data.observacao,
-				valor_total: data.valor_total,
+				valor_pedido: data.valor_pedido,
 				itens_pedido: structuredClone(viewOrderBaskets)
 			};
 
@@ -269,7 +269,7 @@ function enableEditOrder() {
 	if (status === "PENDING"){
 		viewOrderClientSelector.enable();
 		document.getElementById('viewOrder-date').disabled = false;
-		document.getElementById('viewOrder-totalPrice').disabled = false;
+		document.getElementById('viewOrder-orderPrice').disabled = false;
 		document.getElementById('viewOrder-obs').disabled = false;
 
 		document.getElementById('viewOrder-addBasketRow').style.display = 'flex';
@@ -293,7 +293,7 @@ function cancelEditOrder() {
 	document.getElementById('viewOrder-date').value = originalOrderValues.data_pedido;
 	document.getElementById('viewOrder-deliveryDate').value = originalOrderValues.data_entrega;
 	document.getElementById('viewOrder-obs').value = originalOrderValues.observacao;
-	document.getElementById('viewOrder-totalPrice').value = originalOrderValues.valor_total;
+	document.getElementById('viewOrder-orderPrice').value = originalOrderValues.valor_pedido;
 
 	viewOrderBaskets = structuredClone(originalOrderValues.itens_pedido);
 	renderOrderBaskets('view');
@@ -307,7 +307,7 @@ function resetViewOrderModalState() {
 	viewOrderClientSelector.disable();
 	document.getElementById('viewOrder-date').disabled = true;
 	document.getElementById('viewOrder-deliveryDate').disabled = true;
-	document.getElementById('viewOrder-totalPrice').disabled = true;
+	document.getElementById('viewOrder-orderPrice').disabled = true;
 	viewOrderStatusSelector.disable();
 	document.getElementById('viewOrder-obs').disabled = true;
 
@@ -629,7 +629,7 @@ function updateSuggestedTotal(mode) {
 		(sum, b) => sum + (b.basket_price * b.quantity), 0
 	)
 
-	const input = document.getElementById(`${mode}Order-totalPrice`);
+	const input = document.getElementById(`${mode}Order-orderPrice`);
 	input.value = suggested > 0 ? suggested.toFixed(2) : '';
 }
 

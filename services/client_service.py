@@ -26,7 +26,7 @@ def get_clients():
 	page = request.args.get("page", 1, type=int)
 	page = max(1, page)
 	search = request.args.get("search", "", type=str)
-	per_page = 10
+	per_page = 1000
 
 	where_clause = "WHERE isDeleted = 0"
 	params = []
