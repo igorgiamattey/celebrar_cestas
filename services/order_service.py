@@ -3,7 +3,7 @@ from datetime import date
 
 from flask import request
 
-from db import format_currency, format_date, run_select
+from db import format_currency, format_date_year, run_select
 from enums.movement_types import movementTypes
 from enums.order_status import orderStatus
 
@@ -321,8 +321,9 @@ def get_orders():
 	c.nome_razao AS Cliente,
 	COALESCE(items.summary, '') AS Itens,
 	p.data_entrega AS Entrega,
-	p.valor_pedido AS Valor,
-	p.status_pedido AS Status
+	p.valor_total AS Valor,
+	p.status_pedido AS Status,
+	p.isDelivery AS [Retirada/Entrega]
 	FROM IGOR_CG_PEDIDOS p
 	JOIN IGOR_CG_CLIENTES c
 	ON p.id_cliente = c.id_cliente
@@ -340,7 +341,7 @@ def get_orders():
 		AS summary
 	) items
 	{where_clause}
-	ORDER BY Entrega, p.id_pedido
+	ORDER BY p.data_entrega, p.id_pedido
 	OFFSET ? ROWS
 	FETCH NEXT ? ROWS ONLY
 	""", (*params, offset, per_page))
@@ -350,9 +351,10 @@ def get_orders():
 			row[0],
 			row[1].title(),
 			row[2],
-			format_date(row[3]),
+			format_date_year(row[3]),
 			format_currency(row[4]),
-			orderStatus[row[5]].value
+			orderStatus[row[5]].value,
+			row[6]
 		)
 		for row in rows
 	]

@@ -70,6 +70,15 @@ def format_date(value):
 		value = datetime.strptime(value, "%Y-%m-%d")
 	return value.strftime("%d/%m/%Y")
 
+def format_date_year(value):
+	if value is None:
+		return '---'
+	if isinstance(value, str):
+		value = datetime.strptime(value, "%Y-%m-%d")
+	if value.year == datetime.now().year:
+		return value.strftime("%d/%m")
+	return value.strftime("%d/%m/%Y")
+
 @contextmanager
 def run_transaction():
 	conn = get_connection()

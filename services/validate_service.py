@@ -1,5 +1,5 @@
-import re
 from datetime import datetime
+from decimal import Decimal
 
 import phonenumbers
 
@@ -36,14 +36,19 @@ def validate_int_qty(qty, allow_zero=False):
 
 	return int(qty)
 
-def validate_price(price):
+def validate_price(price, allow_free=False):
 	try:
 		price = parse_price(price)
 	except ValueError:
 		raise ValueError("Preço inválido")
 
-	if price <= 0:
-		raise ValueError("O preço deve ser maior que zero")
+	if allow_free:
+		if price < 0:
+			raise ValueError("O preço não pode ser negativo")
+	else:
+		if price <= 0:
+			raise ValueError("O preço deve ser maior que zero")
+		
 
 	return price
 
@@ -131,6 +136,20 @@ def validate_status_transition(current, new):
 			f"{current} para {new}"
 		)
 	return new
+
+def validate_delivery(form):
+	if form.get("isDelivery") not in ("1", "true", "on"):
+		return False, None, Decimal("0.00")
+
+	address = form.get("address", "").strip()
+	if not address:
+		raise ValueError("Endereço obrigatório para entregas")
+	if len(address) > 200:
+		raise ValueError("Endereço muito longo (máx. 200 caracteres)")
+
+	fee_raw = form.get("deliveryFee", "").strip()
+	fee = validate_price(fee_raw, allow_free=True) if fee_raw else Decimal("0.00")
+	return True, address, fee
 
 # ---------------------------
 

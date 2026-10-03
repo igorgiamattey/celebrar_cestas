@@ -15,7 +15,7 @@ from services.validate_service import (OPEN_ORDER_STATUS, validate_date,
                                        validate_id, validate_order_items,
                                        validate_order_stock, validate_price,
                                        validate_status,
-                                       validate_status_transition)
+                                       validate_status_transition, validate_delivery)
 
 orders_bp = Blueprint("orders_bp", __name__)
 
@@ -66,7 +66,8 @@ def new_order():
 		deliveryDate = validate_date(request.form["deliveryDate"], date, False)
 		orderPrice = validate_price(request.form["orderPrice"])	
 		status = validate_status(orderStatus.PENDING.name)
-		items_payload = validate_order_items(items_payload)	
+		items_payload = validate_order_items(items_payload)
+		is_delivery, address, fee = validate_delivery(request.form)
 	
 		obs = request.form.get('obs', '')
 		items = json.dumps(items_payload)
@@ -76,10 +77,12 @@ def new_order():
 			
 			cursor.execute("""
 			INSERT INTO IGOR_CG_PEDIDOS
-			(id_cliente, data_pedido, data_entrega, status_pedido, valor_pedido, observacao, itens_pedido)
+			(id_cliente, data_pedido, data_entrega,
+			status_pedido, valor_pedido, observacao,
+			itens_pedido, isDelivery, endereco, taxa_entrega)
 			OUTPUT INSERTED.id_pedido
-			VALUES (?, ?, ?, ?, ?, ?, ?)
-			""", (client, date, deliveryDate, status, orderPrice, obs, items))
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			""", (client, date, deliveryDate, status, orderPrice, obs, items, is_delivery, address, fee))
 
 			order_id = cursor.fetchone()[0]
 		
@@ -101,7 +104,8 @@ def order_data(id):
 	SELECT
 	p.id_pedido, p.id_cliente, c.nome_razao,
 	p.data_pedido, p.data_entrega, p.status_pedido,
-	p.valor_pedido, p.observacao, p.itens_pedido
+	p.valor_pedido, p.observacao, p.itens_pedido,
+	p.isDelivery, p.endereco, p.taxa_entrega, p.valor_total
 	FROM IGOR_CG_PEDIDOS p
 	JOIN IGOR_CG_CLIENTES c
 	ON p.id_cliente = c.id_cliente
@@ -173,7 +177,8 @@ def update_order():
 	_, data_rows = run_select("""
 	SELECT
 	id_cliente, data_pedido, data_entrega, status_pedido,
-	valor_pedido, observacao, itens_pedido
+	valor_pedido, observacao, itens_pedido,
+	isDelivery, endereco, taxa_entrega
 	FROM IGOR_CG_PEDIDOS
 	WHERE id_pedido = ?
 	AND isDeleted = 0
@@ -189,6 +194,9 @@ def update_order():
 	current_orderPrice = data_rows[0][4]
 	current_obs = data_rows[0][5]
 	current_items = data_rows[0][6]
+	current_is_delivery = data_rows[0][7]
+	current_address = data_rows[0][8]
+	current_fee = data_rows[0][9]
 
 	try:
 		validate_status_transition(current_status, status)
@@ -207,6 +215,7 @@ def update_order():
 			orderPrice = validate_price(request.form["orderPrice"])
 			items_payload = json.loads(request.form["items"])
 			items_payload = validate_order_items(items_payload)
+			is_delivery, address, fee = validate_delivery(request.form)
 		except (KeyError, json.JSONDecodeError):
 			return "Itens do pedido inválidos 2", 400
 		except ValueError as e:
@@ -222,6 +231,9 @@ def update_order():
 		orderPrice = current_orderPrice
 		obs = current_obs
 		items = current_items
+		is_delivery = current_is_delivery
+		address = current_address
+		fee = current_fee
 
 		try:
 			items_payload = json.loads(current_items)
@@ -239,9 +251,12 @@ def update_order():
 			status_pedido = ?,
 			valor_pedido = ?,
 			observacao = ?,
-			itens_pedido = ?
+			itens_pedido = ?,
+			isDelivery = ?,
+			endereco = ?,
+			taxa_entrega = ?
 			WHERE id_pedido = ?
-			""", (client, date, deliveryDate, status, orderPrice, obs, items, id))
+			""", (client, date, deliveryDate, status, orderPrice, obs, items, is_delivery, address, fee, id))
 
 			cursor.execute("""
 			DELETE FROM IGOR_CG_CESTAS_PEDIDO
