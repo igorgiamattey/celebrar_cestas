@@ -9,7 +9,7 @@ from enums.table_names import Table
 from services.order_service import (get_basket_composition, get_orders,
                                     get_today, update_order_stock)
 from services.routes_service import (getAvailableBaskets, getAvailableClients,
-                                     getAvailableStatus)
+                                     getAvailableStatus, getAvailableAddresses)
 from services.status_transitions import get_allowed_status
 from services.validate_service import (OPEN_ORDER_STATUS, validate_date,
                                        validate_id, validate_order_items,
@@ -26,6 +26,7 @@ def orders():
 	available_clients = getAvailableClients()
 	available_baskets = getAvailableBaskets()
 	statuses = getAvailableStatus()
+	available_addresses = getAvailableAddresses()
 
 	return render_template("orders/orders.html",
 						columns=columns,
@@ -37,6 +38,7 @@ def orders():
 						available_clients=available_clients,
 						available_baskets=available_baskets,
 						statuses=statuses,
+						available_addresses=available_addresses,
 						today=get_today())
 
 @orders_bp.route('/pedidos/basket_comp/<int:id>')
@@ -105,7 +107,7 @@ def order_data(id):
 	p.id_pedido, p.id_cliente, c.nome_razao,
 	p.data_pedido, p.data_entrega, p.status_pedido,
 	p.valor_pedido, p.observacao, p.itens_pedido,
-	p.isDelivery, p.endereco, p.taxa_entrega, p.valor_total
+	p.isDelivery, p.id_endereco, p.taxa_entrega, p.valor_total
 	FROM IGOR_CG_PEDIDOS p
 	JOIN IGOR_CG_CLIENTES c
 	ON p.id_cliente = c.id_cliente

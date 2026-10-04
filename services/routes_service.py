@@ -107,6 +107,25 @@ def getAvailableUnits():
 
 	return units
 
+def getAvailableAddresses():
+	_, rows = run_select(f"""
+	SELECT
+	id_endereco, id_cliente, endereco
+	FROM IGOR_CG_ENDERECOS_CLIENTES
+	ORDER BY endereco, id_endereco
+	""")
+
+	available_addresses = [
+		{
+			"id": row[0],
+			"id_cliente": row[1],
+			"endereco": row[2]
+		}
+		for row in rows
+	]
+
+	return available_addresses
+
 def countRows(table, where_clause="", params=()):
 	_, rows = run_select(f"""
 	SELECT COUNT(*)

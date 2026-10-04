@@ -13,10 +13,12 @@
 					name="client"
 					data-clients='{{available_clients|tojson}}'
 					placeholder="Selecione um cliente..."
-					oninput="toggleSaveButton(
-						['newOrder-client', 'newOrder-orderPrice', 'newOrder-date'],
-						'newOrder-saveBtn',
-						[newOrderBaskets])"
+					oninput="
+						refreshAddressOptions(this.value)
+						toggleSaveButton(
+							['newOrder-client', 'newOrder-orderPrice', 'newOrder-date'],
+							'newOrder-saveBtn',
+							[newOrderBaskets])"
 				>
 			</div>
 
@@ -68,7 +70,7 @@
 			<div id="newOrder-basketList" class="order-items-list"></div>
 
 			<div class="status-row">
-				<div class="form-group">
+				<div class="form-group form-group--fixed">
 					<label>Valor do Pedido*:</label>
 					<input
 						id="newOrder-orderPrice"
@@ -90,6 +92,21 @@
 						name="status"
 						data-status='{{statuses|tojson}}'
 					>
+				</div>
+
+				<div class="form-group form-group--fixed">
+					<label id="newOrder-isDeliveryLabel" for="newOrder-isDelivery">Retirada</label>
+					<div class="switch-container">
+						<label class="switch">
+							<input type="checkbox" id="newOrder-isDelivery" name="isDelivery" onchange="toggleDeliveryModal(this)">
+							<span class="switch-slider">
+								<span class="switch-thumb">
+									<span class="switch-thumb-icon switch-icon--off"></span>
+									<span class="switch-thumb-icon switch-icon--on"></span>
+								</span>
+							</span>
+						</label>
+					</div>
 				</div>
 			</div>
 

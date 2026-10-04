@@ -24,6 +24,11 @@ const availableStatuses = JSON.parse(
 	document.getElementById('newOrder-status').dataset.status
 );
 
+const availableAddresses = JSON.parse(
+	document.getElementById('newOrder-address').dataset.addresses
+);
+const NEW_ADDRESS_ID = "new";
+
 const newOrderClientSelector = new TomSelect('#newOrder-client', {
 	options: availableClients,
 	valueField: 'id',
@@ -68,6 +73,34 @@ const newOrderStatusSelector = new TomSelect('#newOrder-status', {
 		}
 	]
 });
+
+const newOrderAddressSelector = new TomSelect('#newOrder-address', {
+	options: [],
+	valueField: 'id',
+	labelField: 'endereco',
+	searchField: 'endereco',
+	create: false,
+	maxItems: 1,
+	onChange: function(value) {
+		const isNew = value === NEW_ADDRESS_ID;
+		document.getElementById('newOrder-newAddressRow').style.display = isNew ? 'block' : 'none';
+		document.getElementById('newOrder-addressId').value = isNew ? '' : value;
+		if (isNew) document.getElementById('newOrder-newAddressText').value = '';
+	}
+});
+
+function refreshAddressOptions(clientId) {
+	newOrderAddressSelector.clear(true);
+	newOrderAddressSelector.clearOptions();
+
+	newOrderAddressSelector.addOption({id: NEW_ADDRESS_ID, endereco: 'Novo Endereço'});
+
+	availableAddresses
+		.filter(addr => addr.id_cliente === parseInt(clientId, 10))
+		.forEach(addr => newOrderAddressSelector.addOption(addr));
+
+	newOrderAddressSelector.setValue(NEW_ADDRESS_ID);
+}
 
 let viewOrderClientSelector = null;
 let viewOrderBasketSelector = null;
@@ -638,4 +671,30 @@ function cancelBasketComposition() {
 	pendingOrderIndex = null;
 	pendingOrderMode = null;
 	closeModal('basketComposition-modal');
+}
+
+function cancelDeliveryDetails(mode) {
+	const checkbox_id = mode === 'new'
+		? 'newOrder-isDelivery'
+		: 'viewOrder-isDelivery';
+
+	const checkbox = document.getElementById(checkbox_id);
+	checkbox.checked = false;
+
+	closeModal('deliveryOrder-modal');
+}
+
+function toggleDeliveryModal(checkbox) {
+	const delivery = checkbox.checked;
+
+	const label = document.getElementById(checkbox.id + 'Label');
+	if (label)
+		label.textContent = delivery ? 'Entrega' : 'Retirada';
+	
+	if (delivery) {
+		refreshAddressOptions(document.getElementById('newOrder-client').value);
+		document.getElementById('deliveryOrder-modal').style.display = 'flex';
+	}
+	else
+		document.getElementById('deliveryOrder-modal').style.display = 'none';
 }

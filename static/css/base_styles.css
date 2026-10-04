@@ -351,7 +351,7 @@ body.fit-viewport .dashboard-container {
 	position: sticky;
 	top: 0;
 	z-index: 1;
-	background-color: var(--bg-card);
+	background-color: var(--bg-header);
 	color: var(--text-header);
 	font-weight: bold;
 	padding-top: 6px;

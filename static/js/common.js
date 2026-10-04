@@ -91,3 +91,6 @@ function inputNumber(input) {
 function inputPhone(input) {
 	input.value = input.value.replace(/[^0-9+() -]/g, '');
 }
+
+document.querySelector('#newOrder-isDelivery ~ .switch-slider .switch-icon--off').innerHTML = ICON_TAKE;
+document.querySelector('#newOrder-isDelivery ~ .switch-slider .switch-icon--on').innerHTML = ICON_DELIVERY;
