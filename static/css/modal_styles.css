@@ -41,6 +41,10 @@
 	margin-bottom: 5%;
 }
 
+.modal-box .ts-control input {
+	margin-bottom: 0;
+}
+
 .modal-box select {
 	display: flex;
 	width: 100%;
@@ -75,7 +79,7 @@
 	font-family: inherit;
 	resize: none;
 	display: flex;
-	margin-bottom: 5%;	
+	margin-bottom: 5%;
 }
 
 .modal-box textarea:disabled {
@@ -285,7 +289,8 @@
 
 /* Orders */
 .date-row,
-.status-row {
+.status-row,
+.price-row {
 	display: flex;
 	gap: 12px;
 	width: 100%;
@@ -293,7 +298,8 @@
 }
 
 .date-row .form-group,
-.status-row .form-group {
+.status-row .form-group,
+.price-row .form-group {
 	flex: 1;
 	min-width: 0;
 }
@@ -372,15 +378,24 @@
 	align-items: center;
 	justify-content: center;
 	color: var(--text-light);
-	/* background-color: var(--bg-card); */
 }
 
 .switch input:checked + .switch-slider {
 	background-color: var(--primary-color);
 }
 
+.switch input:checked:disabled + .switch-slider {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
 .switch input:empty + .switch-slider {
 	background-color: var(--primary-color);
+}
+
+.switch input:empty:disabled + .switch-slider {
+	opacity: 0.5;
+	cursor: not-allowed;
 }
 
 .switch input:checked + .switch-slider .switch-thumb {
@@ -419,6 +434,15 @@
 	display: inline-block;
 	width: 62px;
 	text-align: left;
+}
+
+.form-group .ts-control {
+	height: 30px;
+	min-height: 30px;
+}
+
+.form-group .ts-wrapper {
+	margin-bottom: 5%;
 }
 
 .order-items-list {

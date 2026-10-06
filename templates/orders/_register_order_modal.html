@@ -6,6 +6,7 @@
 		</div>
 		<form id="newOrder-form" method="post" action="{{url_for('orders_bp.new_order')}}">
 			<input type="hidden" id="newOrder-items" name="items">
+			]<input type="hidden" id="newOrder-deliveryDetails" name="deliveryDetails">
 			<div class="client-row">
 				<label>Cliente*:</label>
 				<input
@@ -14,7 +15,8 @@
 					data-clients='{{available_clients|tojson}}'
 					placeholder="Selecione um cliente..."
 					oninput="
-						refreshAddressOptions(this.value)
+						toggleSwitch('newOrder-client', 'newOrder-isDelivery');
+						refreshAddressOptions(this.value, 'new')
 						toggleSaveButton(
 							['newOrder-client', 'newOrder-orderPrice', 'newOrder-date'],
 							'newOrder-saveBtn',
@@ -98,7 +100,7 @@
 					<label id="newOrder-isDeliveryLabel" for="newOrder-isDelivery">Retirada</label>
 					<div class="switch-container">
 						<label class="switch">
-							<input type="checkbox" id="newOrder-isDelivery" name="isDelivery" onchange="toggleDeliveryModal(this)">
+							<input type="checkbox" id="newOrder-isDelivery" name="isDelivery" disabled onchange="toggleDeliveryModal(this)">
 							<span class="switch-slider">
 								<span class="switch-thumb">
 									<span class="switch-thumb-icon switch-icon--off"></span>

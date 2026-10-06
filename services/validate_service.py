@@ -137,19 +137,55 @@ def validate_status_transition(current, new):
 		)
 	return new
 
-def validate_delivery(form):
-	if form.get("isDelivery") not in ("1", "true", "on"):
-		return False, None, Decimal("0.00")
+def validate_address(address):
+	if not isinstance(address, str):
+		raise ValueError("Endereço inválido")
 
-	address = form.get("address", "").strip()
+	address = address.strip()
+
 	if not address:
-		raise ValueError("Endereço obrigatório para entregas")
-	if len(address) > 200:
-		raise ValueError("Endereço muito longo (máx. 200 caracteres)")
+		raise ValueError("O endereço não pode estar vazio")
 
-	fee_raw = form.get("deliveryFee", "").strip()
-	fee = validate_price(fee_raw, allow_free=True) if fee_raw else Decimal("0.00")
-	return True, address, fee
+	if len(address) > 200:
+		raise ValueError("O endereço é muito longo (max. 200 caracteres)")
+
+	return address
+
+def validate_delivery(delivery_details):
+	if not isinstance(delivery_details, dict):
+		raise ValueError("Detalhes de entrega inválidos")
+	
+	address_id = delivery_details.get("address_id")
+	address_txt = delivery_details.get("address_txt")
+	delivery_fee = delivery_details.get("delivery_fee")
+	
+	if address_txt:
+		address_txt = validate_address(address_txt)
+
+	if address_id:
+		if not validate_id(Table.Addresses, "id_endereco", address_id):
+			raise ValueError("Endereço inválido")
+	
+	if address_id is None and not address_txt:
+		raise ValueError("Entrega precisa de um endereço")
+
+	if address_id is not None and address_txt:
+		raise ValueError("Informe apenas um endereço cadastrado ou um novo endereço")
+
+	delivery_details["delivery_fee"] = validate_price(delivery_fee)
+	delivery_details["address_txt"] = address_txt
+
+def validate_address_belonging(client, address):
+	check_addr = run_select("""
+	SELECT id_endereco
+	FROM IGOR_CG_ENDERECOS_CLIENTES
+	WHERE id_endereco = ?
+	AND id_cliente = ?
+	AND isDeleted = 0
+	""", (address, client))
+
+	if not check_addr:
+		raise ValueError("Esse endereço não pertence ao cliente selecionado")
 
 # ---------------------------
 

@@ -30,26 +30,38 @@
 			></textarea>
 		</div>
 
-		<div class="form-group">
-			<label>Taxa de Entrega:</label>
-			<input
-				id="newOrder-deliveryFee"
-				name="deliveryFee"
-				type="text"
-				oninput="inputNumber(this)"
-			>
-		</div>
+		<div class="price-row">
+			<div class="form-group">
+				<label>Taxa de Entrega*:</label>
+				<input
+					id="newOrder-deliveryFee"
+					name="deliveryFee"
+					type="text"
+					oninput="inputNumber(this); updateOrderTotal('new')"
+				>
+			</div>
 
+			<div class="form-group">
+				<label>Total do Pedido:</label>
+				<input
+					id="newOrder-totalPrice"
+					name="totalPrice"
+					type="text"
+					disabled
+				>
+			</div>
+		</div>
+		
 		<input type="hidden" id="newOrder-addressId" name="addressId">
 		
 		<div class="modal-actions">
 			<button
 				type="button"
 				class="btn-modal btn-save push-right"
-				id="basketComposition-btn"
+				id="deliveryDetails-btn"
 				onclick="confirmDeliveryDetails()"
 			>
-				Adicionar
+				Salvar
 			</button>
 		</div>		
 	</div>

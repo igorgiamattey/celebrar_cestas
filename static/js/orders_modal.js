@@ -3,6 +3,18 @@ let originalOrderValues = {};
 let newOrderBaskets = [];
 let viewOrderBaskets = [];
 
+let newOrderDeliveryDetails = {
+	"address_id": null,
+	"address_txt": null,
+	"delivery_fee": 0.00
+}
+
+let viewOrderDeliveryDetails = {
+	"address_id": null,
+	"address_txt": null,
+	"delivery_fee": 0.00
+}
+
 let pendingOrderBasket = null;
 let pendingOrderMode = null;
 let pendingOrderIndex = null;
@@ -84,27 +96,30 @@ const newOrderAddressSelector = new TomSelect('#newOrder-address', {
 	onChange: function(value) {
 		const isNew = value === NEW_ADDRESS_ID;
 		document.getElementById('newOrder-newAddressRow').style.display = isNew ? 'block' : 'none';
-		document.getElementById('newOrder-addressId').value = isNew ? '' : value;
+		document.getElementById('newOrder-address').value = isNew ? '' : value;
 		if (isNew) document.getElementById('newOrder-newAddressText').value = '';
 	}
 });
 
-function refreshAddressOptions(clientId) {
-	newOrderAddressSelector.clear(true);
-	newOrderAddressSelector.clearOptions();
+function refreshAddressOptions(clientId, mode) {
+	const addrSelector = mode === 'new'
+		? newOrderAddressSelector
+		: viewOrderAddressSelector
+	
+	addrSelector.clear(true);
+	addrSelector.clearOptions();
 
-	newOrderAddressSelector.addOption({id: NEW_ADDRESS_ID, endereco: 'Novo Endereço'});
+	addrSelector.addOption({id: NEW_ADDRESS_ID, endereco: 'Novo Endereço'});
 
 	availableAddresses
 		.filter(addr => addr.id_cliente === parseInt(clientId, 10))
-		.forEach(addr => newOrderAddressSelector.addOption(addr));
-
-	newOrderAddressSelector.setValue(NEW_ADDRESS_ID);
+		.forEach(addr => addrSelector.addOption(addr));
 }
 
 let viewOrderClientSelector = null;
 let viewOrderBasketSelector = null;
 let viewOrderStatusSelector = null;
+let viewOrderAddressSelector = null;
 const viewOrderForm = document.getElementById('viewOrder-form');
 
 if (viewOrderForm) {
@@ -153,6 +168,21 @@ if (viewOrderForm) {
 		]
 	});
 
+	viewOrderAddressSelector = new TomSelect('#viewOrder-address', {
+		options: [],
+		valueField: 'id',
+		labelField: 'endereco',
+		searchField: 'endereco',
+		create: false,
+		maxItems: 1,
+		onChange: function(value) {
+			const isNew = value === NEW_ADDRESS_ID;
+			document.getElementById('viewOrder-newAddressRow').style.display = isNew ? 'block' : 'none';
+			document.getElementById('viewOrder-address').value = isNew ? '' : value;
+			if (isNew) document.getElementById('viewOrder-newAddressText').value = '';
+		}
+	});
+
 	viewOrderClientSelector.disable();
 	viewOrderBasketSelector.disable();
 	viewOrderStatusSelector.disable();
@@ -190,10 +220,15 @@ function openNewOrderModal() {
 	newOrderClientSelector.clear();
 	newOrderBasketSelector.clear();
 	newOrderStatusSelector.setValue(defaultStatus);
-	newOrderStatusSelector.disable()
+	newOrderStatusSelector.disable();
+
+	document.getElementById('newOrder-newAddressText').value = '';
+	document.getElementById('newOrder-deliveryFee').value = '';
 
 	newOrderBaskets = [];
 	newOrderPriceManuallySet = false;
+	saveButton('new');
+	toggleSwitch('newOrder-client', 'newOrder-isDelivery');
 	renderOrderBaskets('new');
 	document.getElementById('newOrder-modal').style.display = "flex";
 }
@@ -248,6 +283,7 @@ function openViewOrderModal(id) {
 
 function saveNewOrder() {
 	document.getElementById('newOrder-items').value = JSON.stringify(serialiseOrderBaskets('new'));
+	document.getElementById('newOrder-deliveryDetails').value = JSON.stringify(newOrderDeliveryDetails);
 
 	submitModal('newOrder-form');
 }
@@ -666,6 +702,14 @@ function updateSuggestedTotal(mode) {
 	input.value = suggested > 0 ? suggested.toFixed(2) : '';
 }
 
+function updateOrderTotal(mode) {
+	const totalLabel = document.getElementById(`${mode}Order-totalPrice`);
+	const deliveryFee = parseFloat(document.getElementById(`${mode}Order-deliveryFee`).value) || 0;
+	const orderPrice = parseFloat(document.getElementById(`${mode}Order-orderPrice`).value) || 0;
+
+	totalLabel.value = (deliveryFee + orderPrice).toFixed(2);
+}
+
 function cancelBasketComposition() {
 	pendingOrderBasket = null;
 	pendingOrderIndex = null;
@@ -684,17 +728,56 @@ function cancelDeliveryDetails(mode) {
 	closeModal('deliveryOrder-modal');
 }
 
-function toggleDeliveryModal(checkbox) {
+function toggleDeliveryModal(checkbox, mode) {
 	const delivery = checkbox.checked;
+	const clients = document.getElementById(`${mode}Order-client`)
 
 	const label = document.getElementById(checkbox.id + 'Label');
 	if (label)
 		label.textContent = delivery ? 'Entrega' : 'Retirada';
 	
 	if (delivery) {
-		refreshAddressOptions(document.getElementById('newOrder-client').value);
+		refreshAddressOptions(clients.value, mode);
+		updateOrderTotal(mode);
 		document.getElementById('deliveryOrder-modal').style.display = 'flex';
 	}
 	else
 		document.getElementById('deliveryOrder-modal').style.display = 'none';
+}
+
+function toggleSwitch(clientSelector, deliverySwitch) {
+	const orderSwitch = document.getElementById(deliverySwitch);
+	const client = document.getElementById(clientSelector);
+	const slider = orderSwitch.nextElementSibling;
+
+	const allow = client.value.trim() !== '';
+
+	orderSwitch.disabled = !allow;
+	slider.title = allow ? "" : "Selecione um cliente";
+}
+
+function confirmDeliveryDetails(mode) {
+	const selector = mode === 'new'
+		? newOrderAddressSelector
+		: viewOrderAddressSelector;
+
+	const details = mode === 'new'
+		? newOrderDeliveryDetails
+		: viewOrderDeliveryDetails;
+
+	const newAddressText = document.getElementById(`${mode}Order-newAddressText`);
+	const deliveryFee = document.getElementById(`${mode}Order-deliveryFee`);
+	
+
+	if (selector.getValue() === NEW_ADDRESS_ID) {
+		details["address_id"] = null;
+		details["address_txt"] = newAddressText.value;
+	}
+
+	else {
+		details["address_id"] = selector.getValue();
+		details["address_txt"] = null;
+	}
+
+	details['delivery_fee'] = parseFloat(deliveryFee.value) || 0;
 }

@@ -8,14 +8,17 @@ from enums.order_status import orderStatus
 from enums.table_names import Table
 from services.order_service import (get_basket_composition, get_orders,
                                     get_today, update_order_stock)
-from services.routes_service import (getAvailableBaskets, getAvailableClients,
-                                     getAvailableStatus, getAvailableAddresses)
+from services.routes_service import (getAvailableAddresses,
+                                     getAvailableBaskets, getAvailableClients,
+                                     getAvailableStatus)
 from services.status_transitions import get_allowed_status
-from services.validate_service import (OPEN_ORDER_STATUS, validate_date,
+from services.validate_service import (OPEN_ORDER_STATUS,
+                                       validate_address_belonging,
+                                       validate_date, validate_delivery,
                                        validate_id, validate_order_items,
                                        validate_order_stock, validate_price,
                                        validate_status,
-                                       validate_status_transition, validate_delivery)
+                                       validate_status_transition)
 
 orders_bp = Blueprint("orders_bp", __name__)
 
@@ -58,7 +61,12 @@ def new_order():
 	try:
 		items_payload = json.loads(request.form["items"])
 	except (KeyError, json.JSONDecodeError):
-		return "Itens do pedido inválidos 1", 400
+		return "Itens do pedido inválidos"
+
+	try:
+		delivery_details = json.loads(request.form["deliveryDetails"])
+	except (KeyError, json.JSONDecodeError):
+		return "Detalhes de entrega inválidos", 400
 
 	try:
 		client = request.form["client"]
@@ -69,8 +77,15 @@ def new_order():
 		orderPrice = validate_price(request.form["orderPrice"])	
 		status = validate_status(orderStatus.PENDING.name)
 		items_payload = validate_order_items(items_payload)
-		is_delivery, address, fee = validate_delivery(request.form)
-	
+		delivery_details = validate_delivery(delivery_details)
+
+		address_id = delivery_details.get("address_id")
+		address_txt = delivery_details.get("address_txt")
+		delivery_fee = delivery_details.get("delivery_fee")
+
+		if address_id is not None:
+			validate_address_belonging(client, address_id)
+				
 		obs = request.form.get('obs', '')
 		items = json.dumps(items_payload)
 
