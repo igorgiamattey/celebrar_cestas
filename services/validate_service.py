@@ -175,6 +175,8 @@ def validate_delivery(delivery_details):
 	delivery_details["delivery_fee"] = validate_price(delivery_fee)
 	delivery_details["address_txt"] = address_txt
 
+	return delivery_details
+
 def validate_address_belonging(client, address):
 	check_addr = run_select("""
 	SELECT id_endereco
@@ -186,6 +188,20 @@ def validate_address_belonging(client, address):
 
 	if not check_addr:
 		raise ValueError("Esse endereço não pertence ao cliente selecionado")
+
+def validate_isDelivery_check(is_delivery, details):
+	is_delivery = is_delivery == "on"
+
+	if not is_delivery:
+		address_id = details.get("address_id")
+		address_txt = details.get("address_txt")
+		delivery_fee = details.get("delivery_fee")
+
+		if address_id is not None or address_txt or delivery_fee:
+			raise ValueError("Endereço e taxa de entrega só podem existir para entregas")
+
+	return int(is_delivery)
+
 
 # ---------------------------
 

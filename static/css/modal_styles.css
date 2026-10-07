@@ -314,6 +314,16 @@
 	min-width: 0;
 }
 
+.status-row .form-group--grow {
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+.status-row .form-group--status {
+	flex: 0 0 180px;
+	min-width: 0;
+}
+
 .client-row .ts-wrapper,
 .status-row .ts-wrapper,
 .status-row .form-group input {
@@ -337,6 +347,15 @@
 
 .status-row .ts-control::after {
 	display: none !important;
+}
+
+.status-row .btn-edit-details {
+	flex: 0 0 auto;
+}
+
+.status-row .switch {
+	flex: none;
+	min-width: 62px;
 }
 
 .client-row {
@@ -443,6 +462,26 @@
 
 .form-group .ts-wrapper {
 	margin-bottom: 5%;
+}
+
+.btn-edit-details {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 5px 15px;
+	border-radius: 6px;
+	text-decoration: none;
+	font-weight: bold;
+	font-size: 0.9rem;
+	text-align: center;
+	transition: opacity 0.2s, transform 0.1s;
+	cursor: pointer;
+	white-space: nowrap;
+	flex-shrink: 0;
+	box-sizing: border-box;
+	border: 2px solid transparent;
+	background-color: var(--primary-color);
+	color: var(--text-light);
 }
 
 .order-items-list {

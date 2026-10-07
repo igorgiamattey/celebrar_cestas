@@ -15,7 +15,8 @@ from services.status_transitions import get_allowed_status
 from services.validate_service import (OPEN_ORDER_STATUS,
                                        validate_address_belonging,
                                        validate_date, validate_delivery,
-                                       validate_id, validate_order_items,
+                                       validate_id, validate_isDelivery_check,
+                                       validate_order_items,
                                        validate_order_stock, validate_price,
                                        validate_status,
                                        validate_status_transition)
@@ -77,29 +78,47 @@ def new_order():
 		orderPrice = validate_price(request.form["orderPrice"])	
 		status = validate_status(orderStatus.PENDING.name)
 		items_payload = validate_order_items(items_payload)
-		delivery_details = validate_delivery(delivery_details)
+		is_delivery = request.form.get("isDelivery")
+		is_delivery = validate_isDelivery_check(is_delivery, delivery_details)
+		
+		address_id = None
+		delivery_fee = 0.00
 
-		address_id = delivery_details.get("address_id")
-		address_txt = delivery_details.get("address_txt")
-		delivery_fee = delivery_details.get("delivery_fee")
+		if is_delivery:
+			delivery_details = validate_delivery(delivery_details)
 
-		if address_id is not None:
-			validate_address_belonging(client, address_id)
+			address_id = delivery_details.get("address_id")
+			address_txt = delivery_details.get("address_txt")
+			delivery_fee = delivery_details.get("delivery_fee")
+
+			if address_id is not None:
+				validate_address_belonging(client, address_id)
 				
 		obs = request.form.get('obs', '')
 		items = json.dumps(items_payload)
 
 		with run_transaction() as cursor:
 			validate_order_stock(cursor, items_payload)
+
+			if is_delivery and address_id is None:
+				cursor.execute("""
+				INSERT INTO IGOR_CG_ENDERECOS_CLIENTES
+				(id_cliente, endereco)
+				OUTPUT INSERTED.id_endereco
+				VALUES (?, ?)
+				""", (client, address_txt))
+
+				address_id = cursor.fetchone()[0]
+
 			
 			cursor.execute("""
 			INSERT INTO IGOR_CG_PEDIDOS
 			(id_cliente, data_pedido, data_entrega,
 			status_pedido, valor_pedido, observacao,
-			itens_pedido, isDelivery, endereco, taxa_entrega)
+			itens_pedido, isDelivery, id_endereco, taxa_entrega)
 			OUTPUT INSERTED.id_pedido
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			""", (client, date, deliveryDate, status, orderPrice, obs, items, is_delivery, address, fee))
+			""", (client, date, deliveryDate, status, orderPrice, obs, items, is_delivery, address_id, delivery_fee))
 
 			order_id = cursor.fetchone()[0]
 		

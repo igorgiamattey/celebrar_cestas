@@ -216,6 +216,7 @@ function saveButton(mode) {
 
 function openNewOrderModal() {
 	document.getElementById('newOrder-form').reset();
+	toggleDeliveryModal(document.getElementById('newOrder-isDelivery'), 'new');
 
 	newOrderClientSelector.clear();
 	newOrderBasketSelector.clear();
@@ -724,25 +725,32 @@ function cancelDeliveryDetails(mode) {
 
 	const checkbox = document.getElementById(checkbox_id);
 	checkbox.checked = false;
-
-	closeModal('deliveryOrder-modal');
+	toggleDeliveryModal(checkbox, mode)
 }
 
 function toggleDeliveryModal(checkbox, mode) {
 	const delivery = checkbox.checked;
 	const clients = document.getElementById(`${mode}Order-client`)
-
+	const editButton = document.getElementById(`${mode}Order-editDetailsBtn`);
 	const label = document.getElementById(checkbox.id + 'Label');
+
 	if (label)
 		label.textContent = delivery ? 'Entrega' : 'Retirada';
 	
 	if (delivery) {
 		refreshAddressOptions(clients.value, mode);
 		updateOrderTotal(mode);
-		document.getElementById('deliveryOrder-modal').style.display = 'flex';
+		// document.getElementById('deliveryOrder-modal').style.display = 'flex';
+		editButton.parentElement.style.display = '';
 	}
-	else
+	else {
 		document.getElementById('deliveryOrder-modal').style.display = 'none';
+		editButton.parentElement.style.display = 'none';
+	}
+}
+
+function openEditDetailsModal(mode) {
+	document.getElementById('deliveryOrder-modal').style.display = 'flex';
 }
 
 function toggleSwitch(clientSelector, deliverySwitch) {
@@ -779,5 +787,6 @@ function confirmDeliveryDetails(mode) {
 		details["address_txt"] = null;
 	}
 
-	details['delivery_fee'] = parseFloat(deliveryFee.value) || 0;
+	details['delivery_fee'] = deliveryFee.value.trim() || "0";
+	closeModal('deliveryOrder-modal');
 }
