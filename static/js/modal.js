@@ -62,3 +62,14 @@ getModalIds().forEach(id => {
 		});
 	}
 });
+
+document.addEventListener('click', (e) => {
+	const input = e.target.closest('input[type="date"]');
+	if (!input) return;
+
+	try {
+		input.showPicker();
+	} catch (_) {
+
+	}
+});

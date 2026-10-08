@@ -85,12 +85,33 @@ if (searchClear && searchInput) {
 }
 
 function inputNumber(input) {
-	input.value = input.value.replace(/[^0-9.,]/g, '');
+	let v = input.value.replace(/[^0-9.,]/g, '');
+	const i = v.search(/[.,]/);
+
+	if (i !== -1) {
+		const int = v.slice(0, i) || '0';
+		const dec = v.slice(i+1).replace(/[.,]/g,'').slice(0, 5);
+		v = int + v[i] + dec;
+	}
+	input.value = v;
+}
+
+function inputPrice(input) {
+	let v = input.value.replace(/[^0-9.,]/g, '');
+	const i = v.search(/[.,]/);
+
+	if (i !== -1) {
+		const int = v.slice(0, i) || '0';
+		const dec = v.slice(i+1).replace(/[.,]/g,'').slice(0, 2);
+		v = int + v[i] + dec;
+	}
+	input.value = v;
+}
+
+function inputInt(input) {
+	input.value = input.value.replace(/\D/g, '');
 }
 
 function inputPhone(input) {
 	input.value = input.value.replace(/[^0-9+() -]/g, '');
 }
-
-document.querySelector('#newOrder-isDelivery ~ .switch-slider .switch-icon--off').innerHTML = ICON_TAKE;
-document.querySelector('#newOrder-isDelivery ~ .switch-slider .switch-icon--on').innerHTML = ICON_DELIVERY;

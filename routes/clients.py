@@ -1,11 +1,9 @@
-import phonenumbers
 from flask import (Blueprint, jsonify, redirect, render_template, request,
                    url_for)
 
-from db import run_select, run_transaction, run_update
+from db import run_select, run_update
 from enums.table_names import Table
 from services.client_service import client_exists, get_clients
-from services.routes_service import countRows
 from services.validate_service import (client_has_open_orders, validate_id,
                                        validate_name, validate_phone)
 

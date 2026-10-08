@@ -381,7 +381,12 @@ body.fit-viewport .dashboard-container {
 	flex-shrink: 0;
 }
 
-.btn-view:hover {
+.btn-view:hover:enabled {
 	opacity: 0.9;
 	transform: translateY(-1px);
+}
+
+.btn-view:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
 }

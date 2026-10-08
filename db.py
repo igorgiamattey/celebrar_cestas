@@ -1,8 +1,10 @@
-import pyodbc
 import os
-from dotenv import load_dotenv
-from datetime import datetime
+import re
 from contextlib import contextmanager
+from datetime import datetime
+
+import pyodbc
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -57,11 +59,12 @@ def format_currency(value):
 	return currency
 
 def parse_price(value):
-	value = value.strip().replace(",", ".")
-	try:
-		return float(value)
-	except ValueError:
+	value = str(value).strip().replace(",", ".")
+
+	if not re.fullmatch(r"\d+(\.\d{1,2})?", value):
 		raise ValueError(f"Invalid price value: {value}")
+
+	return float(value)
 
 def format_date(value):
 	if value is None:

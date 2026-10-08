@@ -15,7 +15,8 @@
 					data-clients='{{available_clients|tojson}}'
 					placeholder="Selecione um cliente..."
 					oninput="
-						toggleSwitch('newOrder-client', 'newOrder-isDelivery');
+						onClientChange('new')
+						toggleSwitch('newOrder-client', 'newOrder-isDelivery')
 						refreshAddressOptions(this.value, 'new')
 						toggleSaveButton(
 							['newOrder-client', 'newOrder-orderPrice', 'newOrder-date'],
@@ -63,7 +64,7 @@
 					id="newOrder-basketQty"
 					type="text"
 					placeholder="Qtd"
-					oninput="inputNumber(this)"
+					oninput="inputInt(this)"
 				>
 				<button type="button" class="btn-modal btn-edit" onclick="addBasketToOrder('new')">
 					+ Adicionar
@@ -79,7 +80,8 @@
 						name="orderPrice"
 						type="text"
 						oninput="
-							inputNumber(this)
+							inputPrice(this)
+							updateOrderTotal('new')
 							toggleSaveButton(
 							['newOrder-client', 'newOrder-orderPrice', 'newOrder-date'],
 							'newOrder-saveBtn',

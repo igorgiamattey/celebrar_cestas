@@ -1,5 +1,4 @@
 from datetime import datetime
-from decimal import Decimal
 
 import phonenumbers
 
@@ -45,10 +44,8 @@ def validate_price(price, allow_free=False):
 	if allow_free:
 		if price < 0:
 			raise ValueError("O preço não pode ser negativo")
-	else:
-		if price <= 0:
-			raise ValueError("O preço deve ser maior que zero")
-		
+	elif price <= 0:
+		raise ValueError("O preço deve ser maior que zero")
 
 	return price
 
@@ -155,14 +152,14 @@ def validate_delivery(delivery_details):
 	if not isinstance(delivery_details, dict):
 		raise ValueError("Detalhes de entrega inválidos")
 	
-	address_id = delivery_details.get("address_id")
+	address_id = delivery_details.get("address_id") or None
 	address_txt = delivery_details.get("address_txt")
 	delivery_fee = delivery_details.get("delivery_fee")
 	
 	if address_txt:
 		address_txt = validate_address(address_txt)
 
-	if address_id:
+	if address_id is not None:
 		if not validate_id(Table.Addresses, "id_endereco", address_id):
 			raise ValueError("Endereço inválido")
 	
@@ -172,13 +169,14 @@ def validate_delivery(delivery_details):
 	if address_id is not None and address_txt:
 		raise ValueError("Informe apenas um endereço cadastrado ou um novo endereço")
 
-	delivery_details["delivery_fee"] = validate_price(delivery_fee)
-	delivery_details["address_txt"] = address_txt
+	delivery_details["address_id"] = address_id
+	delivery_details["delivery_fee"] = validate_price(delivery_fee, allow_free=True)
+	delivery_details["address_txt"] = address_txt or None
 
 	return delivery_details
 
 def validate_address_belonging(client, address):
-	check_addr = run_select("""
+	_, rows = run_select("""
 	SELECT id_endereco
 	FROM IGOR_CG_ENDERECOS_CLIENTES
 	WHERE id_endereco = ?
@@ -186,18 +184,22 @@ def validate_address_belonging(client, address):
 	AND isDeleted = 0
 	""", (address, client))
 
-	if not check_addr:
+	if not rows:
 		raise ValueError("Esse endereço não pertence ao cliente selecionado")
 
 def validate_isDelivery_check(is_delivery, details):
+	if not isinstance(details, dict):
+		raise ValueError("Detalhes de entrega inválidos")
+	
 	is_delivery = is_delivery == "on"
 
 	if not is_delivery:
 		address_id = details.get("address_id")
 		address_txt = details.get("address_txt")
 		delivery_fee = details.get("delivery_fee")
+		has_fee = delivery_fee not in (None, "") and parse_price(delivery_fee) != 0
 
-		if address_id is not None or address_txt or delivery_fee:
+		if address_id or address_txt or has_fee:
 			raise ValueError("Endereço e taxa de entrega só podem existir para entregas")
 
 	return int(is_delivery)
@@ -353,8 +355,8 @@ def validate_group_items(items):
 
 	return items
 
-def validate_order_stock(cursor, items_payload):
-	available_stock = get_available_stock(cursor)
+def validate_order_stock(cursor, items_payload, exclude_order_id=None):
+	available_stock = get_available_stock(cursor, exclude_order_id)
 	order_requirements = {}
 
 	for item in items_payload:

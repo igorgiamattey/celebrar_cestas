@@ -1,12 +1,12 @@
 from flask import (Blueprint, json, jsonify, redirect, render_template,
                    request, url_for)
 
-from db import (format_currency, format_date, run_select, run_transaction,
+from db import (format_date, run_select, run_transaction,
                 run_update)
 from enums.movement_types import movementTypes
 from enums.table_names import Table
 from services.order_service import update_stock
-from services.routes_service import countRows, getAvailableUnits
+from services.routes_service import getAvailableUnits
 from services.storage_service import group_exists, item_exists, get_storage
 from services.validate_service import (group_has_open_orders,
                                        item_has_open_orders,

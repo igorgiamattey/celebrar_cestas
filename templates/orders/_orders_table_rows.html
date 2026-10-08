@@ -1,4 +1,8 @@
+{% from "orders/_status_icons.html" import cancelled, ready, delivered, confirmed, preparing, pending, toDeliver, toTake %}
+
 {% for row in rows %}
+{% set status = row[5] %}
+{% set closed = status in ['Entregue', 'Cancelado'] %}
 <tr>
 	{% for val in row %}
 		{% if loop.index == 3 %}
@@ -7,30 +11,38 @@
 					<div>{{item}}</div>
 				{% endfor %}
 			</td>
+		{% elif loop.index == 6 %}
+			{% if val == 'Cancelado' %}
+				<td title="Cancelado">{{ cancelled() }}</td>
+			{% elif val == 'Pronto' %}
+				<td title="Pronto">{{ ready() }}</td>
+			{% elif val == 'Entregue' %}
+				<td title="Entregue">{{ delivered() }}</td>
+			{% elif val == 'Confirmado' %}
+				<td title="Confirmado">{{ confirmed() }}</td>
+			{% elif val == 'Em preparação' %}
+				<td title="Em preparação">{{ preparing() }}</td>
+			{% elif val == 'Pagamento pendente' %}
+				<td title="Pagamento pendente">{{ pending() }}</td>
+			{% endif %}
 		{% elif loop.index == 7 %}
 			{% if val %}
-				<td title="Entrega">
-					<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-truck" viewBox="0 0 16 16">
-						<path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h9A1.5 1.5 0 0 1 12 3.5V5h1.02a1.5 1.5 0 0 1 1.17.563l1.481 1.85a1.5 1.5 0 0 1 .329.938V10.5a1.5 1.5 0 0 1-1.5 1.5H14a2 2 0 1 1-4 0H5a2 2 0 1 1-3.998-.085A1.5 1.5 0 0 1 0 10.5z"/>
-					</svg>
-				</td>
+				<td title="Entrega">{{ toDeliver() }}</td>
 			{% else %}
-				<td title="Retirada">
-					<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-walking" viewBox="0 0 16 16">
-						<path d="M9.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0M6.44 3.752A.75.75 0 0 1 7 3.5h1.445c.742 0 1.32.643 1.243 1.38l-.43 4.083a1.8 1.8 0 0 1-.088.395l-.318.906.213.242a.8.8 0 0 1 .114.175l2 4.25a.75.75 0 1 1-1.357.638l-1.956-4.154-1.68-1.921A.75.75 0 0 1 6 8.96l.138-2.613-.435.489-.464 2.786a.75.75 0 1 1-1.48-.246l.5-3a.75.75 0 0 1 .18-.375l2-2.25Z"/>
-						<path d="M6.25 11.745v-1.418l1.204 1.375.261.524a.8.8 0 0 1-.12.231l-2.5 3.25a.75.75 0 1 1-1.19-.914zm4.22-4.215-.494-.494.205-1.843.006-.067 1.124 1.124h1.44a.75.75 0 0 1 0 1.5H11a.75.75 0 0 1-.531-.22Z"/>
-					</svg>
-				</td>
+				<td title="Retirada">{{ toTake() }}</td>
 			{% endif %}
 		{% else %}
 			<td title="{{val}}">{{val}}</td>
 		{% endif %}
 	{% endfor %}
-	<td><button class="btn-view" data-id="{{row[0]}}" onclick="openViewOrderModal(this.dataset.id)">
-		<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
-			<path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/>
-			<path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8m8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"/>
-		</svg>
-	</button></td>
+	<td>
+		<button class="btn-view" data-id="{{row[0]}}" onclick="openViewOrderModal(this.dataset.id)" {% if closed %}disabled title="Pedido encerrado"{% endif %}>
+			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
+				<path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/>
+				<path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8m8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"/>
+			</svg>
+		</button>
+	</td>
+	
 </tr>
 {% endfor %}

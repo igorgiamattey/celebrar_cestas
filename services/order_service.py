@@ -102,64 +102,40 @@ def update_stock(cursor, item_id, qty, order_id, operation, move_type, obs=""):
 	""", (item_id, move_type, qty, obs))
 
 def update_order_stock(cursor, items_payload, operation, order_id=None):
-	if operation == "deduct":
-		order_move = movementTypes.SAIDA_PEDIDO.name
-	elif operation == "increase":
-		order_move = movementTypes.ENTRADA_PEDIDO.name
-	else:
+	move = {
+		"deduct": movementTypes.SAIDA_PEDIDO,
+		"increase": movementTypes.ENTRADA_PEDIDO
+	}.get(operation)
+
+	if move is None:
 		raise ValueError("Invalid Operation")
-	
+
+	needed = {}
 	for item in items_payload:
-		basket_id = item['basket_id']
-		basket_qty = item['quantity']
-		choices_by_group = {
-			c['group_id']: c['item_id'] for c in item.get('choices', [])
-		}
+		for item_id, qty in get_stock_requirements(cursor, item).items():
+			needed[item_id] = needed.get(item_id, 0) + qty
 
-		cursor.execute("""
-		SELECT
-		id_insumo, quantidade_utilizada, id_grupo
-		FROM IGOR_CG_CESTA_ESTOQUE
-		WHERE id_produto = ? AND isDeleted = 0
-		""", (basket_id,))
-		recipe_rows = cursor.fetchall()
-
-		for item_id, used_qty, group_id in recipe_rows:
-			if group_id is None:
-				update_stock(cursor, item_id, used_qty * basket_qty, order_id, operation, move_type=order_move, obs="")
-			else:
-				chosen_ids = choices_by_group.get(group_id, [])
-				if not chosen_ids:
-					raise ValueError(f"Nenhuma escolha feita para o grupo {group_id} (cesta {basket_id})")
-				for chosen_item in chosen_ids:
-					cursor.execute("""
-					SELECT
-					qtd_item_grupo
-					FROM IGOR_CG_MEMBROS_GRUPO
-					WHERE id_grupo = ? AND id_insumo = ? AND isDeleted = 0
-					""", (group_id, chosen_item))
-
-					row = cursor.fetchone()
-
-					if not row:
-						raise ValueError(f"Item {chosen_item} não pertence ao grupo {group_id}")
-
-					item_qty = row[0]
-
-					update_stock(cursor, chosen_item, item_qty, order_id, operation, move_type=order_move, obs="")
+	for item_id, qty in needed.items():
+		update_stock(cursor, item_id, qty, order_id, operation, move_type=move.name)
 
 def get_today():
 	return date.today().isoformat()
 
-def get_pending_orders(cursor):
-	cursor.execute("""
+def get_pending_orders(cursor, exclude_order_id=None):
+	query = """
 	SELECT
 	id_pedido, itens_pedido
 	FROM IGOR_CG_PEDIDOS
 	WHERE status_pedido = ?
 	AND isDeleted = 0
-	""", (orderStatus.PENDING.name,))
+	"""
+	params = [orderStatus.PENDING.name]
 
+	if exclude_order_id is not None:
+		query += " AND id_pedido <> ?"
+		params.append(exclude_order_id)
+
+	cursor.execute(query, params)
 	return cursor.fetchall()
 
 def get_stock_requirements(cursor, item):
@@ -225,8 +201,8 @@ def get_stock_requirements(cursor, item):
 
 	return requirements			
 
-def get_pending_stock_requirements(cursor):
-	pending_orders = get_pending_orders(cursor)
+def get_pending_stock_requirements(cursor, exclude_order_id=None):
+	pending_orders = get_pending_orders(cursor, exclude_order_id)
 
 	requirements = {}
 
@@ -243,8 +219,8 @@ def get_pending_stock_requirements(cursor):
 
 	return requirements
 
-def get_available_stock(cursor):
-	pending_requirements = get_pending_stock_requirements(cursor)
+def get_available_stock(cursor, exclude_order_id=None):
+	pending_requirements = get_pending_stock_requirements(cursor, exclude_order_id)
 
 	cursor.execute("""
 	SELECT

@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template
-from db import get_connection, run_select, run_update
+from db import get_connection
 
 financial_bp = Blueprint("financial_bp", __name__)
 
