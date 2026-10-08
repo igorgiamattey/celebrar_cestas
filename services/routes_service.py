@@ -112,6 +112,7 @@ def getAvailableAddresses():
 	SELECT
 	id_endereco, id_cliente, endereco
 	FROM IGOR_CG_ENDERECOS_CLIENTES
+	WHERE isDeleted = 0
 	ORDER BY endereco, id_endereco
 	""")
 

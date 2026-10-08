@@ -62,7 +62,7 @@ def parse_price(value):
 	value = str(value).strip().replace(",", ".")
 
 	if not re.fullmatch(r"\d+(\.\d{1,2})?", value):
-		raise ValueError(f"Invalid price value: {value}")
+		raise ValueError(f"Preço inválido: {value}")
 
 	return float(value)
 

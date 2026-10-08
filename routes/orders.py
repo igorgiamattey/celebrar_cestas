@@ -4,7 +4,7 @@ from flask import (Blueprint, jsonify, redirect, render_template, request,
                    url_for)
 
 from db import run_select, run_transaction
-from enums.order_status import orderStatus
+from enums.order_status import OPEN_ORDER_STATUS, orderStatus
 from enums.table_names import Table
 from services.order_service import (get_basket_composition, get_orders,
                                     get_today, update_order_stock)
@@ -12,8 +12,7 @@ from services.routes_service import (getAvailableAddresses,
                                      getAvailableBaskets, getAvailableClients,
                                      getAvailableStatus)
 from services.status_transitions import get_allowed_status
-from services.validate_service import (OPEN_ORDER_STATUS,
-                                       validate_address_belonging,
+from services.validate_service import (validate_address_belonging,
                                        validate_date, validate_delivery,
                                        validate_id, validate_isDelivery_check,
                                        validate_order_items,
@@ -238,7 +237,6 @@ def update_order():
 
 	current_client = data_rows[0][0]
 	current_date = data_rows[0][1]
-	current_deliveryDate = data_rows[0][2]
 	current_status = data_rows[0][3]
 	current_orderPrice = data_rows[0][4]
 	current_obs = data_rows[0][5]

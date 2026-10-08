@@ -4,7 +4,7 @@ import phonenumbers
 
 from db import parse_price, run_select
 from enums.movement_types import movementTypes
-from enums.order_status import orderStatus
+from enums.order_status import OPEN_ORDER_STATUS, orderStatus
 from enums.table_names import Table
 from enums.unit_measurement import Unit
 from services.order_service import (get_available_stock,
@@ -386,13 +386,6 @@ def validate_order_stock(cursor, items_payload, exclude_order_id=None):
 			)
 
 # ---------------------------
-
-OPEN_ORDER_STATUS = (
-	orderStatus.PENDING.name,
-	orderStatus.CONFIRMED.name,
-	orderStatus.PREPARING.name,
-	orderStatus.READY.name,
-)
 
 placeholders = ",".join("?" for _ in OPEN_ORDER_STATUS)
 

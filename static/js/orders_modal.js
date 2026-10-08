@@ -315,7 +315,10 @@ function openViewOrderModal(id) {
 			document.getElementById('viewOrder-modal').style.display = "flex";
 			saveButton('view');
 		})
-		.catch(err => console.error('Não foi possível abrir o pedido', err));
+		.catch(
+			err => console.error('Não foi possível abrir o pedido', err),
+			alert("Não foi possívela abrir o pedido.")
+		);
 }
 
 function saveNewOrder() {
@@ -841,6 +844,10 @@ function getDeliveryState(checkbox, mode) {
 			delivery_fee: 0
 		}
 
+		document.getElementById(`${mode}Order-deliveryFee`).value = '';
+		document.getElementById(`${mode}Order-newAddressText`).value = '';
+		updateOrderTotal(mode);
+
 		if (mode === 'new')
 			newOrderDeliveryDetails = empty;
 		else
@@ -924,7 +931,5 @@ function confirmDeliveryDetails(mode) {
 function onClientChange(mode) {
 	const checkbox = document.getElementById(`${mode}Order-isDelivery`);
 	checkbox.checked = false;
-	document.getElementById(`${mode}Order-deliveryFee`).value = '';
-	document.getElementById(`${mode}Order-newAddressText`).value = '';
 	getDeliveryState(checkbox, mode);
 }
