@@ -7,7 +7,7 @@ from enums.order_status import orderStatus
 from services.home_service import getCloseOrders, getMissingItems, getLateOrders
 from services.routes_service import (getAvailableBaskets, getAvailableClients,
                                      getAvailableGroups, getAvailableItems,
-                                     getAvailableStatus)
+                                     getAvailableOrderStatus)
 
 home_bp = Blueprint("home_bp", __name__)
 
@@ -96,7 +96,7 @@ def home():
 	available_groups = getAvailableGroups()
 	available_clients = getAvailableClients()
 	available_baskets = getAvailableBaskets()
-	statuses = getAvailableStatus()
+	statuses = getAvailableOrderStatus()
 
 	missing_items = getMissingItems()
 	close_orders = getCloseOrders()

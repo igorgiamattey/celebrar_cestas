@@ -4,7 +4,7 @@ from flask import Flask
 
 from routes.catalogue import catalogue_bp
 from routes.clients import clients_bp
-from routes.dispatch import dispatch_bp
+from routes.deliveries import deliveries_bp
 from routes.financial import financial_bp
 from routes.home import home_bp
 from routes.orders import orders_bp
@@ -15,7 +15,7 @@ app = Flask(__name__)
 
 app.register_blueprint(catalogue_bp)
 app.register_blueprint(clients_bp)
-app.register_blueprint(dispatch_bp)
+app.register_blueprint(deliveries_bp)
 app.register_blueprint(financial_bp)
 app.register_blueprint(home_bp)
 app.register_blueprint(orders_bp)
@@ -23,7 +23,7 @@ app.register_blueprint(storage_bp)
 
 # flask_app.register_blueprint(catalogue_bp)
 # flask_app.register_blueprint(clients_bp)
-# flask_app.register_blueprint(dispatch_bp)
+# flask_app.register_blueprint(deliveries_bp)
 # flask_app.register_blueprint(financial_bp)
 # flask_app.register_blueprint(home_bp)
 # flask_app.register_blueprint(orders_bp)

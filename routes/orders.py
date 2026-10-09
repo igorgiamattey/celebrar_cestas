@@ -10,7 +10,7 @@ from services.order_service import (get_basket_composition, get_orders,
                                     get_today, update_order_stock)
 from services.routes_service import (getAvailableAddresses,
                                      getAvailableBaskets, getAvailableClients,
-                                     getAvailableStatus)
+                                     getAvailableOrderStatus)
 from services.status_transitions import get_allowed_status
 from services.validate_service import (validate_address_belonging,
                                        validate_date, validate_delivery,
@@ -28,7 +28,7 @@ def orders():
 
 	available_clients = getAvailableClients()
 	available_baskets = getAvailableBaskets()
-	statuses = getAvailableStatus()
+	statuses = getAvailableOrderStatus()
 	available_addresses = getAvailableAddresses()
 
 	return render_template("orders/orders.html",

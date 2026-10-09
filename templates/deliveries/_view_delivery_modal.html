@@ -1,0 +1,149 @@
+<div id="viewOrder-modal" class="modal-overlay" style="display: none;">
+	<div class="modal-box">
+		<div class="modal-header">
+			<h3>Dados do Pedido</h3>
+			<button type="button" class="btn-close" onclick="closeModal('viewOrder-modal')">&times;</button>
+		</div>
+		<form id="viewOrder-form" method="post" action="{{url_for('orders_bp.update_order')}}">
+			<input type="hidden" id="viewOrder-id" name="id">
+			<input type="hidden" id="viewOrder-items" name="items">
+			<input type="hidden" id="viewOrder-deliveryDetails" name="deliveryDetails">
+			<div class="client-row">
+				<label>Cliente*:</label>
+				<input
+					id="viewOrder-client"
+					name="client"
+					data-clients='{{available_clients|tojson}}'
+					placeholder="Selecione um cliente..."
+					oninput="
+						onClientChange('view')
+						toggleSwitch('viewOrder-client', 'viewOrder-isDelivery')
+						refreshAddressOptions(this.value, 'view')
+						toggleSaveButton(
+							['viewOrder-client', 'viewOrder-orderPrice', 'viewOrder-date'],
+							'viewOrder-saveBtn',
+							[viewOrderBaskets])"
+				>
+			</div>
+
+			<div class="date-row">
+				<div class="form-group">
+					<label>Data do Pedido*:</label>
+					<input
+						id="viewOrder-date"
+						name="date"
+						type="date"
+						onkeydown="return false"
+						oninput="toggleSaveButton(
+							['viewOrder-client', 'viewOrder-orderPrice', 'viewOrder-date'],
+							'viewOrder-saveBtn',
+							[viewOrderBaskets])"
+					>
+				</div>
+				<div class="form-group">
+					<label>Data de Entrega:</label>
+					<input
+						id="viewOrder-deliveryDate"
+						name="deliveryDate"
+						type="date"
+						onkeydown="return false"
+					>
+				</div>
+			</div>
+
+			<label id="viewOrder-addBasketLbl" style="display: none;">Adicionar Cesta*:</label>
+			<div id="viewOrder-addBasketRow" class="item-selection" style="display: none;">
+				<input
+					id="viewOrder-baskets"
+					data-baskets='{{available_baskets|tojson}}'
+					placeholder="Selecione uma cesta...">
+
+				<input
+					id="viewOrder-basketQty"
+					type="text"
+					placeholder="Qtd"
+					oninput="inputInt(this)"
+					>
+				<button type="button" class="btn-modal btn-edit" onclick="addBasketToOrder('view')">
+					+ Adicionar
+				</button>
+			</div>
+			<div id="viewOrder-basketList" class="order-items-list"></div>
+
+			<div id="viewOrder-statusRow" class="status-row">
+				<div class="form-group form-group--grow">
+					<label>Valor do Pedido*:</label>
+					<input
+						id="viewOrder-orderPrice"
+						name="orderPrice"
+						type="text"
+						oninput="
+							inputPrice(this)
+							updateOrderTotal('view')
+							toggleSaveButton(
+							['viewOrder-client', 'viewOrder-orderPrice', 'viewOrder-date'],
+							'viewOrder-saveBtn',
+							[viewOrderBaskets])"
+					>
+				</div>
+
+				<div class="form-group form-group--status">
+					<label>Status:</label>
+					<input
+						id="viewOrder-status"
+						name="status"
+						data-status='{{statuses|tojson}}'
+					>
+				</div>
+
+				<div class="form-group form-group--fixed">
+					<label id="viewOrder-isDeliveryLabel" for="viewOrder-isDelivery">Retirada</label>
+					<div class="switch-container">
+						<label class="switch">
+							<input type="checkbox" id="viewOrder-isDelivery" name="isDelivery" disabled onchange="toggleDeliveryModal(this, 'view')">
+							<span class="switch-slider">
+								<span class="switch-thumb">
+									<span class="switch-thumb-icon switch-icon--off"></span>
+									<span class="switch-thumb-icon switch-icon--on"></span>
+								</span>
+							</span>
+						</label>
+					</div>
+				</div>
+
+				<div class="form-group form-group--fixed" style="display: none;">
+					<label><br></label>
+					<button
+						type="button"
+						id="viewOrder-editDetailsBtn"
+						class="btn-edit-details"
+						onclick="openEditDetailsModal('view')"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+							<path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+						</svg>
+					</button>
+				</div>
+			</div>
+
+			<label>Observações:</label>
+			<textarea
+				id="viewOrder-obs"
+				name="obs"
+				rows="2"
+				maxlength="2048"
+				placeholder="---"
+			></textarea>
+			
+			<div class="modal-actions" id="viewOrder-modalActions">
+				<div></div>
+				<div>
+					<button type="button" class="btn-modal btn-edit" id="viewOrder-editBtn" onclick="updateOrderDeliveryDate('view'); enableEditOrder()">Editar</button>
+					<button type="button" class="btn-modal btn-save" id="viewOrder-saveBtn" style="display: none;" disabled onclick="updateOrder()">Salvar</button>
+					<button type="button" class="btn-modal btn-cancel" id="viewOrder-cancelBtn" style="display: none;" onclick="cancelEditOrder()">Cancelar</button>
+				</div>
+			</div>
+
+		</form>
+	</div>
+</div>

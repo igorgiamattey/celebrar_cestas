@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block nav_deliveries %}active{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/deliveries_styles.css')}}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/modal_styles.css')}}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tom-select.default.css')}}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+	
+	<div class="actions-col">
+		<div class="search-wrapper">
+			<span class="search-icon" id="search-icon"></span>
+			<input
+				class="search-bar"
+				type="text"
+				id="deliveries-search-bar"
+				placeholder="Pesquise entregador/data/status..."
+				title="Pesquise entregador/data/status..."
+				oninput="handleSearch()"
+			>
+			<button type="button" class="search-clear" id="search-clear" title="Limpar pesquisa"></button>
+		</div>
+		<div class="checkbox-container">
+			<input
+				class="checkbox"
+				type="checkbox"
+				id="deliveries-checkbox"
+			>
+			<label for="deliveries-checkbox">Mostrar apenas entregas não concluídas</label>
+		</div>
+		<button class="btn-add" onclick="openNewDeliveryModal()">CADASTRAR NOVA ENTREGA</button>
+	</div>
+
+	<div class="card">
+		<div class="card-body">
+			<div class="table-scroll">
+				<table class="mini-table">
+					<thead>
+						<tr>
+							{% for col in columns %}
+							<th>
+								{{col}}
+							</th>
+							{% endfor %}
+							<th></th>
+						</tr>
+					</thead>
+					<tbody id="deliveriesTableBody">
+						{% include 'deliveries/_deliveries_table_rows.html' %}
+					</tbody>
+				</table>
+			</div>
+			{% if total_pages > 1 %}
+				<div class="pagination">
+					{% if page > 1 %}
+						<a href="{{url_for('deliveries_bp.deliveries', page=page-1, search=search or None, openonly='true' if open_only else None)}}">&laquo;</a>
+					{% endif %}
+
+					<span>{{page}} de {{total_pages}}</span>
+
+					{% if page < total_pages %}
+						<a href="{{url_for('deliveries_bp.deliveries', page=page+1, search=search or None, openonly='true' if open_only else None)}}">&raquo;</a>
+					{% endif %}
+				</div>
+			{% endif %}
+		</div>
+	</div>
+
+</div>
+{% endblock %}
+
+{% block modals %}
+{% include 'deliveries/_view_delivery_modal.html' %}
+{% include 'deliveries/_register_delivery_modal.html' %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{url_for('static', filename='js/tom-select.complete.js')}}"></script>
+<script src="{{url_for('static', filename='js/modal.js')}}"></script>
+<script src="{{url_for('static', filename='js/deliveries_modal.js')}}"></script>
+<script src="{{url_for('static', filename='js/deliveries.js')}}"></script>
+{% endblock %}

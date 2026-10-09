@@ -1,0 +1,334 @@
+from flask import Blueprint, render_template
+
+from services.deliveries_service import get_deliveries
+from services.routes_service import (getAvailableAddresses,
+                                     getAvailableCouriers, getAvailableDates,
+                                     getAvailableDeliveryStatus,
+                                     getAvailableOrders)
+
+deliveries_bp = Blueprint("deliveries_bp", __name__)
+
+@deliveries_bp.route("/entregas")
+def deliveries():
+	columns, rows, page, total_pages, search = get_deliveries()
+
+	available_couriers = getAvailableCouriers()
+	available_dates = getAvailableDates()
+	available_orders = getAvailableOrders()
+	statuses = getAvailableDeliveryStatus()
+	available_addresses = getAvailableAddresses()
+
+	return render_template("deliveries/deliveries.html",
+						columns=columns,
+						rows=rows,
+						page=page,
+						total_pages=total_pages,
+						search=search,
+						user="Vendedor",
+						available_couriers=available_couriers,
+						available_dates=available_dates,
+						available_orders=available_orders,
+						statuses=statuses,
+						available_addresses=available_addresses)
+
+@deliveries_bp.route("/entregas/search")
+def deliveries_search():
+	columns, rows, _, _, _ = get_deliveries()
+
+	return render_template("deliveries/_deliveries_table_rows.html",
+							columns=columns,
+							rows=rows)
+
+# @deliveries_bp.route("/nova_entrega", methods=["POST"])
+# def new_order():
+# 	try:
+# 		items_payload = json.loads(request.form["items"])
+# 	except (KeyError, json.JSONDecodeError):
+# 		return "Itens do pedido inválidos", 400
+
+# 	try:
+# 		delivery_details = json.loads(request.form["deliveryDetails"])
+# 	except (KeyError, json.JSONDecodeError):
+# 		return "Detalhes de entrega inválidos", 400
+
+# 	try:
+# 		client = request.form["client"]
+# 		if not validate_id(Table.Clients, "id_cliente", client):
+# 			return "Cliente inválido", 400
+# 		date = validate_date(request.form["date"])
+# 		deliveryDate = validate_date(request.form["deliveryDate"], date, False)
+# 		orderPrice = validate_price(request.form["orderPrice"])	
+# 		status = validate_status(orderStatus.PENDING.name)
+# 		items_payload = validate_order_items(items_payload)
+# 		is_delivery = request.form.get("isDelivery")
+# 		is_delivery = validate_isDelivery_check(is_delivery, delivery_details)
+		
+# 		address_id = None
+# 		delivery_fee = 0.00
+
+# 		if is_delivery:
+# 			delivery_details = validate_delivery(delivery_details)
+
+# 			address_id = delivery_details.get("address_id")
+# 			address_txt = delivery_details.get("address_txt")
+# 			delivery_fee = delivery_details.get("delivery_fee")
+
+# 			if address_id is not None:
+# 				validate_address_belonging(client, address_id)
+				
+# 		obs = request.form.get('obs', '')
+# 		items = json.dumps(items_payload)
+
+# 		with run_transaction() as cursor:
+# 			validate_order_stock(cursor, items_payload)
+
+# 			if is_delivery and address_id is None:
+# 				cursor.execute("""
+# 				INSERT INTO IGOR_CG_ENDERECOS_CLIENTES
+# 				(id_cliente, endereco)
+# 				OUTPUT INSERTED.id_endereco
+# 				VALUES (?, ?)
+# 				""", (client, address_txt))
+
+# 				address_id = cursor.fetchone()[0]
+
+			
+# 			cursor.execute("""
+# 			INSERT INTO IGOR_CG_PEDIDOS
+# 			(id_cliente, data_pedido, data_entrega,
+# 			status_pedido, valor_pedido, observacao,
+# 			itens_pedido, isDelivery, id_endereco, taxa_entrega)
+# 			OUTPUT INSERTED.id_pedido
+# 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+# 			""", (client, date, deliveryDate, status, orderPrice, obs, items, is_delivery, address_id, delivery_fee))
+
+# 			order_id = cursor.fetchone()[0]
+		
+# 			for item in items_payload:
+# 				cursor.execute("""
+# 				INSERT INTO IGOR_CG_CESTAS_PEDIDO
+# 				(id_produto, id_pedido, quantidade)
+# 				VALUES (?, ?, ?)
+# 				""", (item['basket_id'], order_id, item['quantity']))
+		
+# 	except KeyError:
+# 		return "Dados do pedido inválidos", 400
+# 	except ValueError as e:
+# 		return str(e), 400
+
+# 	return redirect(request.referrer or url_for("deliveries_bp.orders"))
+
+# @deliveries_bp.route("/entregas/<int:id>/data")
+# def order_data(id):
+# 	columns, rows = run_select("""
+# 	SELECT
+# 	p.id_pedido, p.id_cliente, c.nome_razao,
+# 	p.data_pedido, p.data_entrega, p.status_pedido,
+# 	p.valor_pedido, p.observacao, p.itens_pedido,
+# 	p.isDelivery, p.id_endereco, p.taxa_entrega, p.valor_total
+# 	FROM IGOR_CG_PEDIDOS p
+# 	JOIN IGOR_CG_CLIENTES c
+# 	ON p.id_cliente = c.id_cliente
+# 	WHERE p.id_pedido = ? AND p.isDeleted = 0
+# 	""", (id,))
+
+# 	if not rows:
+# 		return jsonify({"error": "Item not found"}), 404
+
+# 	row = rows[0]
+# 	order = dict(zip(columns, row))
+
+# 	if order["status_pedido"] not in OPEN_ORDER_STATUS:
+# 		return jsonify({"error": "Pedido encerrado"}), 403
+
+# 	if order["data_pedido"]:
+# 		order["data_pedido"] = order["data_pedido"].strftime("%Y-%m-%d")
+# 	if order["data_entrega"]:
+# 		order["data_entrega"] = order["data_entrega"].strftime("%Y-%m-%d")
+
+# 	order["itens_pedido"] = json.loads(order["itens_pedido"])
+
+# 	baskets_ids = list({item["basket_id"] for item in order["itens_pedido"]})
+
+# 	if baskets_ids:
+# 		placeholders = ",".join("?" * len(baskets_ids))
+# 		_, basket_rows = run_select(f"""
+# 		SELECT
+# 		id_produto, nome_cesta, preco_venda
+# 		FROM IGOR_CG_PRODUTOS
+# 		WHERE isDeleted = 0
+# 		AND id_produto IN ({placeholders})
+# 		""", tuple(baskets_ids))
+# 	else:
+# 		basket_rows = []
+
+# 	basket_lookup = {
+# 		b_row[0]: {
+# 			"name": b_row[1],
+# 			"price": float(b_row[2])
+# 			if b_row[2] is not None else None
+# 		}
+# 		for b_row in basket_rows
+# 	}
+
+# 	for item in order["itens_pedido"]:
+# 		comp = get_basket_composition(item["basket_id"])
+# 		meta = basket_lookup.get(item["basket_id"], {})
+
+# 		item["basket_name"] = meta.get("name")
+# 		item["basket_price"] = meta.get("price")
+# 		item["groups"] = comp["groups"]
+
+# 		choices_by_group = {c["group_id"]: c["item_id"] for c in item.get("choices", [])}
+
+# 		for group in item["groups"]:
+# 			flat_choices = choices_by_group.get(group["group_id"], [])
+
+# 			group["selected"] = [
+# 				flat_choices[i:i + int(group["quantity"])]
+# 				for i in range(0, len(flat_choices), int(group["quantity"]))
+# 			]
+
+
+# 	order["allowed_status"] = list(get_allowed_status(order["status_pedido"]))
+
+# 	return jsonify(order)
+
+# @deliveries_bp.route("/entregas/update", methods=["POST"])
+# def update_order():
+# 	try:
+# 		id = request.form["id"]
+# 		if not validate_id(Table.Orders, "id_pedido", id):
+# 			raise ValueError("Pedido inválido")
+# 		status = validate_status(request.form["status"])
+# 	except KeyError:
+# 		return "Dados do pedido inválidos", 400
+# 	except ValueError as e:
+# 		return str(e), 400
+
+# 	_, data_rows = run_select("""
+# 	SELECT
+# 	id_cliente, data_pedido, data_entrega, status_pedido,
+# 	valor_pedido, observacao, itens_pedido
+# 	FROM IGOR_CG_PEDIDOS
+# 	WHERE id_pedido = ?
+# 	AND isDeleted = 0
+# 	""", (id,))
+
+# 	if not data_rows:
+# 		return "Pedido não encontrado.", 404
+
+# 	current_client = data_rows[0][0]
+# 	current_date = data_rows[0][1]
+# 	current_status = data_rows[0][3]
+# 	current_orderPrice = data_rows[0][4]
+# 	current_obs = data_rows[0][5]
+# 	current_items = data_rows[0][6]
+
+# 	if current_status not in OPEN_ORDER_STATUS:
+# 		return "Um pedido encerrado não pode ser alterado.", 400
+
+# 	try:
+# 		validate_status_transition(current_status, status)
+
+# 		if current_status == orderStatus.PENDING.name:
+# 			client = request.form["client"]
+# 			if not validate_id(Table.Clients, "id_cliente", client):
+# 				raise ValueError("Cliente inválido")
+# 			date = validate_date(request.form["date"])
+# 			orderPrice = validate_price(request.form["orderPrice"])
+# 			items_payload = validate_order_items(json.loads(request.form["items"]))
+# 			obs = request.form.get('obs', '')
+# 			items = json.dumps(items_payload)
+# 		else:
+# 			client = current_client
+# 			date = current_date
+# 			orderPrice = current_orderPrice
+# 			obs = current_obs
+# 			items = current_items
+# 			items_payload = json.loads(current_items)
+		
+# 		deliveryDate = validate_date(request.form["deliveryDate"], date, False)
+
+# 		delivery_details = json.loads(request.form["deliveryDetails"])
+# 		is_delivery = validate_isDelivery_check(request.form.get("isDelivery"), delivery_details)
+
+# 		address_id = None
+# 		address_txt = None
+# 		delivery_fee = 0.00
+
+# 		if is_delivery:
+# 			delivery_details = validate_delivery(delivery_details)
+# 			address_id = delivery_details.get("address_id")
+# 			address_txt = delivery_details.get("address_txt")
+# 			delivery_fee = delivery_details.get("delivery_fee")
+
+# 			if address_id is not None:
+# 				validate_address_belonging(client, address_id)
+
+# 	except (KeyError, TypeError):
+# 		return "Dados do pedido inválidos", 400
+# 	except ValueError as e:
+# 		return str(e), 400
+	
+# 	try:
+# 		with run_transaction() as cursor:
+# 			if is_delivery and address_id is None:
+# 				cursor.execute("""
+# 				INSERT INTO IGOR_CG_ENDERECOS_CLIENTES
+# 				(id_cliente, endereco)
+# 				OUTPUT INSERTED.id_endereco
+# 				VALUES (?, ?)
+# 				""", (client, address_txt))
+
+# 				address_id = cursor.fetchone()[0]
+
+# 			cursor.execute("""
+# 			UPDATE IGOR_CG_PEDIDOS
+# 			SET
+# 			id_cliente = ?,
+# 			data_pedido = ?,
+# 			data_entrega = ?,
+# 			status_pedido = ?,
+# 			valor_pedido = ?,
+# 			observacao = ?,
+# 			itens_pedido = ?,
+# 			isDelivery = ?,
+# 			id_endereco = ?,
+# 			taxa_entrega = ?
+# 			WHERE id_pedido = ?
+# 			AND status_pedido = ?
+# 			AND isDeleted = 0
+# 			""", (client, date, deliveryDate, status, orderPrice, obs, items, is_delivery, address_id, delivery_fee, id, current_status))
+
+# 			if cursor.rowcount != 1:
+# 				raise ValueError("O pedido já foi alterado. Recarregue a página.")
+			
+# 			changed = items_payload != json.loads(current_items)
+
+# 			if current_status == "PENDING":
+# 				if status == "CONFIRMED" or (status == "PENDING" and changed):
+# 					validate_order_stock(cursor, items_payload, exclude_order_id=id)
+
+# 				if status == "CONFIRMED":
+# 					update_order_stock(cursor, items_payload, "deduct", id)
+
+# 			if status == "CANCELLED" and current_status not in {"PENDING", "CANCELLED"}:
+# 				update_order_stock(cursor, items_payload, "increase", id)
+			
+# 			cursor.execute("""
+# 			DELETE FROM IGOR_CG_CESTAS_PEDIDO
+# 			WHERE id_pedido = ?
+# 			""", (id,))
+
+# 			for item in items_payload:
+# 				cursor.execute("""
+# 				INSERT INTO IGOR_CG_CESTAS_PEDIDO
+# 				(id_produto, id_pedido, quantidade)
+# 				VALUES (?, ?, ?)
+# 				""", (item['basket_id'], id, item['quantity']))
+
+# 	except ValueError as e:
+# 		return str(e), 400
+
+# 	return redirect(url_for("deliveries_bp.orders"))

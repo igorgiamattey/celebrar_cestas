@@ -1,0 +1,32 @@
+{% from "deliveries/_status_icons.html" import cancelled, pending, delivered, transit %}
+
+{% for row in rows %}
+{% set status = row[4] %}
+{% set closed = status in ['Entregue', 'Cancelado'] %}
+<tr>
+	{% for val in row %}
+		{% if loop.index == 5 %}
+			{% if val == 'Cancelada' %}
+				<td title="Cancelada">{{ cancelled() }}</td>
+			{% elif val == 'Entregue' %}
+				<td title="Entregue">{{ delivered() }}</td>
+			{% elif val == 'Em trânsito' %}
+				<td title="Em trânsito">{{ transit() }}</td>
+			{% elif val == 'Pendente' %}
+				<td title="Pendente">{{ pending() }}</td>
+			{% endif %}
+		{% else %}
+			<td title="{{val}}">{{val}}</td>
+		{% endif %}
+	{% endfor %}
+	<td>
+		<button class="btn-view" data-id="{{row[0]}}" onclick="openViewDeliveryModal(this.dataset.id)" {% if closed %}disabled title="Entrega concluída"{% endif %}>
+			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
+				<path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/>
+				<path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8m8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"/>
+			</svg>
+		</button>
+	</td>
+	
+</tr>
+{% endfor %}

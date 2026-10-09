@@ -3,9 +3,10 @@ from datetime import date
 
 from flask import request
 
-from db import format_currency, format_date_year, run_select
+from db import format_date_year, run_select
 from enums.movement_types import movementTypes
 from enums.order_status import orderStatus
+from enums.delivery_status import deliveryStatus
 
 def get_basket_composition(id):
 	_, rows = run_select(f"""
@@ -238,49 +239,40 @@ def get_available_stock(cursor, exclude_order_id=None):
 
 	return available_stock
 
-
-def get_orders():
+def get_deliveries():
 	page = request.args.get("page", 1, type=int)
 	page = max(page, 1)
 	search = request.args.get("search", "", type=str)
 	open_only = request.args.get("openonly", "false").lower() == "true"
 	per_page = 1000
 
-	where_clause = "WHERE p.isDeleted = 0"
+	where_clause = "WHERE d.isDeleted = 0"
 	params = []
 	if search:
 		search_param = f"%{search}%"
 		conditions = [
-			"c.nome_razao LIKE ?",
-			"""EXISTS (
-				SELECT 1
-				FROM IGOR_CG_CESTAS_PEDIDO cp
-				JOIN IGOR_CG_PRODUTOS pr
-				ON pr.id_produto = cp.id_produto
-				WHERE cp.id_pedido = p.id_pedido
-				AND pr.nome_cesta LIKE ?
-			)""",
-			"OR CONVERT(VARCHAR(10), p.data_entrega, 103) LIKE ?"
+			"c.nome_entregador LIKE ?",
+			"CONVERT(VARCHAR(10), d.data_entrega, 103) LIKE ?",
 		]
-		params.extend([search_param, search_param, search_param])
+		params.extend([search_param, search_param])
 
-		matching_status = [s.name for s in orderStatus if search.lower() in s.value.lower()]
+		matching_status = [s.name for s in deliveryStatus if search.lower() in s.value.lower()]
 		if matching_status:
-			conditions.append(f"d.status_pedido IN ({','.join('?' * len(matching_status))})")
+			conditions.append(f"d.status_entrega IN ({','.join('?' * len(matching_status))})")
 			params.extend(matching_status)
-		
+
 		where_clause += " AND (" + " OR ".join(conditions) + ")"
 
 	if open_only:
-			open_status = [orderStatus.PENDING.name, orderStatus.CONFIRMED.name, orderStatus.PREPARING.name, orderStatus.READY.name]
-			where_clause += f" AND d.status_pedido IN ({','.join('?' * len(open_status))})"
-			params.extend(open_status)
+		open_status = [deliveryStatus.PENDING.name, deliveryStatus.TRANSIT.name]
+		where_clause += f" AND d.status_entrega IN ({','.join('?' * len(open_status))})"
+		params.extend(open_status)
 
 	_, count_rows = run_select(f"""
 	SELECT COUNT(*)
-	FROM IGOR_CG_PEDIDOS p
-	JOIN IGOR_CG_CLIENTES c
-	ON p.id_cliente = c.id_cliente
+	FROM IGOR_CG_ENTREGAS d
+	LEFT JOIN IGOR_CG_ENTREGADORES c
+	ON d.id_entregador = c.id_entregador
 	{where_clause}
 	""", tuple(params))
 
@@ -292,31 +284,24 @@ def get_orders():
 
 	columns, rows = run_select(f"""
 	SELECT
-	p.id_pedido AS ID,
-	c.nome_razao AS Cliente,
-	COALESCE(items.summary, '') AS Itens,
-	p.data_entrega AS Entrega,
-	p.valor_total AS Valor,
-	p.status_pedido AS Status,
-	p.isDelivery AS [Retirada/Entrega]
-	FROM IGOR_CG_PEDIDOS p
-	JOIN IGOR_CG_CLIENTES c
-	ON p.id_cliente = c.id_cliente
-	OUTER APPLY (
-		SELECT
-		STUFF ((
-			SELECT
-			CHAR (10) + CAST(cp.quantidade AS VARCHAR) + ' ' + CHAR(215) + ' ' + pr.nome_cesta
-			FROM IGOR_CG_CESTAS_PEDIDO cp
-			JOIN IGOR_CG_PRODUTOS pr
-			ON pr.id_produto = cp.id_produto
-			WHERE cp.id_pedido = p.id_pedido
-			FOR XML PATH(''), TYPE
-		).value('.', 'NVARCHAR(MAX)'), 1, 1, '')
-		AS summary
-	) items
+	d.id_entrega AS ID,
+	d.data_entrega AS [Data de Entrega],
+	c.nome_entregador AS Entregador,
+	COUNT(o.id_pedido) AS [Num. Pedidos],
+	d.status_entrega AS Status
+	FROM IGOR_CG_ENTREGAS d
+	LEFT JOIN IGOR_CG_ENTREGADORES c
+		ON d.id_entregador = c.id_entregador
+	LEFT JOIN IGOR_CG_PEDIDOS o
+		ON o.id_entrega = d.id_entrega
+		AND o.isDeleted = 0
 	{where_clause}
-	ORDER BY p.data_entrega, p.id_pedido
+	GROUP BY
+		d.id_entrega,
+		d.data_entrega,
+		c.nome_entregador,
+		d.status_entrega
+	ORDER BY d.data_entrega, d.id_entrega
 	OFFSET ? ROWS
 	FETCH NEXT ? ROWS ONLY
 	""", (*params, offset, per_page))
@@ -324,12 +309,10 @@ def get_orders():
 	rows = [
 		(
 			row[0],
-			row[1].title(),
-			row[2],
-			format_date_year(row[3]),
-			format_currency(row[4]),
-			orderStatus[row[5]].value,
-			row[6]
+			format_date_year(row[1]),
+			row[2].title() if row[2] else "---",
+			row[3],
+			deliveryStatus[row[4]].value,
 		)
 		for row in rows
 	]
