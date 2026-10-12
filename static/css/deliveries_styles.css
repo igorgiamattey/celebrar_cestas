@@ -1,0 +1,86 @@
+.checkbox-container {
+	display: flex;
+	gap: 8px;
+	justify-content: left;
+	align-items: center;
+	margin-top: 5%;
+	margin-bottom: 5%;
+	width: 100%;
+}
+
+.checkbox-container label {
+	font-size: 0.85rem;
+	display: flex;
+}
+
+.checkbox {
+	justify-content: left;
+	display: flex;	
+	padding: 5px;
+	accent-color: var(--primary-color);
+}
+
+.mini-table td {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	vertical-align: middle;
+}
+
+.mini-table td > svg {
+	display: block;
+	margin: 0 auto;
+}
+
+.mini-table th:nth-child(2),
+.mini-table td:nth-child(2) {
+	width: 19%;
+	white-space: nowrap;
+}
+
+.mini-table th:nth-child(3),
+.mini-table td:nth-child(3) {
+	width: 25%;
+	white-space: normal;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.mini-table th:nth-child(4),
+.mini-table td:nth-child(4) {
+	width: 10%;
+	white-space: nowrap;
+	text-align: center;
+}
+
+.mini-table th:nth-child(5),
+.mini-table td:nth-child(5) {
+	width: 10%;
+	white-space: nowrap;
+	text-align: center;
+}
+
+.mini-table th:nth-child(6),
+.mini-table td:nth-child(6) {
+	width: 10%;
+	white-space: nowrap;
+	text-align: center;
+	vertical-align: middle;
+}
+
+.mini-table th:nth-child(7),
+.mini-table td:nth-child(7) {
+	width: 16%;
+	white-space: nowrap;
+	text-align: center;
+}
+
+.mini-table td:nth-child(6),
+.mini-table td:nth-child(7) {
+	color: var(--primary-color);
+}
+
+.mini-table th:last-child,
+.mini-table td:last-child {
+	width: 10%;
+	white-space: nowrap;
+}

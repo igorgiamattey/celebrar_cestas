@@ -55,7 +55,7 @@
 				<button class="btn-shortcut" onclick="openNewClientModal()">CADASTRAR CLIENTE</button>
 				<button class="btn-shortcut" onclick="openNewBasketModal()">CADASTRAR CESTA</button>
 				<button class="btn-shortcut" onclick="openNewOrderModal()">REGISTRAR PEDIDO</button>
-				<a href="{{ url_for('deliveries_bp.dispatch') }}" class="btn-shortcut">REVISAR EXPEDIÇÃO</a>
+				<button class="btn-shortcut" onclick="openNewDeliveryModal()">REGISTRAR ENTREGA</button>
 			</div>
 		</div>
 	</div>
@@ -123,6 +123,14 @@
 	<div class="alert-banner critical">
 		<div>
 			Você tem <strong>{{ late_orders }} {{'pedido atrasado' if late_orders == 1 else 'pedidos atrasados'}}</strong>!
+		</div>
+	</div>
+	{% endif %}
+
+	{% if no_delivery_orders > 0 %}
+	<div class="alert-banner">
+		<div>
+			Você tem <strong>{{ no_delivery_orders }} {{'pedido pronto' if no_delivery_orders == 1 else 'pedidos prontos'}}</strong> que não {{'está' if no_delivery_orders == 1 else 'estão'}} em nenhuma entrega!
 		</div>
 	</div>
 	{% endif %}

@@ -316,8 +316,10 @@ function openViewOrderModal(id) {
 			saveButton('view');
 		})
 		.catch(
-			err => console.error('Não foi possível abrir o pedido', err),
-			alert("Não foi possívela abrir o pedido.")
+			err => (
+				console.error('Não foi possível abrir o pedido', err),
+				alert("Não foi possívela abrir o pedido.")
+			)
 		);
 }
 

@@ -4,7 +4,8 @@ from flask import Blueprint, jsonify, render_template, request
 
 from db import format_date, run_select
 from enums.order_status import orderStatus
-from services.home_service import getCloseOrders, getMissingItems, getLateOrders
+from services.home_service import (getCloseOrders, getLateOrders,
+                                   getMissingItems, getNoDeliveryOrders)
 from services.routes_service import (getAvailableBaskets, getAvailableClients,
                                      getAvailableGroups, getAvailableItems,
                                      getAvailableOrderStatus)
@@ -101,6 +102,7 @@ def home():
 	missing_items = getMissingItems()
 	close_orders = getCloseOrders()
 	late_orders = getLateOrders()
+	no_delivery_orders = getNoDeliveryOrders()
 
 	return render_template("home/home.html",
 						rows=rows,
@@ -113,6 +115,7 @@ def home():
 						available_groups=available_groups,
 						available_clients=available_clients,
 						available_baskets=available_baskets,
+						no_delivery_orders=no_delivery_orders,
 						statuses=statuses,
 						missing_items=missing_items,
 						close_orders=close_orders,

@@ -115,3 +115,7 @@ function inputInt(input) {
 function inputPhone(input) {
 	input.value = input.value.replace(/[^0-9+() -]/g, '');
 }
+
+const noResults = text => ({
+	no_results: () => `<div class="no-results">${text}</div>`
+});

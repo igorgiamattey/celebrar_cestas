@@ -4,9 +4,8 @@
 			<h3>Registrar Entrega</h3>
 			<button type="button" class="btn-close" onclick="closeModal('newDelivery-modal')">&times;</button>
 		</div>
-		<form id="newDelivery-form" method="post" action="{{url_for('orders_bp.new_order')}}">
+		<form id="newDelivery-form" method="post" action="{{url_for('deliveries_bp.new_delivery')}}">
 			<input type="hidden" id="newDelivery-items" name="items">
-			<input type="hidden" id="newDelivery-deliveryDetails" name="deliveryDetails">
 			<div class="status-row">
 				<div class="form-group">
 					<label>Entregador:</label>
@@ -14,7 +13,7 @@
 						id="newDelivery-courier"
 						name="courier"
 						data-couriers='{{available_couriers|tojson}}'
-						placeholder="Selecione um entregador..."
+						placeholder="Selecione o entregador"
 					>
 				</div>
 
@@ -35,12 +34,7 @@
 						id="newDelivery-date"
 						name="date"
 						data-dates='{{available_dates|tojson}}'
-						placeholder="Selecione uma data para entrega..."
-						oninput="
-							toggleSaveButton(
-								['newDelivery-date'],
-								'newDelivery-saveBtn'
-							)"
+						placeholder="Selecione a data"
 					>
 				</div>
 
@@ -49,15 +43,18 @@
 					<input
 						id="newDelivery-orders"
 						data-orders='{{available_orders|tojson}}'
-						placeholder="Selecione uma pedido...">
+						placeholder="Selecione o pedido">
 				</div>
 
+				<div class="form-group form-group--btn">
+					<label>&nbsp;</label>
 					<button type="button" class="btn-modal btn-edit" onclick="addOrderToDelivery('new')">
 						+ Adicionar
 					</button>
+				</div>
 			</div>
 
-			<div id="newDelivery-orderList" class="delivery-items-list"></div>
+			<div id="newDelivery-orderList" class="delivery-orders-list"></div>
 			
 			<div class="modal-actions">
 				<button

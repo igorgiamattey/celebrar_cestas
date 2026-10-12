@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 
 import phonenumbers
 
@@ -7,6 +7,7 @@ from enums.movement_types import movementTypes
 from enums.order_status import OPEN_ORDER_STATUS, orderStatus
 from enums.table_names import Table
 from enums.unit_measurement import Unit
+from enums.delivery_status import deliveryStatus
 from services.order_service import (get_available_stock,
                                     get_basket_composition,
                                     get_stock_requirements)
@@ -76,9 +77,35 @@ def validate_date(value, min_date=None, required=True):
 
 	return parsed_date
 
-def validate_status(status):
+def validate_date_id(value):
+	try:
+		value = date.fromisoformat(value)
+	except (TypeError, ValueError):
+		return False
+
+	_, rows = run_select(f"""
+	SELECT 1
+	FROM IGOR_CG_PEDIDOS
+	WHERE isDeleted = 0
+	AND isDelivery = 1
+	AND id_entrega IS NULL
+	AND status_pedido = ?
+	AND data_entrega = ?
+	""", (orderStatus.READY.name, value))
+
+	return bool(rows)
+	
+
+def validate_order_status(status):
 	try:
 		return orderStatus[status].name
+	except KeyError:
+		raise ValueError("Status inválido")
+
+#pydead: keep
+def validate_delivery_status(status):
+	try:
+		return deliveryStatus[status].name
 	except KeyError:
 		raise ValueError("Status inválido")
 
@@ -126,8 +153,8 @@ def validate_phone(phone):
 	
 	return phone
 
-def validate_status_transition(current, new):
-	if not is_valid_transition(current, new):
+def validate_status_transition(current, new, mode):
+	if not is_valid_transition(current, new, mode):
 		raise ValueError(
 			f"Não é possível alterar o status de "
 			f"{current} para {new}"
@@ -203,7 +230,7 @@ def validate_isDelivery_check(is_delivery, details):
 			raise ValueError("Endereço e taxa de entrega só podem existir para entregas")
 
 	return int(is_delivery)
-
+	
 
 # ---------------------------
 
@@ -384,6 +411,35 @@ def validate_order_stock(cursor, items_payload, exclude_order_id=None):
 			raise ValueError(
 				f"Estoque insuficiente para o item {item_name}"
 			)
+
+def validate_delivery_orders(orders, delivery_date):
+	if not isinstance(orders, list) or not orders:
+		raise ValueError("A entrega deve conter pelo menos um pedido")
+
+	if not all(isinstance(order, int) and not isinstance(order, bool) for order in orders):
+		raise ValueError("Pedido inválido")
+
+	if len(set(orders)) != len(orders):
+		raise ValueError("Pedido duplicado")
+
+	placeholders = ", ".join("?" * len(orders))
+
+	_, rows = run_select(f"""
+	SELECT id_pedido
+	FROM IGOR_CG_PEDIDOS
+	WHERE isDeleted = 0
+	AND isDelivery = 1
+	AND id_entrega IS NULL
+	AND status_pedido = ?
+	AND data_entrega = ?
+	AND id_pedido IN ({placeholders})
+	""", (orderStatus.READY.name, delivery_date, *orders))
+
+	valid_ids = {row[0] for row in rows}
+	if valid_ids != set(orders):
+		raise ValueError("Um ou mais pedidos não são válidos para entrega")
+
+	return orders
 
 # ---------------------------
 

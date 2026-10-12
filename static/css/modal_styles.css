@@ -820,3 +820,120 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
+
+/* Deliveries */
+.delivery-orders-list {
+	width: 100%;
+	max-height: 120px;
+	overflow-y: auto;
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+	padding: 4px;
+	font-size: 0.8rem;
+	font-family: inherit;
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 3%;
+	box-sizing: border-box;
+}
+
+.delivery-orders-list:empty {
+	align-items: center;
+	justify-content: center;
+}
+
+.delivery-orders-list:empty::before {
+	content: "Nenhum pedido adicionado";
+	color: var(--text-header);
+	opacity: 0.6;
+	font-style: italic;
+}
+
+.delivery-orders-row {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 6px 8px;
+	border-bottom: 1px solid var(--border-color);
+	flex-shrink: 0;
+	box-sizing: border-box;
+}
+
+.delivery-orders-row:last-child {
+	border-bottom: none;
+}
+
+.delivery-orders-row:hover {
+	background-color: rgba(0, 0, 0, 0.03);
+}
+
+.delivery-orders-name {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.delivery-orders-actions {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	gap: 4px;
+}
+
+.order-row {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	margin-bottom: 2%;
+}
+
+.order-row .form-group {
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+.order-row .form-group label {
+	display: block;
+	margin-bottom: 4px;
+}
+
+.order-row .form-group > input,
+.order-row .form-group .ts-wrapper {
+	margin-bottom: 0;
+}
+
+.order-row .form-group > input {
+	height: 30px;
+	box-sizing: border-box;
+}
+
+.order-row .ts-wrapper {
+	width: 100%;
+	height: 30px;
+	box-sizing: border-box;
+}
+
+.order-row .ts-control {
+	height: 30px;
+	min-height: 30px;
+	padding: 4px 8px;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+}
+
+.order-row .ts-control::after {
+	display: none !important;
+}
+
+.order-row .form-group--btn {
+	flex: 0 0 auto;
+}
+
+.order-row .form-group--btn button {
+	height: 30px;
+	margin: 0;
+}

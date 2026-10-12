@@ -17,10 +17,11 @@ from services.validate_service import (validate_address_belonging,
                                        validate_id, validate_isDelivery_check,
                                        validate_order_items,
                                        validate_order_stock, validate_price,
-                                       validate_status,
+                                       validate_order_status,
                                        validate_status_transition)
 
 orders_bp = Blueprint("orders_bp", __name__)
+order_mode = "ORDER"
 
 @orders_bp.route("/pedidos")
 def orders():
@@ -75,7 +76,7 @@ def new_order():
 		date = validate_date(request.form["date"])
 		deliveryDate = validate_date(request.form["deliveryDate"], date, False)
 		orderPrice = validate_price(request.form["orderPrice"])	
-		status = validate_status(orderStatus.PENDING.name)
+		status = validate_order_status(orderStatus.PENDING.name)
 		items_payload = validate_order_items(items_payload)
 		is_delivery = request.form.get("isDelivery")
 		is_delivery = validate_isDelivery_check(is_delivery, delivery_details)
@@ -207,7 +208,7 @@ def order_data(id):
 			]
 
 
-	order["allowed_status"] = list(get_allowed_status(order["status_pedido"]))
+	order["allowed_status"] = sorted(get_allowed_status(order["status_pedido"], order_mode))
 
 	return jsonify(order)
 
@@ -217,7 +218,7 @@ def update_order():
 		id = request.form["id"]
 		if not validate_id(Table.Orders, "id_pedido", id):
 			raise ValueError("Pedido inválido")
-		status = validate_status(request.form["status"])
+		status = validate_order_status(request.form["status"])
 	except KeyError:
 		return "Dados do pedido inválidos", 400
 	except ValueError as e:
@@ -246,7 +247,7 @@ def update_order():
 		return "Um pedido encerrado não pode ser alterado.", 400
 
 	try:
-		validate_status_transition(current_status, status)
+		validate_status_transition(current_status, status, order_mode)
 
 		if current_status == orderStatus.PENDING.name:
 			client = request.form["client"]

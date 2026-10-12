@@ -1,11 +1,11 @@
-from db import run_select, format_date
+from db import format_date, run_select
 from enums.delivery_status import deliveryStatus
 from enums.order_status import orderStatus
 from enums.unit_measurement import Unit
 
 
 def getAvailableGroups():
-	_, rows = run_select(f"""
+	_, rows = run_select("""
 	SELECT
 	id_grupo,
 	nome_grupo
@@ -26,7 +26,7 @@ def getAvailableGroups():
 	return available_groups
 
 def getAvailableItems():
-	_, rows = run_select(f"""
+	_, rows = run_select("""
 	SELECT
 	id_insumo,
 	nome_insumo,
@@ -49,7 +49,7 @@ def getAvailableItems():
 	return available_items
 
 def getAvailableClients():
-	_, rows = run_select(f"""
+	_, rows = run_select("""
 	SELECT
 	id_cliente, nome_razao
 	FROM IGOR_CG_CLIENTES
@@ -68,7 +68,7 @@ def getAvailableClients():
 	return available_clients
 
 def getAvailableCouriers():
-	_, rows = run_select(f"""
+	_, rows = run_select("""
 	SELECT
 	id_entregador, nome_entregador
 	FROM IGOR_CG_ENTREGADORES
@@ -87,7 +87,7 @@ def getAvailableCouriers():
 	return available_couriers
 
 def getAvailableBaskets():
-	_, rows = run_select(f"""
+	_, rows = run_select("""
 	SELECT
 	id_produto, nome_cesta, preco_venda
 	FROM IGOR_CG_PRODUTOS
@@ -140,7 +140,7 @@ def getAvailableUnits():
 	return units
 
 def getAvailableAddresses():
-	_, rows = run_select(f"""
+	_, rows = run_select("""
 	SELECT
 	id_endereco, id_cliente, endereco
 	FROM IGOR_CG_ENDERECOS_CLIENTES
@@ -159,24 +159,24 @@ def getAvailableAddresses():
 
 	return available_addresses
 
-def getAvailableDates():
+def getAvailableDates(delivery_id=None):
 	status = orderStatus.READY.name
 
-	_, rows = run_select(f"""
+	_, rows = run_select("""
 	SELECT DISTINCT
 	data_entrega
 	FROM IGOR_CG_PEDIDOS
 	WHERE isDeleted = 0
 	AND isDelivery = 1
-	AND id_entrega IS NULL
+	AND (id_entrega IS NULL OR id_entrega = ?)
 	AND data_entrega IS NOT NULL
 	AND status_pedido = ?
 	ORDER BY data_entrega
-	""", (status,))
+	""", (delivery_id, status))
 
 	available_dates = [
 		{
-			"id": row[0],
+			"id": row[0].isoformat(),
 			"date": format_date(row[0])
 		}
 		for row in rows
@@ -184,11 +184,11 @@ def getAvailableDates():
 
 	return available_dates
 
-def getAvailableOrders():
+def getAvailableOrders(delivery_id=None):
 	status = orderStatus.READY.name
 
-	_, rows = run_select(f"""
-	SELECT
+	_, rows = run_select("""
+	SELECT  
 	p.id_pedido,
 	c.nome_razao,
 	a.endereco,
@@ -200,17 +200,17 @@ def getAvailableOrders():
 	ON p.id_endereco = a.id_endereco
 	WHERE p.isDeleted = 0
 	AND p.isDelivery = 1
-	AND p.id_entrega IS NULL
+	AND (p.id_entrega IS NULL OR p.id_entrega = ?)
 	AND p.status_pedido = ?
 	AND a.isDeleted = 0
 	ORDER BY p.data_entrega, p.id_pedido;
-	""", (status,))
+	""", (delivery_id, status))
 
 	available_orders = [
 		{
 			"id": row[0],
-			"title": (f"Pedido #{row[0]} | {row[1]} | {row[2]}"),
-			"date": row[3]
+			"title": (f"Pedido #{row[0]} | {row[1] or '---'} | {row[2] or '---'}"),
+			"date": row[3].isoformat()
 		}
 		for row in rows
 	]

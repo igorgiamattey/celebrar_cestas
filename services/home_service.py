@@ -1,4 +1,6 @@
 from db import run_select
+from enums.order_status import orderStatus
+
 
 def getMissingItems():
 	_, rows = run_select(f"""
@@ -34,5 +36,19 @@ def getLateOrders():
 	AND p.data_entrega < CAST(GETDATE() AS DATE)
 	AND p.status_pedido NOT IN ('DELIVERED', 'CANCELLED')
 	""",)
+
+	return rows[0][0]
+
+def getNoDeliveryOrders():
+	status = orderStatus.READY.name
+
+	_, rows = run_select(f"""
+	SELECT COUNT(*)
+	FROM IGOR_CG_PEDIDOS
+	WHERE isDeleted = 0
+	AND isDelivery = 1
+	AND id_entrega is NULL
+	AND status_pedido = ?
+	""", (status))
 
 	return rows[0][0]
