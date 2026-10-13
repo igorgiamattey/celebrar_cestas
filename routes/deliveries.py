@@ -333,7 +333,7 @@ def delete_courier(id):
 	return "", 204
 
 @deliveries_bp.route("/entregas/entregadores/<int:id>/data")
-def group_data(id):
+def courier_data(id):
 	_, rows = run_select("""
 	SELECT nome_entregador, telefone
 	FROM IGOR_CG_ENTREGADORES
