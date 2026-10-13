@@ -5,6 +5,7 @@
 			<button type="button" class="btn-close" onclick="closeModal('newDelivery-modal')">&times;</button>
 		</div>
 		<form id="newDelivery-form" method="post" action="{{url_for('deliveries_bp.new_delivery')}}">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 			<input type="hidden" id="newDelivery-items" name="items">
 			<div class="status-row">
 				<div class="form-group">

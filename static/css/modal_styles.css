@@ -489,6 +489,13 @@
 	color: var(--text-light);
 }
 
+.addr-form-group {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	width: 100%;
+}
+
 .order-items-list {
 	width: 100%;
 	max-height: 90px;

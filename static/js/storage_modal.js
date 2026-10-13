@@ -210,10 +210,13 @@ async function saveMove() {
 	move_qty = document.getElementById('newMove-quantity').value;
 	move_obs = document.getElementById('newMove-obs').value;
 
+
+	const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 	const response = await fetch(`/estoque/${id}/nova_movimentacao`, {
 		method: 'POST',
 		headers: {
-			'Content-Type': 'application/json'
+			'Content-Type': 'application/json',
+			'X-CSRFToken': csrfToken
 		},
 		body: JSON.stringify({
 			type: move_type,
@@ -236,7 +239,8 @@ async function saveMove() {
 function deleteItem() {
 	const id = document.getElementById('viewItem-id').value;
 	if (confirm('Tem certeza que deseja excluir este item?')) {
-		fetch(`/estoque/${id}/delete`, { method: 'POST' })
+		const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+		fetch(`/estoque/${id}/delete`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
 			.then(handleResponse)
 			.catch(handleError);
 	}
@@ -359,8 +363,10 @@ function saveGroup() {
 	formData.append('group_name', groupName);
 	formData.append('items', JSON.stringify(groupItems.map(i => [i.item_id, i.item_qty])));
 
+	const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 	fetch('/estoque/grupos/save', {
 		method: 'POST',
+		headers: {'X-CSRFToken': csrfToken},
 		body: formData
 	})
 	.then(handleResponse)
@@ -372,7 +378,8 @@ function deleteGroup() {
 	if (!groupId) return;
 	
 	if (confirm('Tem certeza que deseja excluir este grupo?')) {
-		fetch(`/estoque/grupos/${groupId}/delete`, {method: 'POST'})
+		const csrfToken = document.querySelector('input[name="csrf_token"]').value;	
+		fetch(`/estoque/grupos/${groupId}/delete`, {method: 'POST', headers: {'X-CSRFToken': csrfToken}})
 			.then(handleResponse)
 			.catch(handleError);
 	}

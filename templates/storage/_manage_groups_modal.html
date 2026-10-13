@@ -5,6 +5,7 @@
 			<button type="button" class="btn-close" onclick="closeModal('mngGroup-modal')">&times;</button>
 		</div>
 
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 		<label>Grupo Existente:</label>
 		<div>
 			<select id="mngGroup-groupSelect">

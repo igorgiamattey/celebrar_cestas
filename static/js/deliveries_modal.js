@@ -291,12 +291,6 @@ function openViewDeliveryModal(id) {
 			document.getElementById('viewDelivery-modal').style.display = "flex";
 			saveButton('view');
 		})
-		.catch(
-			err => (
-				console.error('Não foi possível abrir a entrega', err),
-				alert("Não foi possívela abrir a entrega.")
-			)
-		);
 }
 
 function saveNewDelivery() {
@@ -313,6 +307,8 @@ function updateDelivery() {
 
 function enableEditDelivery() {
 	const status = viewDeliveryStatusSelector.getValue();
+	if (status === "DELIVERED" || status === "CANCELLED")
+		return;
 	viewDeliveryStatusSelector.enable();
 	viewDeliveryCourierSelector.enable();
 
@@ -343,6 +339,10 @@ function cancelEditDelivery() {
 }
 
 function resetViewDeliveryModalState() {
+	const status = viewDeliveryStatusSelector.getValue();
+	document.getElementById('viewDelivery-editBtn').style.display = 'inline-block';
+	if (status === "DELIVERED" || status === "CANCELLED")
+		document.getElementById('viewDelivery-editBtn').style.display = 'none';
 	viewDeliveryCourierSelector.disable();
 	viewDeliveryDateSelector.disable();
 	viewDeliveryStatusSelector.disable();
@@ -350,7 +350,6 @@ function resetViewDeliveryModalState() {
 	document.getElementById('viewDelivery-addOrderRow').style.display = 'none';
 	viewDeliveryOrderSelector.disable()
 	
-	document.getElementById('viewDelivery-editBtn').style.display = 'inline-block';
 	document.getElementById('viewDelivery-saveBtn').style.display = 'none';
 	document.getElementById('viewDelivery-cancelBtn').style.display = 'none';
 
@@ -553,9 +552,11 @@ function saveCourier() {
 	
 	formData.append('courier_name', name);
 	formData.append('courier_phone', phone);
-
+	
+	const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 	fetch('/entregas/entregadores/save', {
 		method: 'POST',
+		headers: {'X-CSRFToken': csrfToken},
 		body: formData
 	})
 	.then(handleResponse)
@@ -598,7 +599,8 @@ function deleteCourier(courier, index) {
 		return;
 	}
 	
-	fetch(`/entregas/entregadores/${courierId}/delete`, {method: 'POST'})
+	const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+	fetch(`/entregas/entregadores/${courierId}/delete`, {method: 'POST', headers: {'X-CSRFToken': csrfToken}})
 		.then(handleResponse)
 		.then(() => {
 			couriers.splice(index, 1);

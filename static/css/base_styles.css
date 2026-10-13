@@ -115,6 +115,76 @@ nav a:hover, nav a.active {
 	text-align: right;
 	font-size: 0.85rem;
 	color: var(--secondary-color);
+	position: relative;
+}
+
+.user-menu-toggle {
+	padding: 8px 12px;
+	border: none;
+	border-radius: 6px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+}
+
+.user-menu-toggle:hover {
+	text-decoration: underline;
+}
+
+.user-dropdown {
+	display: none;
+	position: absolute;
+	top: calc(100% + 6px);
+	right: 0;
+	min-width: 160px;
+	padding: 6px;
+	background-color: var(--bg-header);
+	border: 2px solid var(--border-color);
+	border-radius: 8px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	text-align: left;
+	z-index: 1000;
+}
+
+.user-dropdown.show {
+	display: block;
+}
+
+.dropdown-logout {
+	display: flex;
+	gap: 8px;
+	width: 100%;
+	padding: 10px 12px;
+	border: none;
+	border-radius: 5px;
+	background: transparent;
+	color: var(--primary-color);
+	font: inherit;
+	text-align: left;
+	text-decoration: none;
+	cursor: pointer;
+	box-sizing: border-box;
+}
+
+.dropdown-logout:hover {
+	text-decoration: underline;
+}
+
+.dropdown-logout .door-open {
+	display: none;
+}
+
+.dropdown-logout:hover .door-closed {
+	display: none;
+}
+
+.dropdown-logout:hover .door-open {
+	display: inline-block;
+}
+
+.user-dropdown form {
+	margin: 0;
 }
 
 .dashboard-container {

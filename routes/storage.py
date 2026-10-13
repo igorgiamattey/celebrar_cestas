@@ -1,19 +1,18 @@
 from flask import (Blueprint, json, jsonify, redirect, render_template,
-                   request, url_for)
+                   request, session, url_for)
 
-from db import (format_date, run_select, run_transaction,
-                run_update)
-from enums.movement_types import movementTypes
+from db import format_date, run_select, run_transaction, run_update
+from enums.movement_types import storageMovementTypes
 from enums.table_names import Table
-from services.order_service import update_stock
+from services.order_service import get_available_stock, update_stock
 from services.routes_service import getAvailableUnits
-from services.storage_service import group_exists, item_exists, get_storage
+from services.storage_service import get_storage, group_exists, item_exists
 from services.validate_service import (group_has_open_orders,
                                        item_has_open_orders,
                                        validate_group_items, validate_id,
                                        validate_move, validate_name,
-                                       validate_price, validate_qty,
-                                       validate_unit)
+                                       validate_opt_text, validate_price,
+                                       validate_qty, validate_unit)
 
 storage_bp = Blueprint("storage_bp", __name__)
 
@@ -48,8 +47,8 @@ def storage():
 	]
 
 	available_movements = [
-		movementTypes.ENTRADA,
-		movementTypes.SAIDA
+		storageMovementTypes.ENTRADA,
+		storageMovementTypes.SAIDA
 	]
 
 	return render_template("storage/storage.html",
@@ -58,7 +57,7 @@ def storage():
 						page=page,
 						total_pages=total_pages,
 						search=search,
-						user="Vendedor",
+						user=session.get("username"),
 						available_groups=groups_rows,
 						available_items=available_items,
 						available_movements=available_movements,
@@ -113,18 +112,40 @@ def item_data(id):
 
 @storage_bp.route("/estoque/falta")
 def storage_miss():
+	with run_transaction() as cursor:
+		available_stock = get_available_stock(cursor)
+
 	_, rows = run_select(f"""
 	SELECT
-	nome_insumo AS Nome,
-	unidade_medida AS Unidade,
-	qtd_estoque AS Quantidade
+	id_insumo,
+	nome_insumo,
+	unidade_medida,
+	qtd_estoque,
+	estoque_minimo
 	FROM IGOR_CG_ESTOQUE
-	WHERE isDeleted = 0 AND qtd_estoque <= estoque_minimo
+	WHERE isDeleted = 0
 	""")
 
-	lines = [
-		f"{row[0]}: {row[2]} {row[1].lower()}" for row in rows
-	]
+	lines = []
+
+	for row in rows:
+		item_id = row[0]
+		name = row[1]
+		unit = row[2].lower()
+		physical_stock = row[3]
+		minimun_stock = row[4]
+
+		available = available_stock.get(item_id, physical_stock)
+
+		if available <= minimun_stock:
+			reserved = physical_stock - available
+
+			lines.append(
+				f"{name}: disponível {available} {unit}; "
+				f"físico {physical_stock} {unit}; "
+				f"reservado {reserved} {unit}; "
+				f"mínimo {minimun_stock} {unit}"
+			)
 
 	text = "\n".join(lines)
 
@@ -144,7 +165,7 @@ def storage_moves(id):
 	movements = [
 		{
 		"type": row[0],
-		"type_value": movementTypes[row[0]].value,
+		"type_value": storageMovementTypes[row[0]].value,
 		"quantity": row[1],
 		"date": format_date(row[2]),
 		"observation": row[3]
@@ -164,14 +185,13 @@ def save_move(id):
 	try:
 		movement_type = validate_move(data["type"])
 		quantity = validate_qty(data["quantity"])
-		
-		obs = data.get("obs", "")
+		obs = validate_opt_text(data.get("obs", ""), "Observação", 255)
 
 		with run_transaction() as cursor:
-			if movement_type == movementTypes.SAIDA.name:
+			if movement_type == storageMovementTypes.SAIDA.name:
 				update_stock(cursor, id, quantity, None, "deduct", movement_type, obs)
 
-			elif movement_type == movementTypes.ENTRADA.name:
+			elif movement_type == storageMovementTypes.ENTRADA.name:
 				update_stock(cursor, id, quantity, None, "increase", movement_type, obs)
 
 			else:
@@ -179,7 +199,9 @@ def save_move(id):
 
 		return jsonify({"success": True})
 				
-
+	except (KeyError, TypeError):
+		return jsonify({"error": "Dados incompletos ou inválidos"}), 400
+	
 	except ValueError as e:
 		return jsonify({"error": str(e)}), 400
 
@@ -189,6 +211,8 @@ def update_item():
 		id = request.form["id"]
 		if not validate_id(Table.Items, "id_insumo", id):
 			raise ValueError("Item inválido")
+		if item_has_open_orders(id):
+			raise ValueError("Esse item faz parte de um pedido em aberto")
 		name = validate_name(request.form["name"])
 		unit = validate_unit(request.form["unit"])
 		minimal = validate_qty(request.form["minimal"])

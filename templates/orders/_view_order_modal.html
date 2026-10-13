@@ -5,6 +5,7 @@
 			<button type="button" class="btn-close" onclick="closeModal('viewOrder-modal')">&times;</button>
 		</div>
 		<form id="viewOrder-form" method="post" action="{{url_for('orders_bp.update_order')}}">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 			<input type="hidden" id="viewOrder-id" name="id">
 			<input type="hidden" id="viewOrder-items" name="items">
 			<input type="hidden" id="viewOrder-deliveryDetails" name="deliveryDetails">

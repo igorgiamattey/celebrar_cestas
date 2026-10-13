@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, render_template, request, session
 
 from db import format_date, run_select
 from enums.order_status import orderStatus
@@ -12,7 +12,7 @@ from services.routes_service import (getAvailableBaskets, getAvailableClients,
 
 home_bp = Blueprint("home_bp", __name__)
 
-@home_bp.route("/")
+@home_bp.route("/home")
 def home(): 
 	page = request.args.get("page", 1, type=int)
 	page = max(page, 1)
@@ -110,7 +110,7 @@ def home():
 						page=page,
 						total_pages=total_pages,
 						finances=finances,
-						user="Vendedor",
+						user=session.get("username"),
 						available_items=available_items,
 						available_groups=available_groups,
 						available_clients=available_clients,

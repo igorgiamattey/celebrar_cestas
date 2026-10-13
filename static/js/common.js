@@ -21,6 +21,38 @@ function submitModal(id) {
 		.catch(handleError);
 }
 
+document.addEventListener("DOMContentLoaded", () => {
+	const toggle = document.querySelector(".user-menu-toggle");
+	const dropdown = document.getElementById("user-dropdown");
+
+	if (!toggle || !dropdown) return;
+
+	function closeDropdown() {
+		dropdown.classList.remove("show");
+		toggle.setAttribute("aria-expanded", "false");
+	}
+
+	toggle.addEventListener("click", (event) => {
+		event.stopPropagation();
+
+		const isOpen = dropdown.classList.toggle("show");
+		toggle.setAttribute("aria-expanded", String(isOpen));
+	});
+
+	document.addEventListener("click", (event) => {
+		if (!event.target.closest(".user-menu")) {
+			closeDropdown();
+		}
+	});
+
+	document.addEventListener("keydown", (event) => {
+		if (event.key === "Escape") {
+			closeDropdown();
+			toggle.focus();
+		}
+	});
+});
+
 document.getElementById('search-icon').innerHTML = ICON_SEARCH;
 
 const searchClear = document.getElementById('search-clear');
@@ -114,6 +146,10 @@ function inputInt(input) {
 
 function inputPhone(input) {
 	input.value = input.value.replace(/[^0-9+() -]/g, '');
+}
+
+function inputUserMail(input) {
+	input.value = input.value.replace(/[^A-Za-z0-9._@+-]/g, '')
 }
 
 const noResults = text => ({

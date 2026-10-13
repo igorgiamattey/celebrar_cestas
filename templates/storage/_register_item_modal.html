@@ -5,6 +5,7 @@
 			<button type="button" class="btn-close" onclick="closeModal('newItem-modal')">&times;</button>
 		</div>
 		<form id="newItem-form" method="post" action="{{url_for('storage_bp.new_item')}}">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 			<label>Item*:</label>
 			<input type="text" id="newItem-name" name="name" oninput="toggleSaveButton(['newItem-name','newItem-amount','newItem-unit','newItem-minimal','newItem-cost'], 'newItem-saveBtn')">
 			

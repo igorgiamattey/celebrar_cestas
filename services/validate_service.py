@@ -1,13 +1,14 @@
-from datetime import datetime, date
+import math
+from datetime import date, datetime
 
 import phonenumbers
 
 from db import parse_price, run_select
-from enums.movement_types import movementTypes
+from enums.delivery_status import OPEN_DELIVERY_STATUS, deliveryStatus
+from enums.movement_types import storageMovementTypes
 from enums.order_status import OPEN_ORDER_STATUS, orderStatus
 from enums.table_names import Table
 from enums.unit_measurement import Unit
-from enums.delivery_status import deliveryStatus, OPEN_DELIVERY_STATUS
 from services.order_service import (get_available_stock,
                                     get_basket_composition,
                                     get_stock_requirements)
@@ -19,6 +20,9 @@ def validate_qty(qty, allow_zero=False):
 		qty = float(qty)
 	except (TypeError, ValueError):
 		raise ValueError("Quantidade Inválida")
+
+	if not math.isfinite(qty):
+		raise ValueError("Quantidade não pode ser infinita")
 
 	if qty < 0:
 		raise ValueError("A quantidade não pode ser negativa")
@@ -110,7 +114,7 @@ def validate_delivery_status(status):
 
 def validate_move(move):
 	try:
-		return movementTypes[move].name
+		return storageMovementTypes[move].name
 	except KeyError:
 		raise ValueError("Tipo de Movimentação inválida")
 
@@ -178,22 +182,20 @@ def validate_delivery(delivery_details):
 	if not isinstance(delivery_details, dict):
 		raise ValueError("Detalhes de entrega inválidos")
 	
-	address_id = delivery_details.get("address_id") or None
+	address_id = delivery_details.get("address_id")
+	if address_id == "":
+		address_id = None
 	address_txt = delivery_details.get("address_txt")
 	delivery_fee = delivery_details.get("delivery_fee")
 	
-	if address_txt:
-		address_txt = validate_address(address_txt)
+	if not address_txt:
+		raise ValueError("Entrega precisa de um endereço")
+	
+	address_txt = validate_address(address_txt)
 
 	if address_id is not None:
 		if not validate_id(Table.Addresses, "id_endereco", address_id):
 			raise ValueError("Endereço inválido")
-	
-	if address_id is None and not address_txt:
-		raise ValueError("Entrega precisa de um endereço")
-
-	if address_id is not None and address_txt:
-		raise ValueError("Informe apenas um endereço cadastrado ou um novo endereço")
 
 	delivery_details["address_id"] = address_id
 	delivery_details["delivery_fee"] = validate_price(delivery_fee, allow_free=True)
@@ -229,7 +231,20 @@ def validate_isDelivery_check(is_delivery, details):
 			raise ValueError("Endereço e taxa de entrega só podem existir para entregas")
 
 	return int(is_delivery)
+
+def validate_opt_text(value, field_name, max_len):
+	if value is None:
+		return ""
 	
+	if not isinstance(value, str):
+		raise ValueError(f"{field_name} inválido(a)")
+
+	value = value.strip()
+
+	if len(value) > max_len:
+		raise ValueError(f"{field_name} deve ter no máximo {max_len} caracteres.")
+
+	return value
 
 # ---------------------------
 
@@ -348,7 +363,7 @@ def validate_group_items(items):
 
 	in_group = set()
 
-	for item in items:
+	for index, item in enumerate(items):
 		if not isinstance(item, (list, tuple)) or len(item) != 2:
 			raise ValueError("Item do grupo inválido")
 
@@ -378,6 +393,8 @@ def validate_group_items(items):
 			item_qty = validate_int_qty(item_qty)
 		else:
 			item_qty = validate_qty(item_qty)
+
+		items[index] = (item_id, item_qty)
 
 	return items
 

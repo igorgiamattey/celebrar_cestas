@@ -5,6 +5,7 @@
 			<button type="button" class="btn-close" onclick="closeModal('newBasket-modal')">&times;</button>
 		</div>
 		<form id="newBasket-form" method="post" action="{{url_for('catalogue_bp.new_basket')}}">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 			<input type="hidden" id="newBasket-items" name="items">
 			<label>Nome*:</label>
 			<input type="text" id="newBasket-name" name="name" oninput="toggleSaveButton(['newBasket-name', 'newBasket-price'], 'newBasket-saveBtn', [newBasketItems])">

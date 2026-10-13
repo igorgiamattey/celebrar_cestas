@@ -11,17 +11,13 @@
 			</button>
 		</div>
 
-		<div class="form-group">
+		<div class="addr-form-group">
 			<label>Endereço*:</label>
 			<input
 				id="newOrder-address"
 				data-addresses='{{available_addresses|tojson}}'
 				placeholder="Selecione um Endereço..."
 			>
-		</div>
-
-		<div class="form-group" id="newOrder-newAddressRow" style="display: none;">
-			<label>Novo Endereço*:</label>
 			<textarea
 				id="newOrder-newAddressText"
 				name="newAddressText"

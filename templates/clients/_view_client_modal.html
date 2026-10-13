@@ -5,6 +5,7 @@
 			<button type="button" class="btn-close" onclick="closeModal('viewClient-modal')">&times;</button>
 		</div>
 		<form id="viewClient-form" method="post" action="{{url_for('clients_bp.update_client')}}">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 			<input type="hidden" id="viewClient-id" name="id">
 
 			<label>Nome*:</label>

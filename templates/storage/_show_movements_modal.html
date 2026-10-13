@@ -4,6 +4,7 @@
 			<h3>Movimentações de Estoque</h3>
 			<button type="button" class="btn-close" onclick="closeModal('stockMovements-modal')">&times;</button>
 		</div>
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 		<div id="stockMovements-content" class="movements-list"></div>
 
 		<div class="new-move-container">

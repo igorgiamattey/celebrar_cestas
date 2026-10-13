@@ -2,7 +2,7 @@ import json
 from datetime import date
 
 from flask import (Blueprint, jsonify, redirect, render_template, request,
-                   url_for)
+                   url_for, session)
 
 from db import run_select, run_transaction
 from enums.delivery_status import OPEN_DELIVERY_STATUS, deliveryStatus
@@ -39,7 +39,7 @@ def deliveries():
 						page=page,
 						total_pages=total_pages,
 						search=search,
-						user="Vendedor",
+						user=session.get("username"),
 						available_couriers=available_couriers,
 						available_dates=available_dates,
 						available_orders=available_orders,
@@ -121,9 +121,6 @@ def delivery_data(id):
 
 	row = rows[0]
 	delivery = dict(zip(columns, row))
-
-	if delivery["status_entrega"] not in OPEN_DELIVERY_STATUS:
-		return jsonify({"error": "Entrega encerrada"}), 403
 
 	if delivery["data_entrega"]:
 		delivery["data_entrega"] = delivery["data_entrega"].strftime("%Y-%m-%d")

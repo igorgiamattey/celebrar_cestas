@@ -99,14 +99,20 @@ const newOrderAddressSelector = new TomSelect('#newOrder-address', {
 	maxOptions: null,
 	onChange: function(value) {
 		const isNew = value === NEW_ADDRESS_ID;
-		document.getElementById('newOrder-newAddressRow').style.display = isNew ? 'block' : 'none';
-		document.getElementById('newOrder-address').value = isNew ? '' : value;
-		if (isNew) document.getElementById('newOrder-newAddressText').value = '';
+		const addressTxt = document.getElementById('newOrder-newAddressText');
+
+		if (isNew)
+			addressTxt.value = '';
+		else {
+			const address = availableAddresses.find(
+				addr => String(addr.id) === String(value)
+			);
+			addressTxt.value = address ? address.endereco : '';
+		}
 	}
 });
 
 function refreshAddressOptions(clientId, mode) {
-	document.getElementById(`${mode}Order-newAddressRow`).style.display = 'none';
 	const addrSelector = mode === 'new'
 		? newOrderAddressSelector
 		: viewOrderAddressSelector
@@ -192,9 +198,16 @@ if (viewOrderForm) {
 		maxOptions: null,
 		onChange: function(value) {
 			const isNew = value === NEW_ADDRESS_ID;
-			document.getElementById('viewOrder-newAddressRow').style.display = isNew ? 'block' : 'none';
-			document.getElementById('viewOrder-address').value = isNew ? '' : value;
-			if (isNew) document.getElementById('viewOrder-newAddressText').value = '';
+			const addressTxt = document.getElementById('viewOrder-newAddressText');
+
+			if (isNew)
+				addressTxt.value = '';
+			else {
+				const address = availableAddresses.find(
+					addr => String(addr.id) === String(value)
+				);
+				addressTxt.value = address ? address.endereco : '';
+			}
 		}
 	});
 
@@ -247,7 +260,6 @@ function openNewOrderModal() {
 	};
 
 	newOrderAddressSelector.clear(true);
-	document.getElementById('newOrder-newAddressRow').style.display = 'none';
 
 	newOrderBaskets = [];
 	newOrderPriceManuallySet = false;
@@ -285,19 +297,24 @@ function openViewOrderModal(id) {
 			document.getElementById('viewOrder-orderPrice').value = data.valor_pedido;
 
 			document.getElementById('viewOrder-deliveryFee').value = data.taxa_entrega;
-			document.getElementById('viewOrder-newAddressText').value = '';
 
 			const isDeliveryElement = document.getElementById('viewOrder-isDelivery');
 			isDeliveryElement.checked = Boolean(data.isDelivery);
 			getDeliveryState(isDeliveryElement, 'view')
 			updateOrderTotal('view');
 
-			if (data.isDelivery && data.id_endereco != null)
-				viewOrderAddressSelector.setValue(data.id_endereco);
+			const savedAddr = availableAddresses.find(
+				addr => String(addr.id) === String(data.id_endereco)
+			);
 			
+			if (data.isDelivery && data.id_endereco != null){
+				viewOrderAddressSelector.setValue(data.id_endereco);
+				document.getElementById('viewOrder-newAddressText').value = savedAddr ? savedAddr.endereco : '';
+			}
+
 			viewOrderDeliveryDetails = {
 				address_id: data.id_endereco,
-				address_txt: null,
+				address_txt: savedAddr ? savedAddr.endereco : null,
 				delivery_fee: data.taxa_entrega
 			};
 
@@ -324,12 +341,6 @@ function openViewOrderModal(id) {
 			document.getElementById('viewOrder-modal').style.display = "flex";
 			saveButton('view');
 		})
-		.catch(
-			err => (
-				console.error('Não foi possível abrir o pedido', err),
-				alert("Não foi possívela abrir o pedido.")
-			)
-		);
 }
 
 function saveNewOrder() {
@@ -346,7 +357,7 @@ function updateOrder() {
 		const noLongerDelivery = !document.getElementById('viewOrder-isDelivery').checked;
 
 		if ((dateChanged || noLongerDelivery) && !confirm(
-			`Este pedido está faz parte da entrega #${originalOrderValues.id_entrega}. ` +
+			`Este pedido faz parte da entrega #${originalOrderValues.id_entrega}. ` +
 			`Alterar a data ou mudar a forma de entrega vai removê-lo. Continuar?`
 		)) {
 			return;
@@ -391,6 +402,8 @@ function openBasketComposition(mode, index, editable) {
 
 function enableEditOrder() {
 	const status = viewOrderStatusSelector.getValue();
+	if (status === "DELIVERED" || status === "CANCELLED")
+		return;
 	const isDeliveryElement = document.getElementById('viewOrder-isDelivery');
 	
 	document.getElementById('viewOrder-deliveryDate').disabled = false;
@@ -442,9 +455,13 @@ function cancelEditOrder() {
 	if (originalOrderValues.isDelivery && originalOrderValues.id_endereco !== null)
 		viewOrderAddressSelector.setValue(originalOrderValues.id_endereco, true);
 
+	const savedAddr = availableAddresses.find(
+		addr => String(addr.id) === String(originalOrderValues.id_endereco)
+	);
+
 	viewOrderDeliveryDetails = {
 		address_id: originalOrderValues.id_endereco,
-		address_txt: null,
+		address_txt: savedAddr ? savedAddr.endereco : null,
 		delivery_fee: originalOrderValues.taxa_entrega
 	};
 
@@ -455,6 +472,11 @@ function cancelEditOrder() {
 }
 
 function resetViewOrderModalState() {
+	const status = viewOrderStatusSelector.getValue();
+	document.getElementById('viewOrder-editBtn').style.display = 'inline-block';
+	if (status === "DELIVERED" || status === "CANCELLED")
+		document.getElementById('viewOrder-editBtn').style.display = 'none';
+
 	viewOrderClientSelector.disable();
 	document.getElementById('viewOrder-date').disabled = true;
 	document.getElementById('viewOrder-deliveryDate').disabled = true;
@@ -467,7 +489,6 @@ function resetViewOrderModalState() {
 	viewOrderBasketSelector.disable()
 	document.getElementById('viewOrder-basketQty').disabled = true;
 	
-	document.getElementById('viewOrder-editBtn').style.display = 'inline-block';
 	document.getElementById('viewOrder-saveBtn').style.display = 'none';
 	document.getElementById('viewOrder-cancelBtn').style.display = 'none';
 
@@ -827,16 +848,14 @@ function cancelDeliveryDetails(mode) {
 
 	else {
 		document.getElementById(`${mode}Order-deliveryFee`).value = details.delivery_fee;
-
+			
 		if (details.address_id != null) {
 			selector.setValue(details.address_id, true);
-			document.getElementById(`${mode}Order-newAddressRow`).style.display = 'none';
-			document.getElementById(`${mode}Order-newAddressText`).value = '';
+			document.getElementById(`${mode}Order-newAddressText`).value = details.address_txt || '';
 		}
 
 		else {
 			selector.setValue(NEW_ADDRESS_ID, true);
-			document.getElementById(`${mode}Order-newAddressRow`).style.display = 'block';
 			document.getElementById(`${mode}Order-newAddressText`).value = details.address_txt;
 		}
 
@@ -928,25 +947,25 @@ function confirmDeliveryDetails(mode) {
 	const newAddressText = document.getElementById(`${mode}Order-newAddressText`);
 	const deliveryFee = document.getElementById(`${mode}Order-deliveryFee`);
 
+	const addressTxt = newAddressText.value.trim();
+
 	if (!selector.getValue()) {
 		alert('Selecione um endereço.');
 		return;
 	}
 
-	if (selector.getValue() === NEW_ADDRESS_ID && !newAddressText.value.trim()) {
-		alert('Informe o novo endereço.');
+	if (!addressTxt) {
+		alert('Informe um endereço válido.');
 		return;
 	}
-	
-	if (selector.getValue() === NEW_ADDRESS_ID) {
-		details["address_id"] = null;
-		details["address_txt"] = newAddressText.value;
-	}
+		
+	if (selector.getValue() === NEW_ADDRESS_ID)
+		details.address_id = null;
 
-	else {
-		details["address_id"] = selector.getValue();
-		details["address_txt"] = null;
-	}
+	else
+		details.address_id = selector.getValue();
+
+	details.address_txt = addressTxt;
 
 	details['delivery_fee'] = deliveryFee.value.trim() || "0";
 	closeModal(`${mode}-deliveryOrder-modal`);

@@ -5,6 +5,7 @@
 			<button type="button" class="btn-close" onclick="closeModal('newClient-modal')">&times;</button>
 		</div>
 		<form id="newClient-form" method="post" action="{{url_for('clients_bp.new_client')}}">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 			<label>Nome*:</label>
 			<input type="text" id="newClient-name" name="name" oninput="toggleSaveButton(['newClient-name', 'newClient-phone'], 'newClient-saveBtn')">
 			

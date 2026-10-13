@@ -4,7 +4,7 @@ from datetime import date, datetime
 from flask import request
 
 from db import format_currency, format_date_year, run_select
-from enums.movement_types import movementTypes
+from enums.movement_types import storageMovementTypes
 from enums.order_status import orderStatus
 
 def get_basket_composition(id):
@@ -103,8 +103,8 @@ def update_stock(cursor, item_id, qty, order_id, operation, move_type, obs=""):
 
 def update_order_stock(cursor, items_payload, operation, order_id=None):
 	move = {
-		"deduct": movementTypes.SAIDA_PEDIDO,
-		"increase": movementTypes.ENTRADA_PEDIDO
+		"deduct": storageMovementTypes.SAIDA_PEDIDO,
+		"increase": storageMovementTypes.ENTRADA_PEDIDO
 	}.get(operation)
 
 	if move is None:
@@ -354,3 +354,31 @@ def as_date(value):
 	if isinstance(value, str):
 		return date.fromisoformat(value)
 	return value
+
+def save_delivery_address(cursor, client_id, address_id, address_txt):
+	address_txt = address_txt.strip() if address_txt else ""
+
+	if not address_txt:
+		raise ValueError("Informe um endereço válido")
+
+	if address_id is None:
+		cursor.execute("""
+		INSERT INTO IGOR_CG_ENDERECOS_CLIENTES
+		(id_cliente, endereco)
+		OUTPUT INSERTED.id_endereco
+		VALUES (?, ?)
+		""", (client_id, address_txt))
+
+		return cursor.fetchone()[0]
+
+	cursor.execute("""
+	UPDATE IGOR_CG_ENDERECOS_CLIENTES
+	SET endereco = ?
+	WHERE id_endereco = ?
+	AND id_cliente = ?
+	""", (address_txt, address_id, client_id))
+
+	if cursor.rowcount != 1:
+		raise ValueError("Endereço inválido para o cliente selecionado.")
+
+	return address_id

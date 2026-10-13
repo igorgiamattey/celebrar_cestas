@@ -1,5 +1,5 @@
 from flask import (Blueprint, jsonify, redirect, render_template, request,
-                   url_for)
+                   url_for, session)
 
 from db import run_select, run_update
 from enums.table_names import Table
@@ -19,7 +19,7 @@ def clients():
 						page=page,
 						total_pages=total_pages,
 						search=search,
-						user="Vendedor")
+						user=session.get("username"))
 
 @clients_bp.route("/clientes/search")
 def clients_search():
@@ -66,6 +66,8 @@ def update_client():
 		id = request.form["id"]
 		if not validate_id(Table.Clients, "id_cliente", id):
 			raise ValueError("Cliente inválido")
+		if client_has_open_orders(id):
+			raise ValueError("Esse cliente possui pedido em aberto")
 		name = validate_name(request.form["name"])
 		phone = validate_phone(request.form["phone"])
 	except ValueError as e:

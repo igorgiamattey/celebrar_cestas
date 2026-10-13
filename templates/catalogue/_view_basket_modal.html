@@ -5,6 +5,7 @@
 			<button type="button" class="btn-close" onclick="closeModal('viewBasket-modal')">&times;</button>
 		</div>
 		<form id="viewBasket-form" method="post" action="{{url_for('catalogue_bp.update_basket')}}">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 			<input type="hidden" id="viewBasket-id" name="id">
 			<input type="hidden" id="viewBasket-items" name="items">
 

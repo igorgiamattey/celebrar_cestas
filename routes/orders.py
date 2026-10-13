@@ -1,13 +1,14 @@
 import json
 
 from flask import (Blueprint, jsonify, redirect, render_template, request,
-                   url_for)
+                   session, url_for)
 
 from db import run_select, run_transaction
 from enums.order_status import OPEN_ORDER_STATUS, orderStatus
+from enums.delivery_status import deliveryStatus
 from enums.table_names import Table
-from services.order_service import (get_basket_composition, get_orders,
-                                    get_today, update_order_stock, as_date)
+from services.order_service import (as_date, get_basket_composition,
+                                    get_orders, get_today, update_order_stock, save_delivery_address)
 from services.routes_service import (getAvailableAddresses,
                                      getAvailableBaskets, getAvailableClients,
                                      getAvailableOrderStatus)
@@ -15,9 +16,9 @@ from services.status_transitions import get_allowed_status
 from services.validate_service import (validate_address_belonging,
                                        validate_date, validate_delivery,
                                        validate_id, validate_isDelivery_check,
-                                       validate_order_items,
-                                       validate_order_stock, validate_price,
+                                       validate_opt_text, validate_order_items,
                                        validate_order_status,
+                                       validate_order_stock, validate_price,
                                        validate_status_transition)
 
 orders_bp = Blueprint("orders_bp", __name__)
@@ -38,7 +39,7 @@ def orders():
 						page=page,
 						total_pages=total_pages,
 						search=search,
-						user="Vendedor",
+						user=session.get("username"),
 						available_clients=available_clients,
 						available_baskets=available_baskets,
 						statuses=statuses,
@@ -94,22 +95,14 @@ def new_order():
 			if address_id is not None:
 				validate_address_belonging(client, address_id)
 				
-		obs = request.form.get('obs', '')
+		obs = validate_opt_text(request.form.get('obs', ''), "Observação", 255)
 		items = json.dumps(items_payload)
 
 		with run_transaction() as cursor:
 			validate_order_stock(cursor, items_payload)
 
-			if is_delivery and address_id is None:
-				cursor.execute("""
-				INSERT INTO IGOR_CG_ENDERECOS_CLIENTES
-				(id_cliente, endereco)
-				OUTPUT INSERTED.id_endereco
-				VALUES (?, ?)
-				""", (client, address_txt))
-
-				address_id = cursor.fetchone()[0]
-
+			if is_delivery:
+				address_id = save_delivery_address(cursor, client, address_id, address_txt)
 			
 			cursor.execute("""
 			INSERT INTO IGOR_CG_PEDIDOS
@@ -155,9 +148,6 @@ def order_data(id):
 
 	row = rows[0]
 	order = dict(zip(columns, row))
-
-	if order["status_pedido"] not in OPEN_ORDER_STATUS:
-		return jsonify({"error": "Pedido encerrado"}), 403
 
 	if order["data_pedido"]:
 		order["data_pedido"] = order["data_pedido"].strftime("%Y-%m-%d")
@@ -261,7 +251,7 @@ def update_order():
 			date = validate_date(request.form["date"])
 			orderPrice = validate_price(request.form["orderPrice"])
 			items_payload = validate_order_items(json.loads(request.form["items"]))
-			obs = request.form.get('obs', '')
+			obs = validate_opt_text(request.form.get('obs', ''), "Observação", 255)
 			items = json.dumps(items_payload)
 		else:
 			client = current_client
@@ -302,15 +292,8 @@ def update_order():
 	
 	try:
 		with run_transaction() as cursor:
-			if is_delivery and address_id is None:
-				cursor.execute("""
-				INSERT INTO IGOR_CG_ENDERECOS_CLIENTES
-				(id_cliente, endereco)
-				OUTPUT INSERTED.id_endereco
-				VALUES (?, ?)
-				""", (client, address_txt))
-
-				address_id = cursor.fetchone()[0]
+			if is_delivery:
+				address_id = save_delivery_address(cursor, client, address_id, address_txt)
 
 			cursor.execute("""
 			UPDATE IGOR_CG_PEDIDOS
@@ -335,11 +318,43 @@ def update_order():
 
 			if release:
 				cursor.execute("""
-				UPDATE IGOR_CG_PEDIDOS
-				SET id_entrega = NULL
+				SELECT
+				id_entrega
+				FROM IGOR_CG_PEDIDOS
 				WHERE id_pedido = ?
 				AND id_entrega IS NOT NULL
+				AND isDeleted = 0
 				""", (id,))
+
+				row = cursor.fetchone()
+
+				if row is not None:
+					released_delivery_id = row[0]
+
+					cursor.execute("""
+					UPDATE IGOR_CG_PEDIDOS
+					SET id_entrega = NULL
+					WHERE id_pedido = ?
+					AND id_entrega = ?
+					AND isDeleted = 0
+					""", (id,released_delivery_id))
+
+					cursor.execute("""
+					SELECT COUNT(*)
+					FROM IGOR_CG_PEDIDOS
+					WHERE id_entrega = ?
+					AND isDeleted = 0
+					""", (released_delivery_id,))
+
+					delivery_orders = cursor.fetchone()[0]
+
+					if delivery_orders == 0:
+						cursor.execute("""
+						UPDATE IGOR_CG_ENTREGAS
+						SET status_entrega = ?
+						WHERE id_entrega = ?
+						AND isDeleted = 0
+						""", (deliveryStatus.CANCELLED.name, released_delivery_id))
 			
 			changed = items_payload != json.loads(current_items)
 

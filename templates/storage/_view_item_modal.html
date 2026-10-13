@@ -5,6 +5,7 @@
 			<button type="button" class="btn-close" onclick="closeModal('viewItem-modal')">&times;</button>
 		</div>
 		<form id="viewItem-form" method="post" action="{{url_for('storage_bp.update_item')}}">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 			<input type="hidden" id="viewItem-id" name="id">
 
 			<label>Item*:</label>

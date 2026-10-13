@@ -199,8 +199,10 @@ function resetViewBasketModalState() {
 
 function deleteBasket() {
 	const id = document.getElementById('viewBasket-id').value;
+
 	if (confirm('Tem certeza que deseja excluir esta cesta?')) {
-		fetch(`/catalogo/${id}/delete`, { method: 'POST' })
+		const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+		fetch(`/catalogo/${id}/delete`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
 			.then(handleResponse)
 			.catch(handleError);
 	}

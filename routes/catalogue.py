@@ -1,7 +1,7 @@
 import json
 
 from flask import (Blueprint, jsonify, redirect, render_template, request,
-                   url_for)
+                   url_for, session)
 
 from db import run_select, run_transaction
 from enums.table_names import Table
@@ -26,7 +26,7 @@ def catalogue():
 						page=page,
 						total_pages=total_pages,
 						search=search,
-						user="Vendedor",
+						user=session.get("username"),
 						available_items = available_items,
 						available_groups = available_groups)
 

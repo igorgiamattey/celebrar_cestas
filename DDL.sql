@@ -96,6 +96,24 @@ CREATE TABLE IFPF.dbo.IGOR_CG_PRODUTOS (
 );
 
 
+-- IFPF.dbo.IGOR_CG_USUARIOS definition
+
+-- Drop table
+
+-- DROP TABLE IFPF.dbo.IGOR_CG_USUARIOS;
+
+CREATE TABLE IFPF.dbo.IGOR_CG_USUARIOS (
+	id_usuario int IDENTITY(1,1) NOT NULL,
+	nome_usuario varchar(30) COLLATE Latin1_General_CI_AS NOT NULL,
+	email varchar(100) COLLATE Latin1_General_CI_AS NOT NULL,
+	senha_hash varchar(255) COLLATE Latin1_General_CI_AS NOT NULL,
+	isDeleted bit DEFAULT 0 NOT NULL,
+	CONSTRAINT PK__IGOR_CG___4E3E04ADDD6CDDE8 PRIMARY KEY (id_usuario),
+	CONSTRAINT UQ_IGOR_CG_USUARIOS_EMAIL UNIQUE (email),
+	CONSTRAINT UQ__IGOR_CG___CCB80B0A3ED2D8F8 UNIQUE (nome_usuario)
+);
+
+
 -- IFPF.dbo.IGOR_CG_CESTA_ESTOQUE definition
 
 -- Drop table
@@ -199,8 +217,8 @@ CREATE TABLE IFPF.dbo.IGOR_CG_PEDIDOS (
 	status_pedido varchar(30) COLLATE Latin1_General_CI_AS NOT NULL,
 	valor_pedido decimal(10,2) NOT NULL,
 	isDeleted bit DEFAULT 0 NOT NULL,
-	observacao text COLLATE Latin1_General_CI_AS NULL,
-	itens_pedido text COLLATE Latin1_General_CI_AS NOT NULL,
+	observacao varchar(255) COLLATE Latin1_General_CI_AS NULL,
+	itens_pedido varchar(255) COLLATE Latin1_General_CI_AS NOT NULL,
 	id_entrega int NULL,
 	isDelivery bit DEFAULT 0 NOT NULL,
 	taxa_entrega decimal(10,2) DEFAULT 0.00 NOT NULL,
