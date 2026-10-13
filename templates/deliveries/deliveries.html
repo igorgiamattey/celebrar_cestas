@@ -5,7 +5,6 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/deliveries_styles.css')}}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/modal_styles.css')}}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/tom-select.default.css')}}">
 {% endblock %}
 
 {% block content %}
@@ -18,8 +17,7 @@
 				class="search-bar"
 				type="text"
 				id="deliveries-search-bar"
-				placeholder="Pesquise entregador/data/status..."
-				title="Pesquise entregador/data/status..."
+				placeholder="Entregador/Data/Status/#id..."
 				oninput="handleSearch()"
 			>
 			<button type="button" class="search-clear" id="search-clear" title="Limpar pesquisa"></button>
@@ -33,6 +31,7 @@
 			<label for="deliveries-checkbox">Mostrar apenas entregas não concluídas</label>
 		</div>
 		<button class="btn-add" onclick="openNewDeliveryModal()">CADASTRAR NOVA ENTREGA</button>
+		<button id="mngCourier-btn" class="btn-add" onclick="openManageCouriersModal()">ENTREGADORES</button>
 	</div>
 
 	<div class="card">
@@ -76,6 +75,7 @@
 {% block modals %}
 {% include 'deliveries/_register_delivery_modal.html' %}
 {% include 'deliveries/_view_delivery_modal.html' %}
+{% include 'deliveries/_manage_couriers_modal.html' %}
 {% endblock %}
 
 {% block scripts %}

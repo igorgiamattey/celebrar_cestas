@@ -31,6 +31,12 @@
 	margin: 0 auto;
 }
 
+.mini-table th:first-child,
+.mini-table td:first-child {
+	display: table-cell;
+	width: 5%;
+}
+
 .mini-table th:nth-child(2),
 .mini-table td:nth-child(2) {
 	width: 19%;

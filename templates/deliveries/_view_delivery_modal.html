@@ -4,7 +4,7 @@
 			<h3>Dados da Entrega</h3>
 			<button type="button" class="btn-close" onclick="closeModal('viewDelivery-modal')">&times;</button>
 		</div>
-		<form id="viewDelivery-form" method="post" action="{{url_for('deliveries_bp.deliveries')}}">
+		<form id="viewDelivery-form" method="post" action="{{url_for('deliveries_bp.update_delivery')}}">
 			<input type="hidden" id="viewDelivery-id" name="id">
 			<input type="hidden" id="viewDelivery-items" name="items">
 			<div class="status-row">

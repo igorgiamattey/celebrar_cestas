@@ -44,6 +44,7 @@ const newBasketItemSelector = new TomSelect('#newBasket-itemSelect', {
 
 	create: false,
 	maxItems: 1,
+	maxOptions: null,
 	sortField: [
 		{
 			field: 'categoryOrder',
@@ -74,6 +75,7 @@ if (viewBasketForm) {
 
 		create: false,
 		maxItems: 1,
+		maxOptions: null,
 		sortField: [
 			{
 				field: 'categoryOrder',

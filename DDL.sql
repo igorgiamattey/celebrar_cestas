@@ -22,7 +22,8 @@ CREATE TABLE IFPF.dbo.IGOR_CG_CLIENTES (
 CREATE TABLE IFPF.dbo.IGOR_CG_ENTREGADORES (
 	id_entregador int IDENTITY(1,1) NOT NULL,
 	nome_entregador varchar(100) COLLATE Latin1_General_CI_AS NOT NULL,
-	phone varchar(20) COLLATE Latin1_General_CI_AS NULL,
+	telefone varchar(20) COLLATE Latin1_General_CI_AS NULL,
+	isDeleted bit DEFAULT 0 NOT NULL,
 	CONSTRAINT PK_COURIERS PRIMARY KEY (id_entregador)
 );
 
@@ -114,6 +115,22 @@ CREATE TABLE IFPF.dbo.IGOR_CG_CESTA_ESTOQUE (
 ALTER TABLE IFPF.dbo.IGOR_CG_CESTA_ESTOQUE WITH NOCHECK ADD CONSTRAINT CK_BasketItems_ItemOrGroup CHECK (([id_insumo] IS NOT NULL AND [id_grupo] IS NULL OR [id_insumo] IS NULL AND [id_grupo] IS NOT NULL));
 
 
+-- IFPF.dbo.IGOR_CG_ENDERECOS_CLIENTES definition
+
+-- Drop table
+
+-- DROP TABLE IFPF.dbo.IGOR_CG_ENDERECOS_CLIENTES;
+
+CREATE TABLE IFPF.dbo.IGOR_CG_ENDERECOS_CLIENTES (
+	id_endereco int IDENTITY(1,1) NOT NULL,
+	id_cliente int NOT NULL,
+	endereco varchar(200) COLLATE Latin1_General_CI_AS NOT NULL,
+	isDeleted bit DEFAULT 0 NOT NULL,
+	CONSTRAINT PK_ADDRESS_CLIENT PRIMARY KEY (id_endereco),
+	CONSTRAINT FK_ADDR_CLIENTS_CLIENTS FOREIGN KEY (id_cliente) REFERENCES IFPF.dbo.IGOR_CG_CLIENTES(id_cliente)
+);
+
+
 -- IFPF.dbo.IGOR_CG_ENTREGAS definition
 
 -- Drop table
@@ -124,10 +141,12 @@ CREATE TABLE IFPF.dbo.IGOR_CG_ENTREGAS (
 	id_entrega int IDENTITY(1,1) NOT NULL,
 	id_entregador int NULL,
 	data_entrega date NOT NULL,
-	endereco varchar(50) COLLATE Latin1_General_CI_AS NULL,
+	status_entrega varchar(30) COLLATE Latin1_General_CI_AS NOT NULL,
+	isDeleted bit DEFAULT 0 NOT NULL,
 	CONSTRAINT PK_DELIVERIES PRIMARY KEY (id_entrega),
 	CONSTRAINT FK_DELIVERIES_COURIERS FOREIGN KEY (id_entregador) REFERENCES IFPF.dbo.IGOR_CG_ENTREGADORES(id_entregador)
 );
+ALTER TABLE IFPF.dbo.IGOR_CG_ENTREGAS WITH NOCHECK ADD CONSTRAINT CK_ENTREGAS_STATUS CHECK (([status_entrega]='DELIVERED' OR [status_entrega]='TRANSIT' OR [status_entrega]='PENDING' OR [status_entrega]='CANCELLED'));
 
 
 -- IFPF.dbo.IGOR_CG_MEMBROS_GRUPO definition
@@ -177,19 +196,22 @@ CREATE TABLE IFPF.dbo.IGOR_CG_PEDIDOS (
 	id_cliente int NOT NULL,
 	data_pedido date NOT NULL,
 	data_entrega date NULL,
-	status_pedido varchar(30) COLLATE Latin1_General_CI_AS NULL,
+	status_pedido varchar(30) COLLATE Latin1_General_CI_AS NOT NULL,
 	valor_pedido decimal(10,2) NOT NULL,
 	isDeleted bit DEFAULT 0 NOT NULL,
 	observacao text COLLATE Latin1_General_CI_AS NULL,
 	itens_pedido text COLLATE Latin1_General_CI_AS NOT NULL,
 	id_entrega int NULL,
-	endereco varchar(200) COLLATE Latin1_General_CI_AS NULL,
 	isDelivery bit DEFAULT 0 NOT NULL,
 	taxa_entrega decimal(10,2) DEFAULT 0.00 NOT NULL,
 	valor_total AS ([valor_pedido]+[taxa_entrega]) PERSISTED,
+	id_endereco int NULL,
 	CONSTRAINT PK_IGOR_CG_PEDIDO PRIMARY KEY (id_pedido),
+	CONSTRAINT FK_PEDIDOS_ENDERECOS FOREIGN KEY (id_endereco) REFERENCES IFPF.dbo.IGOR_CG_ENDERECOS_CLIENTES(id_endereco),
 	CONSTRAINT FK_PEDIDOS_ENTREGAS FOREIGN KEY (id_entrega) REFERENCES IFPF.dbo.IGOR_CG_ENTREGAS(id_entrega)
 );
+ALTER TABLE IFPF.dbo.IGOR_CG_PEDIDOS WITH NOCHECK ADD CONSTRAINT CK_PEDIDOS_DELIVERY_ADDR CHECK (([isDelivery]=(0) OR [id_endereco] IS NOT NULL));
+ALTER TABLE IFPF.dbo.IGOR_CG_PEDIDOS WITH NOCHECK ADD CONSTRAINT CK_PEDIDOS_STATUS CHECK (([status_pedido]='READY' OR [status_pedido]='PREPARING' OR [status_pedido]='PENDING' OR [status_pedido]='DELIVERED' OR [status_pedido]='CONFIRMED' OR [status_pedido]='CANCELLED'));
 
 
 -- IFPF.dbo.IGOR_CG_CESTAS_PEDIDO definition

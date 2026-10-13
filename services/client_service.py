@@ -31,8 +31,9 @@ def get_clients():
 	where_clause = "WHERE isDeleted = 0"
 	params = []
 	if search:
-		where_clause += " AND nome_razao LIKE ?"
-		params.append(f"%{search}%")
+		search_param = f"%{search}%"
+		where_clause += " AND (nome_razao LIKE ? OR telefone LIKE ?)"
+		params.extend([search_param, search_param])
 
 
 	count = countRows(Table.Clients, where_clause, tuple(params))

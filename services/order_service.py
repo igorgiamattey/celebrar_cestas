@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import date, datetime
 
 from flask import request
 
@@ -249,31 +249,41 @@ def get_orders():
 	where_clause = "WHERE p.isDeleted = 0"
 	params = []
 	if search:
-		search_param = f"%{search}%"
-		conditions = [
-			"c.nome_razao LIKE ?",
-			"""EXISTS (
-				SELECT 1
-				FROM IGOR_CG_CESTAS_PEDIDO cp
-				JOIN IGOR_CG_PRODUTOS pr
-				ON pr.id_produto = cp.id_produto
-				WHERE cp.id_pedido = p.id_pedido
-				AND pr.nome_cesta LIKE ?
-			)""",
-			"OR CONVERT(VARCHAR(10), p.data_entrega, 103) LIKE ?"
-		]
-		params.extend([search_param, search_param, search_param])
+		if search.startswith("#"):
+			id_part = search[1:].strip()
+			if id_part.isdigit():
+				where_clause += " AND p.id_pedido = ?"
+				params.append(int(id_part))
+		else:
+			search_param = f"%{search}%"
+			conditions = [
+				"c.nome_razao LIKE ?",
+				"""EXISTS (
+					SELECT 1
+					FROM IGOR_CG_CESTAS_PEDIDO cp
+					JOIN IGOR_CG_PRODUTOS pr
+					ON pr.id_produto = cp.id_produto
+					WHERE cp.id_pedido = p.id_pedido
+					AND pr.nome_cesta LIKE ?
+				)""",
+				"CONVERT(VARCHAR(10), p.data_entrega, 103) LIKE ?"
+			]
+			params.extend([search_param, search_param, search_param])
 
-		matching_status = [s.name for s in orderStatus if search.lower() in s.value.lower()]
-		if matching_status:
-			conditions.append(f"d.status_pedido IN ({','.join('?' * len(matching_status))})")
-			params.extend(matching_status)
-		
-		where_clause += " AND (" + " OR ".join(conditions) + ")"
+			if search.isdigit():
+				conditions.append("p.id_pedido = ?")
+				params.append(int(search))
+
+			matching_status = [s.name for s in orderStatus if search.lower() in s.value.lower()]
+			if matching_status:
+				conditions.append(f"p.status_pedido IN ({','.join('?' * len(matching_status))})")
+				params.extend(matching_status)
+			
+			where_clause += " AND (" + " OR ".join(conditions) + ")"
 
 	if open_only:
 			open_status = [orderStatus.PENDING.name, orderStatus.CONFIRMED.name, orderStatus.PREPARING.name, orderStatus.READY.name]
-			where_clause += f" AND d.status_pedido IN ({','.join('?' * len(open_status))})"
+			where_clause += f" AND p.status_pedido IN ({','.join('?' * len(open_status))})"
 			params.extend(open_status)
 
 	_, count_rows = run_select(f"""
@@ -298,7 +308,7 @@ def get_orders():
 	p.data_entrega AS Entrega,
 	p.valor_total AS Valor,
 	p.status_pedido AS Status,
-	p.isDelivery AS [Retirada/Entrega]
+	p.isDelivery AS Tipo
 	FROM IGOR_CG_PEDIDOS p
 	JOIN IGOR_CG_CLIENTES c
 	ON p.id_cliente = c.id_cliente
@@ -335,3 +345,12 @@ def get_orders():
 	]
 
 	return columns, rows, page, total_pages, search
+
+def as_date(value):
+	if value is None:
+		return None
+	if isinstance(value, datetime):
+		return value.date()
+	if isinstance(value, str):
+		return date.fromisoformat(value)
+	return value

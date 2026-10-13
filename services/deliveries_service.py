@@ -249,19 +249,25 @@ def get_deliveries():
 	where_clause = "WHERE d.isDeleted = 0"
 	params = []
 	if search:
-		search_param = f"%{search}%"
-		conditions = [
-			"c.nome_entregador LIKE ?",
-			"CONVERT(VARCHAR(10), d.data_entrega, 103) LIKE ?",
-		]
-		params.extend([search_param, search_param])
+		if search.startswith("#"):
+			id_part = search[1:].strip()
+			if id_part.isdigit():
+				where_clause += " AND d.id_entrega = ?"
+				params.append(int(id_part))
+		else:	
+			search_param = f"%{search}%"
+			conditions = [
+				"c.nome_entregador LIKE ?",
+				"CONVERT(VARCHAR(10), d.data_entrega, 103) LIKE ?",
+			]
+			params.extend([search_param, search_param])
 
-		matching_status = [s.name for s in deliveryStatus if search.lower() in s.value.lower()]
-		if matching_status:
-			conditions.append(f"d.status_entrega IN ({','.join('?' * len(matching_status))})")
-			params.extend(matching_status)
+			matching_status = [s.name for s in deliveryStatus if search.lower() in s.value.lower()]
+			if matching_status:
+				conditions.append(f"d.status_entrega IN ({','.join('?' * len(matching_status))})")
+				params.extend(matching_status)
 
-		where_clause += " AND (" + " OR ".join(conditions) + ")"
+			where_clause += " AND (" + " OR ".join(conditions) + ")"
 
 	if open_only:
 		open_status = [deliveryStatus.PENDING.name, deliveryStatus.TRANSIT.name]
@@ -318,3 +324,22 @@ def get_deliveries():
 	]
 
 	return columns, rows, page, total_pages, search
+
+def courier_exists(name, phone, exclude_id=None):
+	query = """
+	SELECT 1
+	FROM IGOR_CG_ENTREGADORES
+	WHERE nome_entregador = ?
+	AND telefone = ?
+	AND isDeleted = 0
+	"""
+
+	params = [name, phone]
+
+	if exclude_id is not None:
+		query += " AND id_entregador <> ?"
+		params.append(exclude_id)
+
+	_, rows = run_select(query, tuple(params))
+
+	return bool(rows)

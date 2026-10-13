@@ -9,7 +9,7 @@
 		<div>
 			<select id="mngGroup-groupSelect">
 				<option value="">Novo Grupo</option>
-				{% for group in existing_groups %}
+				{% for group in available_groups %}
 				<option value="{{group[0]}}">{{group[1]}}</option>
 				{% endfor %}
 			</select>

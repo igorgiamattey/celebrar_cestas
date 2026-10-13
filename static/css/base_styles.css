@@ -225,6 +225,7 @@ body.fit-viewport .dashboard-container {
 	outline: none;
 	background-color: var(--bg-card);
 	padding-right: 36px;
+	font-size: 0.8rem;
 }
 
 .search-wrapper {
@@ -389,4 +390,75 @@ body.fit-viewport .dashboard-container {
 .btn-view:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
+}
+
+/* Tom Select */
+.ts-wrapper.single .ts-control,
+.ts-wrapper.multi .ts-control,
+.ts-wrapper .ts-control {
+	width: 100%;
+	min-height: 32px;
+	padding: 0 9px;
+	margin: 0;
+	margin-bottom: 2%;
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+	background-color: var(--bg-card);
+	background-image: none;
+	color: var(--text-dark);
+	font-family: inherit;
+	font-size: 0.8rem;
+	box-shadow: none;
+	display: flex;
+	align-items: center;
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.ts-wrapper.single .ts-control .item,
+.ts-wrapper .ts-control input {
+	color: var(--text-dark);
+	font-family: inherit;
+	font-size: 0.8rem;
+	line-height: 1.2;
+}
+
+.ts-wrapper .ts-control:hover {
+	border-color: var(--primary-color);
+}
+
+.ts-wrapper.focus .ts-control,
+.ts-wrapper.single.input-active .ts-control,
+.ts-wrapper.dropdown-active .ts-control {
+	border-color: var(--primary-color);
+	box-shadow: 0 0 0 2px rgba(110, 61, 43, 0.12);
+	background-image: none;
+}
+
+.ts-wrapper .ts-control input::placeholder {
+	color: var(--text-dark);
+	opacity: 0.7;
+}
+
+.ts-dropdown {
+	font-family: inherit;
+	font-size: 0.8rem;
+	background-color: var(--bg-card);
+	color: var(--text-dark);
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+	overflow: hidden;
+}
+
+.ts-dropdown .option {
+	padding: 6px 9px;
+}
+
+.ts-dropdown .option:hover,
+.ts-dropdown .option.active {
+	background-color: var(--primary-color);
+	color: white;
+}
+
+html .ts-wrapper.single .ts-control::after {
+	display: none !important;
 }

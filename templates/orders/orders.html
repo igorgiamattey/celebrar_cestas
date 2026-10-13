@@ -5,7 +5,6 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/orders_styles.css')}}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/modal_styles.css')}}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/tom-select.default.css')}}">
 {% endblock %}
 
 {% block content %}
@@ -18,7 +17,7 @@
 				class="search-bar"
 				type="text"
 				id="orders-search-bar"
-				placeholder="Pesquise cliente/cesta/data"
+				placeholder="Cliente/Cesta/Data/#id..."
 				oninput="handleSearch()"
 			>
 			<button type="button" class="search-clear" id="search-clear" title="Limpar pesquisa"></button>

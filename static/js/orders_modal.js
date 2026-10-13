@@ -48,6 +48,7 @@ const newOrderClientSelector = new TomSelect('#newOrder-client', {
 	searchField: 'name',
 	create: false,
 	maxItems: 1,
+	maxOptions: null,
 	sortField: [
 		{
 			field: 'name',
@@ -63,6 +64,7 @@ const newOrderBasketSelector = new TomSelect('#newOrder-baskets', {
 	searchField: 'name',
 	create: false,
 	maxItems: 1,
+	maxOptions: null,
 	sortField: [
 		{
 			field: 'name',
@@ -78,6 +80,7 @@ const newOrderStatusSelector = new TomSelect('#newOrder-status', {
 	searchField: 'title',
 	create: false,
 	maxItems: 1,
+	maxOptions: null,
 	sortField: [
 		{
 			field: 'title',
@@ -93,6 +96,7 @@ const newOrderAddressSelector = new TomSelect('#newOrder-address', {
 	searchField: 'endereco',
 	create: false,
 	maxItems: 1,
+	maxOptions: null,
 	onChange: function(value) {
 		const isNew = value === NEW_ADDRESS_ID;
 		document.getElementById('newOrder-newAddressRow').style.display = isNew ? 'block' : 'none';
@@ -137,6 +141,7 @@ if (viewOrderForm) {
 		searchField: 'name',
 		create: false,
 		maxItems: 1,
+		maxOptions: null,
 		sortField: [
 			{
 				field: 'name',
@@ -152,6 +157,7 @@ if (viewOrderForm) {
 		searchField: 'name',
 		create: false,
 		maxItems: 1,
+		maxOptions: null,
 		sortField: [
 			{
 				field: 'name',
@@ -167,6 +173,7 @@ if (viewOrderForm) {
 		searchField: 'title',
 		create: false,
 		maxItems: 1,
+		maxOptions: null,
 		sortField: [
 			{
 				field: 'title',
@@ -182,6 +189,7 @@ if (viewOrderForm) {
 		searchField: 'endereco',
 		create: false,
 		maxItems: 1,
+		maxOptions: null,
 		onChange: function(value) {
 			const isNew = value === NEW_ADDRESS_ID;
 			document.getElementById('viewOrder-newAddressRow').style.display = isNew ? 'block' : 'none';
@@ -305,6 +313,7 @@ function openViewOrderModal(id) {
 				valor_pedido: data.valor_pedido,
 				isDelivery: Boolean(data.isDelivery),
 				id_endereco: data.id_endereco,
+				id_entrega: data.id_entrega,
 				taxa_entrega: data.taxa_entrega,
 				itens_pedido: structuredClone(viewOrderBaskets)
 			};
@@ -331,6 +340,19 @@ function saveNewOrder() {
 }
 
 function updateOrder() {
+	if (originalOrderValues.id_entrega != null) {
+		const newDate = document.getElementById('viewOrder-deliveryDate').value;
+		const dateChanged = newDate !== (originalOrderValues.data_entrega ?? '');
+		const noLongerDelivery = !document.getElementById('viewOrder-isDelivery').checked;
+
+		if ((dateChanged || noLongerDelivery) && !confirm(
+			`Este pedido está faz parte da entrega #${originalOrderValues.id_entrega}. ` +
+			`Alterar a data ou mudar a forma de entrega vai removê-lo. Continuar?`
+		)) {
+			return;
+		}
+	}
+
 	document.getElementById('viewOrder-items').value = JSON.stringify(serialiseOrderBaskets('view'));
 	document.getElementById('viewOrder-deliveryDetails').value = JSON.stringify(viewOrderDeliveryDetails);
 	submitModal('viewOrder-form');

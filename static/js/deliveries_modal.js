@@ -7,6 +7,26 @@ let viewAvailableOrders = [];
 
 let defaultStatus = 'PENDING';
 
+let couriers = []
+
+document.getElementById('mngCourier-courierSelect').addEventListener('change', function() {
+	const courierId = this.value;
+
+	if (!courierId) {
+		document.getElementById('mngCourier-name').value = "";
+		document.getElementById('mngCourier-phone').value = "";
+		return;
+	}
+
+	fetch(`/entregas/entregadores/${courierId}/data`)
+		.then(res => res.json())
+		.then(data => {
+			document.getElementById('mngCourier-name').value = data.name;
+			document.getElementById('mngCourier-phone').value = data.phone;
+		})
+		.catch(err => console.error('Failed to load courier:', err));
+});
+
 const availableCouriers = JSON.parse(
 	document.getElementById('newDelivery-courier').dataset.couriers
 );
@@ -23,6 +43,22 @@ const availableDates = JSON.parse(
 	document.getElementById('newDelivery-date').dataset.dates
 );
 
+const mngCourierCourierSelector = new TomSelect('#mngCourier-courierSelect', {
+	options: availableCouriers,
+	valueField: 'id',
+	labelField: 'name',
+	searchField: 'name',
+	create: false,
+	maxItems: 1,
+	maxOptions: null,
+	sortField: [
+		{
+			field: 'name',
+			direction: 'asc'
+		}
+	]
+});
+
 const newDeliveryCourierSelector = new TomSelect('#newDelivery-courier', {
 	options: availableCouriers,
 	valueField: 'id',
@@ -30,6 +66,7 @@ const newDeliveryCourierSelector = new TomSelect('#newDelivery-courier', {
 	searchField: 'name',
 	create: false,
 	maxItems: 1,
+	maxOptions: null,
 	sortField: [
 		{
 			field: 'name',
@@ -45,6 +82,7 @@ const newDeliveryOrderSelector = new TomSelect('#newDelivery-orders', {
 	searchField: 'title',
 	create: false,
 	maxItems: 1,
+	maxOptions: null,
 	sortField: [
 		{
 			field: 'title',
@@ -60,6 +98,7 @@ const newDeliveryStatusSelector = new TomSelect('#newDelivery-status', {
 	searchField: 'title',
 	create: false,
 	maxItems: 1,
+	maxOptions: null,
 	sortField: [
 		{
 			field: 'title',
@@ -75,9 +114,8 @@ const newDeliveryDateSelector = new TomSelect('#newDelivery-date', {
 	searchField: 'date',
 	create: false,
 	maxItems: 1,
+	maxOptions: null,
 	onChange: () => onDateChange('new')
-
-
 });
 
 function refreshOrderOptions(dateId, mode) {
@@ -117,6 +155,7 @@ if (viewDeliveryForm) {
 		searchField: 'name',
 		create: false,
 		maxItems: 1,
+		maxOptions: null,
 		sortField: [
 			{
 				field: 'name',
@@ -132,6 +171,7 @@ if (viewDeliveryForm) {
 		searchField: 'title',
 		create: false,
 		maxItems: 1,
+		maxOptions: null,
 		sortField: [
 			{
 				field: 'title',
@@ -147,6 +187,7 @@ if (viewDeliveryForm) {
 		searchField: 'title',
 		create: false,
 		maxItems: 1,
+		maxOptions: null,
 		sortField: [
 			{
 				field: 'title',
@@ -162,6 +203,7 @@ if (viewDeliveryForm) {
 		searchField: 'date',
 		create: false,
 		maxItems: 1,
+		maxOptions: null,
 		onChange: () => onDateChange('view')
 	});
 
@@ -428,4 +470,139 @@ function onDateChange(mode) {
 	refreshOrderOptions(dateSelector.getValue(), mode);
 	renderDeliveryOrders(mode);
 	saveButton(mode);
+}
+
+function openManageCouriersModal() {
+	mngCourierCourierSelector.clear();
+	document.getElementById('mngCourier-name').value = "";
+	document.getElementById('mngCourier-phone').value = "";
+
+	couriers = availableCouriers;
+	renderCouriers();
+
+	document.getElementById('mngCourier-modal').style.display = "flex";
+}
+
+function renderCouriers() {
+	const container = document.getElementById('mngCourier-couriersList');
+	container.innerHTML = '';
+
+	if (couriers.length === 0)
+		container.innerHTML = '<p class="no-movements">Nenhum entregador registrado.</p>';
+	else {
+		container.innerHTML = `
+			<table class="couriers-table">
+				<thead>
+					<tr>
+						<th>Nome</th>
+						<th>Telefone</th>
+						<th></th>
+					</tr>
+				</thead>
+				<tbody></tbody>
+			</table>
+		`;
+
+		const tbody = container.querySelector('tbody');
+
+		couriers.forEach((courier, index) => {
+			const row = document.createElement('tr');
+			row.className = 'courier-row';
+
+			const name = document.createElement('td');
+			name.textContent = courier.name;
+			name.className = 'courier-name';
+
+			const phone = document.createElement('td');
+			phone.textContent = courier.phone;
+			phone.className = 'courier-phone';
+
+			const remove = document.createElement('td');
+			const button = document.createElement('button')
+
+			button.type = 'button';
+			button.className = 'btn-remove-courier';
+			button.innerHTML = ICON_CLOSE;
+			button.title = 'Excluir entregador';
+			button.onclick = () => deleteCourier(courier, index);
+			
+			remove.appendChild(button);
+			row.append(name, phone, remove);
+			tbody.appendChild(row);
+		})
+	}
+}
+
+function saveCourier() {
+	const nameInput = document.getElementById('mngCourier-name');
+	const phoneInput = document.getElementById('mngCourier-phone');
+	const name = nameInput.value;
+	const phone = phoneInput.value;
+
+	const courierId = mngCourierCourierSelector.getValue();
+
+	if (!name) {
+		alert('O entregador precisa de um nome.');
+		return;
+	}
+	
+	const formData = new FormData();
+	
+	if (courierId)
+		formData.append('courier_id', courierId);
+	
+	formData.append('courier_name', name);
+	formData.append('courier_phone', phone);
+
+	fetch('/entregas/entregadores/save', {
+		method: 'POST',
+		body: formData
+	})
+	.then(handleResponse)
+	.then(() => {
+		const courier ={
+			id: courierId ? Number(courierId) : null,
+			name: name,
+			phone: phone
+		};
+
+		if (courierId) {
+			const index = couriers.findIndex(
+				c => String(c.courier_id) === String(courierId)
+			);
+
+			if (index !== -1)
+				couriers[index] = courier;
+		}
+		else
+			couriers.push(courier);
+
+		renderCouriers();
+		nameInput.value = '';
+		phoneInput.value = '';
+		mngCourierCourierSelector.clear();
+	})
+	.catch(handleError);
+}
+
+function deleteCourier(courier, index) {
+	if (!confirm('Tem certeza que deseja excluir este entregador?')) {
+		return;
+	}
+
+	const courierId = courier.id ?? courier.courier_id;
+	
+	
+	if (!courierId) {
+		alert('Não foi possível identificar o entregador.');
+		return;
+	}
+	
+	fetch(`/entregas/entregadores/${courierId}/delete`, {method: 'POST'})
+		.then(handleResponse)
+		.then(() => {
+			couriers.splice(index, 1);
+			renderCouriers()
+		})
+		.catch(handleError);
 }

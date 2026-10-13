@@ -59,7 +59,7 @@ def storage():
 						total_pages=total_pages,
 						search=search,
 						user="Vendedor",
-						existing_groups=groups_rows,
+						available_groups=groups_rows,
 						available_items=available_items,
 						available_movements=available_movements,
 						units=getAvailableUnits())

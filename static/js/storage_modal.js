@@ -8,6 +8,13 @@ const availableItems = JSON.parse(
 	document.getElementById('mngGroup-itemSelect').dataset.items
 );
 
+const mngGroupsGroupSelector = new TomSelect('#mngGroup-groupSelect', {
+	allowEmptyOption: true, 
+	create: false,
+	maxOptions: null,
+	sortField: '$order'
+});
+
 const groupItemSelector = new TomSelect('#mngGroup-itemSelect', {
 	options: availableItems,
 	valueField: 'id',
@@ -15,6 +22,7 @@ const groupItemSelector = new TomSelect('#mngGroup-itemSelect', {
 	searchField: 'title',
 	create: false,
 	maxItems: 1,
+	maxOptions: null,
 	sortField: {field: 'title', direction: 'asc'}
 });
 

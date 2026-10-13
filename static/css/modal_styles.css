@@ -937,3 +937,71 @@
 	height: 30px;
 	margin: 0;
 }
+
+.couriers-list {
+	width: 100%;
+	max-height: 180px;
+	overflow-y: auto;
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+	margin-bottom: 5%;
+	box-sizing: border-box;
+}
+
+.couriers-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.85rem;
+	table-layout: fixed;
+}
+
+.couriers-table th,
+.couriers-table td {
+	padding: 6px 10px;
+	text-align: left;
+	border-bottom: 1px solid var(--border-color);
+	border-right: 1px solid var(--border-color);
+}
+
+.couriers-table th {
+	background-color: var(--bg-card);
+	color: var(--text-header);
+	font-weight: bold;
+	border-top: 1px solid var(--border-color);
+}
+
+.couriers-table th:first-child,
+.couriers-table td:first-child {
+	border-left: 1px solid var(--border-color);
+	width: 45%;
+}
+
+.couriers-table th:nth-child(2),
+.couriers-table td:nth-child(2) {
+	width: 40%;
+}
+
+.couriers-table th:last-child,
+.couriers-table td:last-child {
+	text-align: center;
+	width: 15%;
+	padding: 4px;
+}
+
+.couriers-table td {
+	overflow-wrap: anywhere;
+}
+
+.btn-remove-courier {
+	background: none;
+	border: none;
+	line-height: 1;
+	font-size: 1.5rem;
+	cursor: pointer;
+	color: var(--text-header);
+	padding: 0 2px;
+}
+
+.btn-remove-courier:hover {
+	color: var(--delete-bg);
+}

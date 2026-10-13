@@ -4,6 +4,7 @@
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<title>{% block title %}Celebrar Cestas Gourmet{% endblock %}</title>
+		<link rel="stylesheet" href="{{ url_for('static', filename='css/tom-select.default.css')}}">
 		<link rel="stylesheet" href="{{ url_for('static', filename='css/base_styles.css')}}">
 		<link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
 		{% block extra_css %}{% endblock %}
@@ -28,11 +29,6 @@
 						>CLIENTES</a>
 					</li>
 					<li><a
-						href="{{ url_for('orders_bp.orders') }}"
-						class="{% block nav_orders %}{% endblock %}"
-						>PEDIDOS</a>
-					</li>
-					<li><a
 						href="{{ url_for('catalogue_bp.catalogue') }}"
 						class="{% block nav_catalogue %}{% endblock %}"
 						>CATÁLOGO</a>
@@ -41,6 +37,11 @@
 						href="{{ url_for('storage_bp.storage') }}"
 						class="{% block nav_storage %}{% endblock %}"
 						>ESTOQUE</a>
+					</li>
+					<li><a
+						href="{{ url_for('orders_bp.orders') }}"
+						class="{% block nav_orders %}{% endblock %}"
+						>PEDIDOS</a>
 					</li>
 					<li><a
 						href="{{ url_for('deliveries_bp.deliveries') }}"

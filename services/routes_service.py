@@ -70,7 +70,7 @@ def getAvailableClients():
 def getAvailableCouriers():
 	_, rows = run_select("""
 	SELECT
-	id_entregador, nome_entregador
+	id_entregador, nome_entregador, telefone
 	FROM IGOR_CG_ENTREGADORES
 	WHERE isDeleted = 0
 	ORDER BY nome_entregador
@@ -79,7 +79,8 @@ def getAvailableCouriers():
 	available_couriers = [
 		{
 			"id": row[0],
-			"name": row[1]
+			"name": row[1],
+			"phone": row[2]
 		}
 		for row in rows
 	]

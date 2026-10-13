@@ -7,7 +7,7 @@ from db import run_select, run_transaction
 from enums.order_status import OPEN_ORDER_STATUS, orderStatus
 from enums.table_names import Table
 from services.order_service import (get_basket_composition, get_orders,
-                                    get_today, update_order_stock)
+                                    get_today, update_order_stock, as_date)
 from services.routes_service import (getAvailableAddresses,
                                      getAvailableBaskets, getAvailableClients,
                                      getAvailableOrderStatus)
@@ -142,7 +142,7 @@ def order_data(id):
 	SELECT
 	p.id_pedido, p.id_cliente, c.nome_razao,
 	p.data_pedido, p.data_entrega, p.status_pedido,
-	p.valor_pedido, p.observacao, p.itens_pedido,
+	p.valor_pedido, p.observacao, p.itens_pedido, p.id_entrega,
 	p.isDelivery, p.id_endereco, p.taxa_entrega, p.valor_total
 	FROM IGOR_CG_PEDIDOS p
 	JOIN IGOR_CG_CLIENTES c
@@ -208,7 +208,10 @@ def order_data(id):
 			]
 
 
-	order["allowed_status"] = sorted(get_allowed_status(order["status_pedido"], order_mode))
+	allowed = get_allowed_status(order["status_pedido"], order_mode)
+	if order["id_entrega"] is not None:
+		allowed = allowed - {orderStatus.CANCELLED.name, orderStatus.DELIVERED.name}
+	order["allowed_status"] = sorted(allowed)
 
 	return jsonify(order)
 
@@ -227,7 +230,7 @@ def update_order():
 	_, data_rows = run_select("""
 	SELECT
 	id_cliente, data_pedido, data_entrega, status_pedido,
-	valor_pedido, observacao, itens_pedido
+	valor_pedido, observacao, itens_pedido, id_entrega
 	FROM IGOR_CG_PEDIDOS
 	WHERE id_pedido = ?
 	AND isDeleted = 0
@@ -238,10 +241,12 @@ def update_order():
 
 	current_client = data_rows[0][0]
 	current_date = data_rows[0][1]
+	current_delivery_date = data_rows[0][2]
 	current_status = data_rows[0][3]
 	current_orderPrice = data_rows[0][4]
 	current_obs = data_rows[0][5]
 	current_items = data_rows[0][6]
+	current_delivery_id = data_rows[0][7]
 
 	if current_status not in OPEN_ORDER_STATUS:
 		return "Um pedido encerrado não pode ser alterado.", 400
@@ -270,6 +275,12 @@ def update_order():
 
 		delivery_details = json.loads(request.form["deliveryDetails"])
 		is_delivery = validate_isDelivery_check(request.form.get("isDelivery"), delivery_details)
+
+		if current_delivery_id is not None and status in (orderStatus.CANCELLED.name, orderStatus.DELIVERED.name):
+			raise ValueError(f"Remova o pedido da entrega {current_delivery_id} antes de alterar o status.")
+
+		date_change = as_date(deliveryDate) != as_date(current_delivery_date)
+		release = not is_delivery or date_change
 
 		address_id = None
 		address_txt = None
@@ -321,6 +332,14 @@ def update_order():
 
 			if cursor.rowcount != 1:
 				raise ValueError("O pedido já foi alterado. Recarregue a página.")
+
+			if release:
+				cursor.execute("""
+				UPDATE IGOR_CG_PEDIDOS
+				SET id_entrega = NULL
+				WHERE id_pedido = ?
+				AND id_entrega IS NOT NULL
+				""", (id,))
 			
 			changed = items_payload != json.loads(current_items)
 

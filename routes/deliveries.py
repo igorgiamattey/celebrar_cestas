@@ -8,14 +8,17 @@ from db import run_select, run_transaction
 from enums.delivery_status import OPEN_DELIVERY_STATUS, deliveryStatus
 from enums.order_status import orderStatus
 from enums.table_names import Table
-from services.deliveries_service import get_deliveries
+from services.deliveries_service import get_deliveries, courier_exists
 from services.routes_service import (getAvailableAddresses,
                                      getAvailableCouriers, getAvailableDates,
                                      getAvailableDeliveryStatus,
                                      getAvailableOrders)
 from services.status_transitions import get_allowed_status
 from services.validate_service import (validate_date_id,
-                                       validate_delivery_orders, validate_id)
+                                       validate_delivery_orders,
+                                       validate_delivery_status, validate_id,
+                                       validate_name, validate_phone,
+                                       validate_status_transition, courier_has_open_deliveries)
 
 deliveries_bp = Blueprint("deliveries_bp", __name__)
 delivery_mode = "DELIVERY"
@@ -150,141 +153,198 @@ def delivery_data(id):
 
 	return jsonify(delivery)
 
-# @deliveries_bp.route("/entregas/update", methods=["POST"])
-# def update_order():
-# 	try:
-# 		id = request.form["id"]
-# 		if not validate_id(Table.Orders, "id_pedido", id):
-# 			raise ValueError("Pedido inválido")
-# 		status = validate_order_status(request.form["status"])
-# 	except KeyError:
-# 		return "Dados do pedido inválidos", 400
-# 	except ValueError as e:
-# 		return str(e), 400
+@deliveries_bp.route("/entregas/update", methods=["POST"])
+def update_delivery():
+	try:
+		id = request.form["id"]
+		if not validate_id(Table.Deliveries, "id_entrega", id):
+			raise ValueError("Entrega inválida")
+		status = validate_delivery_status(request.form["status"])
+		courier = None
+		if request.form.get("courier"):
+			courier = request.form.get("courier", type=int) or None
+			if courier is None or not validate_id(Table.Couriers, "id_entregador", courier):
+				return "Entregador inválido", 400
 
-# 	_, data_rows = run_select("""
-# 	SELECT
-# 	id_cliente, data_pedido, data_entrega, status_pedido,
-# 	valor_pedido, observacao, itens_pedido
-# 	FROM IGOR_CG_PEDIDOS
-# 	WHERE id_pedido = ?
-# 	AND isDeleted = 0
-# 	""", (id,))
+		if courier is None and status in (deliveryStatus.TRANSIT.name, deliveryStatus.DELIVERED.name):
+			return "Informe o entregador antes de iniciar a entrega.", 400
+	except KeyError:
+		return "Dados da entrega inválidos", 400
+	except ValueError as e:
+		return str(e), 400
 
-# 	if not data_rows:
-# 		return "Pedido não encontrado.", 404
+	_, data_rows = run_select("""
+	SELECT
+	data_entrega, status_entrega
+	FROM IGOR_CG_ENTREGAS
+	WHERE id_entrega = ?
+	AND isDeleted = 0
+	""", (id,))
 
-# 	current_client = data_rows[0][0]
-# 	current_date = data_rows[0][1]
-# 	current_status = data_rows[0][3]
-# 	current_orderPrice = data_rows[0][4]
-# 	current_obs = data_rows[0][5]
-# 	current_items = data_rows[0][6]
+	if not data_rows:
+		return "Entrega não encontrada.", 404
 
-# 	if current_status not in OPEN_ORDER_STATUS:
-# 		return "Um pedido encerrado não pode ser alterado.", 400
+	current_delivery_date = data_rows[0][0]
+	current_status = data_rows[0][1]
 
-# 	try:
-# 		validate_status_transition(current_status, status)
+	if current_status not in OPEN_DELIVERY_STATUS:
+		return "Uma entrega encerrada não pode ser alterada.", 400
 
-# 		if current_status == orderStatus.PENDING.name:
-# 			client = request.form["client"]
-# 			if not validate_id(Table.Clients, "id_cliente", client):
-# 				raise ValueError("Cliente inválido")
-# 			date = validate_date(request.form["date"])
-# 			orderPrice = validate_price(request.form["orderPrice"])
-# 			items_payload = validate_order_items(json.loads(request.form["items"]))
-# 			obs = request.form.get('obs', '')
-# 			items = json.dumps(items_payload)
-# 		else:
-# 			client = current_client
-# 			date = current_date
-# 			orderPrice = current_orderPrice
-# 			obs = current_obs
-# 			items = current_items
-# 			items_payload = json.loads(current_items)
-		
-# 		deliveryDate = validate_date(request.form["deliveryDate"], date, False)
+	try:
+		validate_status_transition(current_status, status, delivery_mode)
+		orders = []
+		delivery_date = current_delivery_date
 
-# 		delivery_details = json.loads(request.form["deliveryDetails"])
-# 		is_delivery = validate_isDelivery_check(request.form.get("isDelivery"), delivery_details)
+		if current_status == deliveryStatus.PENDING.name and status != deliveryStatus.CANCELLED.name:
+			date_id = request.form["date"]
+			if not validate_date_id(date_id, id):
+				return "Data inválida", 400
+			delivery_date = date.fromisoformat(date_id)
+			
+			try:
+				orders = json.loads(request.form.get("items", ""))
+			except json.JSONDecodeError:
+				return "Pedidos da entrega inválidos", 400
+			orders = validate_delivery_orders(orders, delivery_date, id)
 
-# 		address_id = None
-# 		address_txt = None
-# 		delivery_fee = 0.00
+	except (KeyError, TypeError):
+		return "Dados da entrega inválidos", 400
+	except ValueError as e:
+		return str(e), 400
 
-# 		if is_delivery:
-# 			delivery_details = validate_delivery(delivery_details)
-# 			address_id = delivery_details.get("address_id")
-# 			address_txt = delivery_details.get("address_txt")
-# 			delivery_fee = delivery_details.get("delivery_fee")
+	try:
+		with run_transaction() as cursor:
+			cursor.execute("""
+			UPDATE IGOR_CG_ENTREGAS
+			SET
+			id_entregador = ?,
+			data_entrega = ?,
+			status_entrega = ?
+			WHERE id_entrega = ?
+			AND isDeleted = 0
+			AND status_entrega = ?
+			""", (courier, delivery_date, status, id, current_status))
 
-# 			if address_id is not None:
-# 				validate_address_belonging(client, address_id)
+			if cursor.rowcount != 1:
+				raise ValueError("A entrega já foi alterada. Recarregue a página.")
 
-# 	except (KeyError, TypeError):
-# 		return "Dados do pedido inválidos", 400
-# 	except ValueError as e:
-# 		return str(e), 400
+			if status == deliveryStatus.CANCELLED.name:
+				cursor.execute(f"""
+				UPDATE IGOR_CG_PEDIDOS
+				SET id_entrega = NULL
+				WHERE id_entrega = ?
+				""", (id,))
+
+			elif status == deliveryStatus.DELIVERED.name:
+				cursor.execute(f"""
+				UPDATE IGOR_CG_PEDIDOS
+				SET status_pedido = ?
+				WHERE id_entrega = ?
+				AND isDeleted = 0
+				AND status_pedido = ?
+				""", (orderStatus.DELIVERED.name, id, orderStatus.READY.name))
+				
+			elif current_status == deliveryStatus.PENDING.name:
+				placeholders = ", ".join("?" * len(orders))
+
+				cursor.execute(f"""
+				UPDATE IGOR_CG_PEDIDOS
+				SET id_entrega = NULL
+				WHERE id_entrega = ?
+				AND id_pedido NOT IN ({placeholders})
+				""", (id, *orders))
+
+				for order in orders:
+					cursor.execute("""
+					UPDATE IGOR_CG_PEDIDOS
+					SET id_entrega = ?
+					WHERE id_pedido = ?
+					AND isDeleted = 0
+					AND isDelivery = 1
+					AND status_pedido = ?
+					AND data_entrega = ?
+					AND (id_entrega is NULL OR id_entrega = ?)
+					""", (id, order, orderStatus.READY.name, delivery_date, id))
+
+					if cursor.rowcount != 1:
+						raise ValueError("Um ou mais pedidos não estão mais disponíveis para entrega")
+
+			
+
+	except ValueError as e:
+		return str(e), 400
+
+
+	return redirect(request.referrer or url_for("deliveries_bp.deliveries"))
+
+@deliveries_bp.route("/entregas/entregadores/save", methods=["POST"])
+def save_courier():
+	try:
+		courier_id = request.form.get("courier_id")
+		if courier_id:
+			if not validate_id(Table.Couriers, "id_entregador", courier_id):
+				raise ValueError("Entregador inválido")
+		name = validate_name(request.form["courier_name"])
+		phone = validate_phone(request.form["courier_phone"])
+	except ValueError as e:
+		return str(e), 400
+
+	if courier_exists(name, phone, courier_id):
+		return "Entregador já cadastrado", 400
+
 	
-# 	try:
-# 		with run_transaction() as cursor:
-# 			if is_delivery and address_id is None:
-# 				cursor.execute("""
-# 				INSERT INTO IGOR_CG_ENDERECOS_CLIENTES
-# 				(id_cliente, endereco)
-# 				OUTPUT INSERTED.id_endereco
-# 				VALUES (?, ?)
-# 				""", (client, address_txt))
+	with run_transaction() as cursor:
+		if courier_id:
+			cursor.execute("""
+			UPDATE IGOR_CG_ENTREGADORES
+			SET
+			nome_entregador = ?,
+			telefone = ?
+			WHERE id_entregador = ?
+			""", (name, phone, courier_id))
 
-# 				address_id = cursor.fetchone()[0]
+		else:
+			cursor.execute("""
+			INSERT INTO IGOR_CG_ENTREGADORES
+			(nome_entregador, telefone)
+			VALUES (?, ?)
+			""", (name, phone))
 
-# 			cursor.execute("""
-# 			UPDATE IGOR_CG_PEDIDOS
-# 			SET
-# 			id_cliente = ?,
-# 			data_pedido = ?,
-# 			data_entrega = ?,
-# 			status_pedido = ?,
-# 			valor_pedido = ?,
-# 			observacao = ?,
-# 			itens_pedido = ?,
-# 			isDelivery = ?,
-# 			id_endereco = ?,
-# 			taxa_entrega = ?
-# 			WHERE id_pedido = ?
-# 			AND status_pedido = ?
-# 			AND isDeleted = 0
-# 			""", (client, date, deliveryDate, status, orderPrice, obs, items, is_delivery, address_id, delivery_fee, id, current_status))
+	return redirect(url_for("deliveries_bp.deliveries"))
 
-# 			if cursor.rowcount != 1:
-# 				raise ValueError("O pedido já foi alterado. Recarregue a página.")
-			
-# 			changed = items_payload != json.loads(current_items)
+@deliveries_bp.route("/entregas/entregadores/<int:id>/delete", methods=["POST"])
+def delete_courier(id):
+	try:
+		if not validate_id(Table.Couriers, "id_entregador", id):
+			raise ValueError("Entregador inválido")
+		if courier_has_open_deliveries(id):
+			raise ValueError("Esse entregador tem uma entrega em aberto")
+	except ValueError as e:
+		return str(e), 400
+	
+	with run_transaction() as cursor:
+		cursor.execute("""
+		UPDATE IGOR_CG_ENTREGADORES
+		SET
+		isDeleted = 1
+		WHERE id_entregador = ?
+		""", (id,))
 
-# 			if current_status == "PENDING":
-# 				if status == "CONFIRMED" or (status == "PENDING" and changed):
-# 					validate_order_stock(cursor, items_payload, exclude_order_id=id)
+	return "", 204
 
-# 				if status == "CONFIRMED":
-# 					update_order_stock(cursor, items_payload, "deduct", id)
+@deliveries_bp.route("/entregas/entregadores/<int:id>/data")
+def group_data(id):
+	_, rows = run_select("""
+	SELECT nome_entregador, telefone
+	FROM IGOR_CG_ENTREGADORES
+	WHERE id_entregador = ?
+	AND isDeleted = 0
+	""", (id,))
 
-# 			if status == "CANCELLED" and current_status not in {"PENDING", "CANCELLED"}:
-# 				update_order_stock(cursor, items_payload, "increase", id)
-			
-# 			cursor.execute("""
-# 			DELETE FROM IGOR_CG_CESTAS_PEDIDO
-# 			WHERE id_pedido = ?
-# 			""", (id,))
+	if not rows:
+		return jsonify({"error": "Courier not found"}), 404
 
-# 			for item in items_payload:
-# 				cursor.execute("""
-# 				INSERT INTO IGOR_CG_CESTAS_PEDIDO
-# 				(id_produto, id_pedido, quantidade)
-# 				VALUES (?, ?, ?)
-# 				""", (item['basket_id'], id, item['quantity']))
+	courier_name = rows[0][0]
+	courier_phone = rows[0][1]
 
-# 	except ValueError as e:
-# 		return str(e), 400
-
-# 	return redirect(url_for("deliveries_bp.orders"))
+	return jsonify({"name": courier_name, "phone": courier_phone})

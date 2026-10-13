@@ -7,7 +7,7 @@ from enums.movement_types import movementTypes
 from enums.order_status import OPEN_ORDER_STATUS, orderStatus
 from enums.table_names import Table
 from enums.unit_measurement import Unit
-from enums.delivery_status import deliveryStatus
+from enums.delivery_status import deliveryStatus, OPEN_DELIVERY_STATUS
 from services.order_service import (get_available_stock,
                                     get_basket_composition,
                                     get_stock_requirements)
@@ -77,7 +77,7 @@ def validate_date(value, min_date=None, required=True):
 
 	return parsed_date
 
-def validate_date_id(value):
+def validate_date_id(value, delivery_id=None):
 	try:
 		value = date.fromisoformat(value)
 	except (TypeError, ValueError):
@@ -88,10 +88,10 @@ def validate_date_id(value):
 	FROM IGOR_CG_PEDIDOS
 	WHERE isDeleted = 0
 	AND isDelivery = 1
-	AND id_entrega IS NULL
+	AND (id_entrega IS NULL OR id_entrega = ?)
 	AND status_pedido = ?
 	AND data_entrega = ?
-	""", (orderStatus.READY.name, value))
+	""", (delivery_id, orderStatus.READY.name, value))
 
 	return bool(rows)
 	
@@ -102,7 +102,6 @@ def validate_order_status(status):
 	except KeyError:
 		raise ValueError("Status inválido")
 
-#pydead: keep
 def validate_delivery_status(status):
 	try:
 		return deliveryStatus[status].name
@@ -157,7 +156,7 @@ def validate_status_transition(current, new, mode):
 	if not is_valid_transition(current, new, mode):
 		raise ValueError(
 			f"Não é possível alterar o status de "
-			f"{current} para {new}"
+			f"{current.title} para {new.title}"
 		)
 	return new
 
@@ -412,7 +411,7 @@ def validate_order_stock(cursor, items_payload, exclude_order_id=None):
 				f"Estoque insuficiente para o item {item_name}"
 			)
 
-def validate_delivery_orders(orders, delivery_date):
+def validate_delivery_orders(orders, delivery_date, delivery_id=None):
 	if not isinstance(orders, list) or not orders:
 		raise ValueError("A entrega deve conter pelo menos um pedido")
 
@@ -429,11 +428,11 @@ def validate_delivery_orders(orders, delivery_date):
 	FROM IGOR_CG_PEDIDOS
 	WHERE isDeleted = 0
 	AND isDelivery = 1
-	AND id_entrega IS NULL
+	AND (id_entrega IS NULL OR id_entrega = ?)
 	AND status_pedido = ?
 	AND data_entrega = ?
 	AND id_pedido IN ({placeholders})
-	""", (orderStatus.READY.name, delivery_date, *orders))
+	""", (delivery_id, orderStatus.READY.name, delivery_date, *orders))
 
 	valid_ids = {row[0] for row in rows}
 	if valid_ids != set(orders):
@@ -443,7 +442,8 @@ def validate_delivery_orders(orders, delivery_date):
 
 # ---------------------------
 
-placeholders = ",".join("?" for _ in OPEN_ORDER_STATUS)
+OPEN_ORDERS_PLACEHOLDERS = ",".join("?" for _ in OPEN_ORDER_STATUS)
+OPEN_DELIVERIES_PLACEHOLDERS = ",".join("?" for _ in OPEN_DELIVERY_STATUS)
 
 def basket_has_open_orders(id):
 	_, rows = run_select(f"""
@@ -453,7 +453,7 @@ def basket_has_open_orders(id):
 	ON p.id_pedido = cp.id_pedido
 	WHERE cp.id_produto = ?
 	AND p.isDeleted = 0
-	AND p.status_pedido IN ({placeholders}) 
+	AND p.status_pedido IN ({OPEN_ORDERS_PLACEHOLDERS}) 
 	""", (id, *OPEN_ORDER_STATUS))
 
 	return bool(rows)
@@ -464,7 +464,7 @@ def client_has_open_orders(id):
 	FROM IGOR_CG_PEDIDOS
 	WHERE id_cliente = ?
 	AND isDeleted = 0
-	AND status_pedido IN ({placeholders}) 
+	AND status_pedido IN ({OPEN_ORDERS_PLACEHOLDERS}) 
 	""", (id, *OPEN_ORDER_STATUS))
 
 	return bool(rows)
@@ -479,7 +479,7 @@ def item_has_open_orders(id):
 	ON ce.id_produto = cp.id_produto
 	AND ce.isDeleted = 0
 	WHERE p.isDeleted = 0
-	AND p.status_pedido IN ({placeholders})
+	AND p.status_pedido IN ({OPEN_ORDERS_PLACEHOLDERS})
 	AND (
 		ce.id_insumo = ?
 		OR EXISTS (
@@ -505,7 +505,21 @@ def group_has_open_orders(id):
 	WHERE ce.id_grupo = ?
 	AND ce.isDeleted = 0
 	AND p.isDeleted = 0
-	AND p.status_pedido IN ({placeholders})
+	AND p.status_pedido IN ({OPEN_ORDERS_PLACEHOLDERS})
 	""", (id, *OPEN_ORDER_STATUS))
+
+	return bool(rows)
+
+def courier_has_open_deliveries(id):
+	_, rows = run_select(f"""
+	SELECT 1
+	FROM IGOR_CG_ENTREGADORES c
+	JOIN IGOR_CG_ENTREGAS d
+	ON d.id_entregador = c.id_entregador
+	WHERE d.id_entregador = ?
+	AND d.isDeleted = 0
+	AND c.isDeleted = 0
+	AND d.status_entrega IN ({OPEN_DELIVERIES_PLACEHOLDERS})
+	""", (id, *OPEN_DELIVERY_STATUS))
 
 	return bool(rows)

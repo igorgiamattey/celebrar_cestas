@@ -5,7 +5,6 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/modal_styles.css')}}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/home_styles.css')}}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/tom-select.default.css')}}">
 {% endblock %}
 
 {% block content %}
@@ -135,7 +134,7 @@
 	</div>
 	{% endif %}
 
-	{% if missing_items == 0 and close_orders == 0 %}
+	{% if missing_items == 0 and close_orders == 0 and late_orders == 0 and no_delivery_orders == 0 %}
 	<div class="no-alert-msg">
 		Nenhum alerta para você hoje!
 	</div>

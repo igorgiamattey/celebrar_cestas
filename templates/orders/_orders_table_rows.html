@@ -5,7 +5,11 @@
 {% set closed = status in ['Entregue', 'Cancelado'] %}
 <tr>
 	{% for val in row %}
-		{% if loop.index == 3 %}
+		{% if loop.index == 1 %}
+			<td title="{{val}}">
+				<div>#{{val}}</div>
+			</td>
+		{% elif loop.index == 3 %}
 			<td title="{{val}}">
 				{% for item in val.split('\n') %}
 					<div>{{item}}</div>
