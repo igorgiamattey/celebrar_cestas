@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width", initial-scale="1.0">
+		<meta name="robots" content="noindex">
+		<title>{% block title %}Erro{% endblock %} | Celebrar Cestas Gourmet</title>
+		<link rel="stylesheet" href="{{url_for('static', filename='css/base_styles.css')}}">
+		<link rel="stylesheet" href="{{url_for('static', filename='css/error_styles.css')}}">
+		<link rel="icon" href="{{url_for('static', filename='img/favicon.png')}}" type="image/png">
+	</head>
+	<body class="error-page">
+		<header>
+			<div class="brand-logo">
+				<a href="{{url_for('home_bp.home')}}">
+					<img src="{{url_for('static',filename='img/Logo_Simplified.png')}}" alt="Celebrar Cestas Gourmet">
+				</a>
+			</div>
+		</header>
+
+		<main class="error-main">
+			<section class="error-card" role="alert">
+				<div class="error-card-header">
+					<span>{% block header_label %}ALGO DEU ERRADO{% endblock %}</span>
+					<span class="error-code">{% block code %}{% endblock %}</span>
+				</div>
+				<div class="error-card-body">
+					{% block icon %}{% endblock %}
+					<h1 class="error-title">{% block heading %}{% endblock %}</h1>
+					<p class="error-message">{% block message %}{% endblock %}</p>
+					<div class="error-actions">
+						{% block actions %}{% endblock %}
+					</div>
+				</div>
+			</section>
+		</main>
+	</body>
+</html>

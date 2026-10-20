@@ -1,9 +1,10 @@
 import os
 
 from dotenv import load_dotenv
-from flask import Flask, redirect, render_template, request, session, url_for
-from flask_wtf.csrf import CSRFProtect, CSRFError
+from flask import Flask, redirect, request, session, url_for
+from flask_wtf.csrf import CSRFProtect
 
+from error_handlers import register_error_handlers
 from routes.auth import auth_bp
 from routes.catalogue import catalogue_bp
 from routes.clients import clients_bp
@@ -43,12 +44,7 @@ app.config.update(
 	SESSION_COOKIE_SECURE=False
 )
 
-@app.errorhandler(CSRFError)
-def handle_csrf_error(e):
-	return render_template(
-		"csrf_error.html",
-		reason=e.description
-	), 400
+register_error_handlers(app)
 
 @app.before_request
 def require_login():

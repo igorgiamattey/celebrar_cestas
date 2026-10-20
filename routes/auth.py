@@ -3,7 +3,6 @@ from flask import (Blueprint, flash, redirect, render_template, request,
 from werkzeug.security import check_password_hash
 
 from db import run_select
-from services.login_service import validate_loginId, validate_password
 
 auth_bp = Blueprint("auth_bp", __name__)
 
@@ -13,8 +12,8 @@ def login():
 		return render_template("login.html")
 
 	try:	
-		login_id = validate_loginId(request.form.get("login_id", ""))
-		password = validate_password(request.form.get("password", ""))
+		login_id = request.form.get("login_id", "")
+		password = request.form.get("password", "")
 	except ValueError as e:
 		flash(str(e), "error")
 		return redirect(url_for("auth_bp.login"))
