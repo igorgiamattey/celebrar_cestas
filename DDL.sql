@@ -60,27 +60,6 @@ CREATE TABLE IFPF.dbo.IGOR_CG_GRUPOS_ITEM (
 );
 
 
--- IFPF.dbo.IGOR_CG_LANCAMENTOS_FIN definition
-
--- Drop table
-
--- DROP TABLE IFPF.dbo.IGOR_CG_LANCAMENTOS_FIN;
-
-CREATE TABLE IFPF.dbo.IGOR_CG_LANCAMENTOS_FIN (
-	id_lancamento int IDENTITY(1,1) NOT NULL,
-	id_pedido int NULL,
-	tipo varchar(10) COLLATE Latin1_General_CI_AS NULL,
-	descricao varchar(150) COLLATE Latin1_General_CI_AS NOT NULL,
-	valor decimal(10,2) NOT NULL,
-	data_vencimento date NOT NULL,
-	data_pagamento date NULL,
-	status varchar(20) COLLATE Latin1_General_CI_AS NULL,
-	isDeleted bit DEFAULT 0 NOT NULL,
-	fornecedor varchar(100) COLLATE Latin1_General_CI_AS NULL,
-	CONSTRAINT PK_IGOR_CG_LANCAMENTOS PRIMARY KEY (id_lancamento)
-);
-
-
 -- IFPF.dbo.IGOR_CG_PRODUTOS definition
 
 -- Drop table
@@ -128,7 +107,9 @@ CREATE TABLE IFPF.dbo.IGOR_CG_CESTA_ESTOQUE (
 	id_cesta_insumo int IDENTITY(1,1) NOT NULL,
 	id_grupo int NULL,
 	CONSTRAINT PK_IGOR_CG_CESTA_ESTOQUE PRIMARY KEY (id_cesta_insumo),
-	CONSTRAINT FK_BasketItems_Group FOREIGN KEY (id_grupo) REFERENCES IFPF.dbo.IGOR_CG_GRUPOS_ITEM(id_grupo)
+	CONSTRAINT FK_BasketItems_Group FOREIGN KEY (id_grupo) REFERENCES IFPF.dbo.IGOR_CG_GRUPOS_ITEM(id_grupo),
+	CONSTRAINT FK_CESTA_ESTOQUE_INSUMOS FOREIGN KEY (id_insumo) REFERENCES IFPF.dbo.IGOR_CG_ESTOQUE(id_insumo),
+	CONSTRAINT FK_CESTA_ESTOQUE_PRODUTOS FOREIGN KEY (id_produto) REFERENCES IFPF.dbo.IGOR_CG_PRODUTOS(id_produto)
 );
 ALTER TABLE IFPF.dbo.IGOR_CG_CESTA_ESTOQUE WITH NOCHECK ADD CONSTRAINT CK_BasketItems_ItemOrGroup CHECK (([id_insumo] IS NOT NULL AND [id_grupo] IS NULL OR [id_insumo] IS NULL AND [id_grupo] IS NOT NULL));
 
@@ -218,13 +199,14 @@ CREATE TABLE IFPF.dbo.IGOR_CG_PEDIDOS (
 	valor_pedido decimal(10,2) NOT NULL,
 	isDeleted bit DEFAULT 0 NOT NULL,
 	observacao varchar(255) COLLATE Latin1_General_CI_AS NULL,
-	itens_pedido varchar(255) COLLATE Latin1_General_CI_AS NOT NULL,
+	itens_pedido varchar(MAX) COLLATE Latin1_General_CI_AS NOT NULL,
 	id_entrega int NULL,
 	isDelivery bit DEFAULT 0 NOT NULL,
 	taxa_entrega decimal(10,2) DEFAULT 0.00 NOT NULL,
 	valor_total AS ([valor_pedido]+[taxa_entrega]) PERSISTED,
 	id_endereco int NULL,
 	CONSTRAINT PK_IGOR_CG_PEDIDO PRIMARY KEY (id_pedido),
+	CONSTRAINT FK_PEDIDOS_CLIENTES FOREIGN KEY (id_cliente) REFERENCES IFPF.dbo.IGOR_CG_CLIENTES(id_cliente),
 	CONSTRAINT FK_PEDIDOS_ENDERECOS FOREIGN KEY (id_endereco) REFERENCES IFPF.dbo.IGOR_CG_ENDERECOS_CLIENTES(id_endereco),
 	CONSTRAINT FK_PEDIDOS_ENTREGAS FOREIGN KEY (id_entrega) REFERENCES IFPF.dbo.IGOR_CG_ENTREGAS(id_entrega)
 );
@@ -247,4 +229,27 @@ CREATE TABLE IFPF.dbo.IGOR_CG_CESTAS_PEDIDO (
 	CONSTRAINT PK__IGOR_CG___5F3D07189D13BDCB PRIMARY KEY (id_cestas_pedido),
 	CONSTRAINT FK_BasketOrders_Basket FOREIGN KEY (id_produto) REFERENCES IFPF.dbo.IGOR_CG_PRODUTOS(id_produto),
 	CONSTRAINT FK_BasketOrders_Orders FOREIGN KEY (id_pedido) REFERENCES IFPF.dbo.IGOR_CG_PEDIDOS(id_pedido)
+);
+
+
+-- IFPF.dbo.IGOR_CG_LANCAMENTOS_FIN definition
+
+-- Drop table
+
+-- DROP TABLE IFPF.dbo.IGOR_CG_LANCAMENTOS_FIN;
+
+CREATE TABLE IFPF.dbo.IGOR_CG_LANCAMENTOS_FIN (
+	id_lancamento int IDENTITY(1,1) NOT NULL,
+	id_pedido int NULL,
+	tipo varchar(100) COLLATE Latin1_General_CI_AS NOT NULL,
+	descricao varchar(150) COLLATE Latin1_General_CI_AS NOT NULL,
+	valor decimal(10,2) NOT NULL,
+	data_pagamento date NULL,
+	status_pagamento varchar(100) COLLATE Latin1_General_CI_AS NOT NULL,
+	isDeleted bit DEFAULT 0 NOT NULL,
+	fornecedor varchar(100) COLLATE Latin1_General_CI_AS NULL,
+	categoria varchar(100) COLLATE Latin1_General_CI_AS NOT NULL,
+	id_lancamento_origem int NULL,
+	CONSTRAINT PK_IGOR_CG_LANCAMENTOS PRIMARY KEY (id_lancamento),
+	CONSTRAINT FK_LANCAMENTOS_PEDIDOS FOREIGN KEY (id_pedido) REFERENCES IFPF.dbo.IGOR_CG_PEDIDOS(id_pedido)
 );

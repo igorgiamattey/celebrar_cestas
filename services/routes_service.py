@@ -1,5 +1,8 @@
 from db import format_date, run_select
 from enums.delivery_status import deliveryStatus
+from enums.financial_status import financialStatus
+from enums.movement_types import (financialMovementCategories,
+                                  financialMovementTypes, CAT_BY_TYPE)
 from enums.order_status import orderStatus
 from enums.unit_measurement import Unit
 
@@ -211,12 +214,81 @@ def getAvailableOrders(delivery_id=None):
 		{
 			"id": row[0],
 			"title": (f"Pedido #{row[0]} | {row[1] or '---'} | {row[2] or '---'}"),
-			"date": row[3].isoformat()
+			"date": row[3].isoformat() if row[3] is not None else None
 		}
 		for row in rows
 	]
 
 	return available_orders
+
+def getAvailableOrdersFinancial():
+	_, rows = run_select("""
+	SELECT  
+	p.id_pedido,
+	c.nome_razao,
+	p.data_entrega,
+	p.valor_total,
+	p.status_pedido
+	FROM IGOR_CG_PEDIDOS p
+	JOIN IGOR_CG_CLIENTES c
+	ON p.id_cliente = c.id_cliente
+	LEFT JOIN IGOR_CG_ENDERECOS_CLIENTES a
+	ON p.id_endereco = a.id_endereco
+	WHERE p.isDeleted = 0
+	AND p.status_pedido <> ?
+	AND NOT EXISTS (
+		SELECT 1
+		FROM IGOR_CG_LANCAMENTOS_FIN f
+		WHERE f.id_pedido = p.id_pedido
+		AND f.status_pagamento IN (?, ?))
+	ORDER BY p.id_pedido;
+	""", (orderStatus.CANCELLED.name, financialStatus.PENDING.name, financialStatus.PAID.name))
+
+	available_orders = [
+		{
+			"id": row[0],
+			"title": " | ".join([
+				f"Pedido #{row[0]}",
+				row[1] or '---',
+				format_date(row[2]),
+				orderStatus[row[4]].value,
+			]),
+			"price": str(row[3]) if row[3] is not None else ""
+		}
+		for row in rows
+	]
+
+	return available_orders
+
+def getAvailableFinancialStatus():
+	statuses = [
+		{
+			"id": status.name,
+			"title": status.value.replace("_", " ").title()
+		}
+		for status in financialStatus
+	]
+
+	return statuses
+
+def getAvailableFinancialTypes():
+	types = [
+		{
+			"id": type.name,
+			"title": type.value.replace("_", " ").title()
+		}
+		for type in financialMovementTypes
+	]
+
+	return types
+
+def getAvailableFinancialCategoriesByType():
+	categories = {
+		fin_type: [{"id": c.name, "title": c.value.replace("_", " ").title()} for c in cats if c != financialMovementCategories.REFUND]
+		for fin_type, cats in CAT_BY_TYPE.items()
+	}
+
+	return categories
 
 def countRows(table, where_clause="", params=()):
 	_, rows = run_select(f"""

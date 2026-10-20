@@ -268,3 +268,56 @@
 	color: var(--ready-badge-txt);
 	border-color: var(--ready-badge-brd);
 }
+
+.home-balance-table {
+	width: 100%;
+	border-collapse: separate;
+	border-spacing: 0;
+	background-color: var(--bg-card);
+	color: var(--text-dark);
+	font-family: inherit;
+	font-size: 0.85rem;
+	margin-bottom: 0;
+	table-layout: fixed;
+}
+
+.home-balance-table th,
+.home-balance-table td {
+	padding: 6px 10px;
+	border-bottom: 1px solid var(--border-color);
+	vertical-align: middle;
+	box-sizing: border-box;
+}
+
+.home-balance-table th[scope="row"] {
+	width: 50%;
+	text-align: left;
+	font-weight: bold;
+	color: var(--text-dark);
+	white-space: normal;
+	border-right: 1px solid var(--border-color);
+}
+
+.home-balance-table td {
+	width: 50%;
+	text-align: right;
+	overflow-wrap: anywhere;
+	font-weight: bold;
+}
+
+.home-balance-table tbody tr:last-child th,
+.home-balance-table tbody tr:last-child td {
+	border-bottom: none;
+}
+
+.money-in {
+	color: var(--income);
+}
+
+.money-out {
+	color: var(--expense);
+}
+
+.money-total {
+	color: var(--total);
+}

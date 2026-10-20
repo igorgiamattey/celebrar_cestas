@@ -1,4 +1,8 @@
-from db import run_select, run_transaction
+from datetime import date
+
+from db import format_currency, run_select, run_transaction
+from enums.financial_status import financialStatus
+from enums.movement_types import financialMovementTypes
 from enums.order_status import orderStatus
 from services.order_service import get_available_stock
 
@@ -58,3 +62,42 @@ def getNoDeliveryOrders():
 	""", (status))
 
 	return rows[0][0]
+
+def getBalance():
+	balance = {}
+	IN = financialMovementTypes.INCOME.name
+	OUT = financialMovementTypes.EXPENSE.name
+	PAID = financialStatus.PAID.name
+	PENDING = financialStatus.PENDING.name
+
+	start = date.today().replace(day=1)
+	end = (
+		start.replace(year=start.year + 1, month=1) if start.month == 12
+		else start.replace(month=start.month+1)
+	)
+	
+	_, rows = run_select("""
+	SELECT tipo,
+		SUM(CASE WHEN status_pagamento = ? THEN valor ELSE 0 END) AS pending,
+		SUM(CASE WHEN status_pagamento = ?
+			AND data_pagamento >= ?
+			AND data_pagamento < ?
+			THEN valor ELSE 0 END) AS paid_month
+	FROM IGOR_CG_LANCAMENTOS_FIN
+	WHERE isDeleted = 0
+	GROUP BY tipo
+	""", (PENDING, PAID, start, end))
+
+	totals = {tipo: ((pending or 0), (monthly or 0)) for tipo, pending, monthly in rows}
+
+	pending_income, month_income = totals.get(IN, (0, 0))
+	pending_expense, month_expense = totals.get(OUT, (0, 0))
+	
+	balance["PENDING_INCOME"] = format_currency(pending_income)
+	balance["PENDING_EXPENSE"] = format_currency(pending_expense)
+	balance["MONTH_INCOME"] = format_currency(month_income)
+	balance["MONTH_EXPENSE"] = format_currency(month_expense)
+	balance["MONTH_TOTAL"] = format_currency(month_income-month_expense)
+
+	return balance
+

@@ -18,7 +18,7 @@
 				<thead>
 					<tr>
 						<th></th>
-						{% for col in columns %}
+						{% for col in order_columns %}
 						<th>
 							{{col}}
 						</th>
@@ -61,25 +61,31 @@
 
 	<div class="home-card">
 		<div class="home-card-header">
-			FINANCEIRO DO DIA
+			RESUMO FINANCEIRO
 		</div>
 
 		<div class="home-card-body">
-			<table class="home-mini-table">
+			<table class="home-balance-table">
 				<tbody>
 					<tr>
-						<td><strong>Contas a Receber:</strong></td>
-						<td class="positive-value">{{finances.receivables}}</td>
+						<th scope="row">A receber</th>
+						<td class="money-in">{{finances["PENDING_INCOME"]}}</td>
 					</tr>
-
 					<tr>
-						<td><strong>Taxas de Entrega:</strong></td>
-						<td class="neutral-value">{{finances.delivery_fee}}</td>
+						<th scope="row">A pagar</th>
+						<td class="money-out">{{finances["PENDING_EXPENSE"]}}</td>
 					</tr>
-
 					<tr>
-						<td><strong>Total Faturado:</strong></td>
-						<td class="total-value">{{finances.invoicing}}</td>
+						<th scope="row">Faturamento no mês</th>
+						<td class="money-in">{{finances["MONTH_INCOME"]}}</td>
+					</tr>
+					<tr>
+						<th scope="row">Gastos no mês</th>
+						<td class="money-out">{{finances["MONTH_EXPENSE"]}}</td>
+					</tr>
+					<tr>
+						<th scope="row">Saldo do mês</th>
+						<td class="money-total">{{finances["MONTH_TOTAL"]}}</td>
 					</tr>
 				</tbody>
 			</table>
@@ -149,7 +155,9 @@
 {% include 'catalogue/_register_basket_modal.html' %}
 {% include 'orders/_register_order_modal.html' %}
 {% include 'orders/_baskets_composition_modal.html' %}
+{% include 'orders/_new_delivery_order_modal.html' %}
 {% include 'storage/_miss_item_modal.html' %}
+{% include 'deliveries/_register_delivery_modal.html' %}
 {% endblock %}
 
 {% block scripts %}
@@ -159,5 +167,6 @@
 <script src="{{url_for('static', filename='js/clients_modal.js')}}"></script>
 <script src="{{url_for('static', filename='js/catalogue_modal.js')}}"></script>
 <script src="{{url_for('static', filename='js/orders_modal.js')}}"></script>
+<script src="{{url_for('static', filename='js/deliveries_modal.js')}}"></script>
 <script src="{{url_for('static', filename='js/home.js')}}"></script>
 {% endblock %}

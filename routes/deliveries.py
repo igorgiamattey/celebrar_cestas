@@ -43,7 +43,7 @@ def deliveries():
 						available_couriers=available_couriers,
 						available_dates=available_dates,
 						available_orders=available_orders,
-						statuses=statuses,
+						delivery_statuses=statuses,
 						available_addresses=available_addresses)
 
 @deliveries_bp.route("/entregas/search")

@@ -53,7 +53,9 @@ document.addEventListener("DOMContentLoaded", () => {
 	});
 });
 
-document.getElementById('search-icon').innerHTML = ICON_SEARCH;
+const search_icon = document.getElementById('search-icon')
+if (search_icon)
+	search_icon.innerHTML = ICON_SEARCH;
 
 const searchClear = document.getElementById('search-clear');
 const searchInput = document.querySelector('.search-bar');

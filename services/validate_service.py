@@ -5,7 +5,9 @@ import phonenumbers
 
 from db import parse_price, run_select
 from enums.delivery_status import OPEN_DELIVERY_STATUS, deliveryStatus
-from enums.movement_types import storageMovementTypes
+from enums.financial_status import financialStatus, DATE_REQUIRED_STATUSES
+from enums.movement_types import (CAT_BY_TYPE, financialMovementCategories,
+                                  financialMovementTypes, storageMovementTypes)
 from enums.order_status import OPEN_ORDER_STATUS, orderStatus
 from enums.table_names import Table
 from enums.unit_measurement import Unit
@@ -14,8 +16,9 @@ from services.order_service import (get_available_stock,
                                     get_stock_requirements)
 from services.status_transitions import is_valid_transition
 
+MAX_DECIMAL = 100_000_000
 
-def validate_qty(qty, allow_zero=False):
+def validate_qty(qty, allow_zero=False, integer=False):
 	try:
 		qty = float(qty)
 	except (TypeError, ValueError):
@@ -23,6 +26,14 @@ def validate_qty(qty, allow_zero=False):
 
 	if not math.isfinite(qty):
 		raise ValueError("Quantidade não pode ser infinita")
+	
+	if not integer and qty >= MAX_DECIMAL:
+		raise ValueError("Quantidade muito alta")
+
+	if integer:
+		if not qty.is_integer():
+			raise ValueError("A quantidade deve ser um número inteiro")
+		qty = int(qty)
 
 	if qty < 0:
 		raise ValueError("A quantidade não pode ser negativa")
@@ -32,19 +43,14 @@ def validate_qty(qty, allow_zero=False):
 
 	return qty
 
-def validate_int_qty(qty, allow_zero=False):
-	qty = validate_qty(qty, allow_zero)
-
-	if not qty.is_integer():
-		raise ValueError("A quantidade deve ser um número inteiro")
-
-	return int(qty)
-
 def validate_price(price, allow_free=False):
 	try:
 		price = parse_price(price)
 	except ValueError:
 		raise ValueError("Preço inválido")
+
+	if price >= MAX_DECIMAL:
+		raise ValueError("Preço muito alto")
 
 	if allow_free:
 		if price < 0:
@@ -81,6 +87,23 @@ def validate_date(value, min_date=None, required=True):
 
 	return parsed_date
 
+def validate_pay_date(value, status):
+	if status not in DATE_REQUIRED_STATUSES:
+		return None
+
+	if value is None or value == "":
+		raise ValueError("A data de pagamento é obrigatória")
+
+	try:
+		parsed_date = datetime.strptime(value, "%Y-%m-%d").date()
+	except (TypeError, ValueError):
+		raise ValueError("Data de pagamento inválida")
+
+	if parsed_date > date.today():
+		raise ValueError("A data de pagamento não pode ser futura")
+
+	return parsed_date
+
 def validate_date_id(value, delivery_id=None):
 	try:
 		value = date.fromisoformat(value)
@@ -99,7 +122,6 @@ def validate_date_id(value, delivery_id=None):
 
 	return bool(rows)
 	
-
 def validate_order_status(status):
 	try:
 		return orderStatus[status].name
@@ -111,6 +133,31 @@ def validate_delivery_status(status):
 		return deliveryStatus[status].name
 	except KeyError:
 		raise ValueError("Status inválido")
+
+def validate_financial_status(status):
+	try:
+		return financialStatus[status].name
+	except KeyError:
+		raise ValueError("Status inválido")
+
+def validate_financial_type(fin_type):
+	try:
+		return financialMovementTypes[fin_type].name
+	except KeyError:
+		raise ValueError("Tipo de lançamento inválido")
+
+def validate_financial_category(category, fin_type):
+	try:
+		category = financialMovementCategories[category]
+		if category == financialMovementCategories.REFUND:
+			raise ValueError("Estornos só podem ser criados pela opção de estorno")
+	except KeyError:
+		raise ValueError("Categoria inválida")
+
+	if category not in CAT_BY_TYPE[fin_type]:
+		raise ValueError("Categoria inválida para o tipo selecionado")
+
+	return category.name
 
 def validate_move(move):
 	try:
@@ -297,7 +344,7 @@ def validate_order_items(items_payload):
 			raise ValueError("Item de pedido incompleto")
 
 		basket_id = item["basket_id"]
-		item["quantity"] = validate_int_qty(item["quantity"])
+		item["quantity"] = validate_qty(item["quantity"], integer=True)
 
 		if basket_id in in_order:
 			raise ValueError("Essa cesta já está no pedido")
@@ -339,13 +386,13 @@ def validate_basket_items(items):
 
 		if category == "items":
 			if unit.lower() == 'un':
-				item["quantity"] = validate_int_qty(item["quantity"])	
+				item["quantity"] = validate_qty(item["quantity"], integer=True)	
 
 			if not validate_id(Table.Items, "id_insumo", item_id):
 				raise ValueError("Item inválido")
 
 		elif category == "groups":
-			item["quantity"] = validate_int_qty(item["quantity"])
+			item["quantity"] = validate_qty(item["quantity"], integer=True)
 			if not validate_id(Table.Groups, "id_grupo", item_id):
 				raise ValueError("Grupo inválido")
 
@@ -390,7 +437,7 @@ def validate_group_items(items):
 		unit = rows[0][0]
 
 		if unit.lower() == "un":
-			item_qty = validate_int_qty(item_qty)
+			item_qty = validate_qty(item_qty, integer=True)
 		else:
 			item_qty = validate_qty(item_qty)
 

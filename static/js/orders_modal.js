@@ -19,7 +19,7 @@ let pendingOrderBasket = null;
 let pendingOrderMode = null;
 let pendingOrderIndex = null;
 
-let defaultStatus = 'PENDING';
+let defaultOrderStatus = 'PENDING';
 
 let newOrderPriceManuallySet = false;
 let viewOrderPriceManuallySet = false;
@@ -32,13 +32,14 @@ const availableBaskets = JSON.parse(
 	document.getElementById('newOrder-baskets').dataset.baskets
 );
 
-const availableStatuses = JSON.parse(
+const availableOrderStatuses = JSON.parse(
 	document.getElementById('newOrder-status').dataset.status
 );
 
 const availableAddresses = JSON.parse(
 	document.getElementById('newOrder-address').dataset.addresses
 );
+
 const NEW_ADDRESS_ID = "new";
 
 const newOrderClientSelector = new TomSelect('#newOrder-client', {
@@ -74,7 +75,7 @@ const newOrderBasketSelector = new TomSelect('#newOrder-baskets', {
 });
 
 const newOrderStatusSelector = new TomSelect('#newOrder-status', {
-	options: availableStatuses,
+	options: availableOrderStatuses,
 	valueField: 'id',
 	labelField: 'title',
 	searchField: 'title',
@@ -173,7 +174,7 @@ if (viewOrderForm) {
 	});
 
 	viewOrderStatusSelector = new TomSelect('#viewOrder-status', {
-		options: availableStatuses,
+		options: availableOrderStatuses,
 		valueField: 'id',
 		labelField: 'title',
 		searchField: 'title',
@@ -247,7 +248,7 @@ function openNewOrderModal() {
 
 	newOrderClientSelector.clear();
 	newOrderBasketSelector.clear();
-	newOrderStatusSelector.setValue(defaultStatus);
+	newOrderStatusSelector.setValue(defaultOrderStatus);
 	newOrderStatusSelector.disable();
 
 	document.getElementById('newOrder-newAddressText').value = '';
@@ -275,10 +276,7 @@ function openNewOrderModal() {
 function openViewOrderModal(id) {
 	id = parseInt(id, 10);
 	fetch(`/pedidos/${id}/data`)
-		.then(res => {
-			if (!res.ok) throw new Error(res.status);
-			return res.json();
-		})
+		.then(res => res.json())
 		.then(data => {
 			document.getElementById('viewOrder-id').value = data.id_pedido;
 			viewOrderClientSelector.setValue(data.id_cliente);
@@ -286,7 +284,7 @@ function openViewOrderModal(id) {
 			const allowedStatuses = [...data.allowed_status];
 			viewOrderStatusSelector.clear(true);
 			viewOrderStatusSelector.clearOptions();
-			availableStatuses
+			availableOrderStatuses
 				.filter(status => allowedStatuses.includes(status.id))
 				.forEach(status => {viewOrderStatusSelector.addOption(status)});
 			viewOrderStatusSelector.setValue(data.status_pedido);

@@ -43,6 +43,12 @@
 	--ready-badge-bg: #F0E4F7;
 	--ready-badge-txt: #6B2A8C;
 	--ready-badge-brd: #6B2A8C;
+
+	--income: #095309;
+	--expense: #940909;
+	--total: #6E3D2B;
+
+
 }
 
 * {
@@ -531,4 +537,19 @@ body.fit-viewport .dashboard-container {
 
 html .ts-wrapper.single .ts-control::after {
 	display: none !important;
+}
+
+.search-query {
+	font-style: italic;
+	text-decoration: underline;
+}
+
+.mini-table .empty-search-row td {
+    display: table-cell;
+    width: auto;
+    text-align: center;
+    white-space: normal;
+	color: var(--text-header);
+	border: none;
+	padding-top: 10%;
 }

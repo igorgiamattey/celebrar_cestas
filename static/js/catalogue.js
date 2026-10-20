@@ -10,7 +10,28 @@ function handleSearch() {
 		fetch(`/catalogo/search?search=${encodeURIComponent(query)}`)
 			.then(res => res.text())
 			.then(html => {
-				document.getElementById('catalogueTableBody').innerHTML = html;
+				const tableBody = document.getElementById('catalogueTableBody');
+
+				tableBody.innerHTML = html;
+
+				if (!html.trim() && query.trim()) {
+					const row = document.createElement('tr');
+					row.classList.add('empty-search-row');
+					
+					const cell = document.createElement('td');
+					
+					cell.colSpan = tableBody.closest('table').querySelectorAll('thead th').length;
+					cell.classList.add('text-center', 'py-4');
+					
+					const queryStyle = document.createElement('span');
+					queryStyle.textContent = query;
+					queryStyle.classList.add('search-query');
+
+					cell.append('Nenhuma cesta correspondente à pesquisa: ', queryStyle);
+
+					row.appendChild(cell);
+					tableBody.appendChild(row);
+				}
 			});
 	}, 300);
 }

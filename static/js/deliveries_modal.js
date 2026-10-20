@@ -5,33 +5,54 @@ let viewDeliveryOrders = [];
 
 let viewAvailableOrders = [];
 
-let defaultStatus = 'PENDING';
+let defaultDeliveryStatus = 'PENDING';
 
 let couriers = []
 
-document.getElementById('mngCourier-courierSelect').addEventListener('change', function() {
-	const courierId = this.value;
 
-	if (!courierId) {
-		document.getElementById('mngCourier-name').value = "";
-		document.getElementById('mngCourier-phone').value = "";
-		return;
-	}
+const mngCourierCourierSelector = null;
+const mngCouriersForm = document.getElementById('mngCourier-modal');
+if (mngCouriersForm) {
+	document.getElementById('mngCourier-courierSelect').addEventListener('change', function() {
+		const courierId = this.value;
 
-	fetch(`/entregas/entregadores/${courierId}/data`)
-		.then(res => res.json())
-		.then(data => {
-			document.getElementById('mngCourier-name').value = data.name;
-			document.getElementById('mngCourier-phone').value = data.phone;
-		})
-		.catch(err => console.error('Failed to load courier:', err));
-});
+		if (!courierId) {
+			document.getElementById('mngCourier-name').value = "";
+			document.getElementById('mngCourier-phone').value = "";
+			return;
+		}
+
+		fetch(`/entregas/entregadores/${courierId}/data`)
+			.then(res => res.json())
+			.then(data => {
+				document.getElementById('mngCourier-name').value = data.name;
+				document.getElementById('mngCourier-phone').value = data.phone;
+			})
+			.catch(err => console.error('Failed to load courier:', err));
+	});
+
+	mngCourierCourierSelector = new TomSelect('#mngCourier-courierSelect', {
+		options: availableCouriers,
+		valueField: 'id',
+		labelField: 'name',
+		searchField: 'name',
+		create: false,
+		maxItems: 1,
+		maxOptions: null,
+		sortField: [
+			{
+				field: 'name',
+				direction: 'asc'
+			}
+		]
+	});
+}
 
 const availableCouriers = JSON.parse(
 	document.getElementById('newDelivery-courier').dataset.couriers
 );
 
-const availableStatuses = JSON.parse(
+const availableDeliveryStatuses = JSON.parse(
 	document.getElementById('newDelivery-status').dataset.status
 );
 
@@ -42,22 +63,6 @@ const availableOrders = JSON.parse(
 const availableDates = JSON.parse(
 	document.getElementById('newDelivery-date').dataset.dates
 );
-
-const mngCourierCourierSelector = new TomSelect('#mngCourier-courierSelect', {
-	options: availableCouriers,
-	valueField: 'id',
-	labelField: 'name',
-	searchField: 'name',
-	create: false,
-	maxItems: 1,
-	maxOptions: null,
-	sortField: [
-		{
-			field: 'name',
-			direction: 'asc'
-		}
-	]
-});
 
 const newDeliveryCourierSelector = new TomSelect('#newDelivery-courier', {
 	options: availableCouriers,
@@ -92,7 +97,7 @@ const newDeliveryOrderSelector = new TomSelect('#newDelivery-orders', {
 });
 
 const newDeliveryStatusSelector = new TomSelect('#newDelivery-status', {
-	options: availableStatuses,
+	options: availableDeliveryStatuses,
 	valueField: 'id',
 	labelField: 'title',
 	searchField: 'title',
@@ -181,7 +186,7 @@ if (viewDeliveryForm) {
 	});
 
 	viewDeliveryStatusSelector = new TomSelect('#viewDelivery-status', {
-		options: availableStatuses,
+		options: availableDeliveryStatuses,
 		valueField: 'id',
 		labelField: 'title',
 		searchField: 'title',
@@ -234,7 +239,7 @@ function openNewDeliveryModal() {
 	newDeliveryOrderSelector.clear(true);
 	newDeliveryOrderSelector.clearOptions();
 	newDeliveryCourierSelector.clear();
-	newDeliveryStatusSelector.setValue(defaultStatus);
+	newDeliveryStatusSelector.setValue(defaultDeliveryStatus);
 	newDeliveryStatusSelector.disable();
 
 	newDeliveryOrders = [];
@@ -247,10 +252,7 @@ function openNewDeliveryModal() {
 function openViewDeliveryModal(id) {
 	id = parseInt(id, 10);
 	fetch(`/entregas/${id}/data`)
-		.then(res => {
-			if (!res.ok) throw new Error(res.status);
-			return res.json();
-		})
+		.then(res => res.json())
 		.then(data => {
 			document.getElementById('viewDelivery-id').value = data.id_entrega;
 			viewDeliveryCourierSelector.setValue(data.id_entregador ?? '', true);
@@ -258,7 +260,7 @@ function openViewDeliveryModal(id) {
 			viewDeliveryStatusSelector.clear(true);
 			viewDeliveryStatusSelector.clearOptions();
 			const allowedStatuses = [...data.allowed_status];
-			availableStatuses
+			availableDeliveryStatuses
 				.filter(status => allowedStatuses.includes(status.id))
 				.forEach(status => {viewDeliveryStatusSelector.addOption(status)});
 			viewDeliveryStatusSelector.setValue(data.status_entrega, true);

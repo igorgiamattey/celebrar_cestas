@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block nav_financial %}active{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_styles.css')}}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/modal_styles.css')}}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+	
+	<div class="actions-col">
+		<div class="search-wrapper">
+			<span class="search-icon" id="search-icon"></span>
+			<input
+				class="search-bar"
+				type="text"
+				id="financial-search-bar"
+				placeholder="Tipo/Data/Status/Categoria..."
+				oninput="handleSearch()"
+			>
+			<button type="button" class="search-clear" id="search-clear" title="Limpar pesquisa"></button>
+		</div>
+		<button class="btn-add" onclick="openNewFinancialModal()">NOVO LANÇAMENTO</button>
+		<button class="btn-add" onclick="openBalance()">VER BALANÇO TOTAL</button>
+	</div>
+
+	<div class="card">
+		<div class="card-body">
+			<div class="table-scroll">
+				<table class="mini-table">
+					<thead>
+						<tr>
+							{% for col in columns %}
+							<th>
+								{{col}}
+							</th>
+							{% endfor %}
+							<th></th>
+						</tr>
+					</thead>
+					<tbody id="financialTableBody">
+						{% include 'financial/_financial_table_rows.html' %}
+					</tbody>
+				</table>
+			</div>
+			{% if total_pages > 1 %}
+				<div class="pagination">
+					{% if page > 1 %}
+						<a href="{{url_for('financial_bp.financial', page=page-1, search=search or None)}}">&laquo;</a>
+					{% endif %}
+
+					<span>{{page}} de {{total_pages}}</span>
+
+					{% if page < total_pages %}
+						<a href="{{url_for('financial_bp.financial', page=page+1, search=search or None)}}">&raquo;</a>
+					{% endif %}
+				</div>
+			{% endif %}
+		</div>
+	</div>
+
+</div>
+{% endblock %}
+
+{% block modals %}
+{% include 'financial/_register_financial_modal.html' %}
+{% include 'financial/_view_financial_modal.html' %}
+{% include 'financial/_view_balance_modal.html' %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{url_for('static', filename='js/tom-select.complete.js')}}"></script>
+<script src="{{url_for('static', filename='js/modal.js')}}"></script>
+<script src="{{url_for('static', filename='js/financial_modal.js')}}"></script>
+<script src="{{url_for('static', filename='js/financial.js')}}"></script>
+{% endblock %}

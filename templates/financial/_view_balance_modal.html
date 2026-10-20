@@ -1,0 +1,52 @@
+<div id="viewBalance-modal" class="modal-overlay" style="display: none;">
+	<div class="modal-box">
+		<div class="modal-header">
+			<h3>Balanço Total</h3>
+			<button type="button" class="btn-close" onclick="closeModal('viewBalance-modal')">&times;</button>
+		</div>
+			<table class="balance-table">
+				<tbody>
+					<tr>
+						<th scope="row">Entradas</th>
+						<td class="money-in">{{balance_values["INCOME"]}}</td>
+					</tr>
+					<tr>
+						<th scope="row">Saídas</th>
+						<td class="money-out">{{balance_values["EXPENSE"]}}</td>
+					</tr>
+					<tr>
+						<th scope="row">Total</th>
+						<td class="money-total">{{balance_values["TOTAL"]}}</td>
+					</tr>
+					<tr>
+						<th scope="row"></th>
+						<td></td>
+					</tr>
+					<tr>
+						<th scope="row">Pedidos</th>
+						<td class="money-in">{{balance_values["ORDERS"]}}</td>
+					</tr>
+					<tr>
+						<th scope="row">Compras</th>
+						<td class="money-out">{{balance_values["MARKET"]}}</td>
+					</tr>
+					<tr>
+						<th scope="row">Reembolso (Entrada)</th>
+						<td class="money-in">{{balance_values["REFUND_IN"]}}</td>
+					</tr>
+					<tr>
+						<th scope="row">Reembolso (Saída)</th>
+						<td class="money-out">{{balance_values["REFUND_OUT"]}}</td>
+					</tr>
+					<tr>
+						<th scope="row">Outros (Entrada)</th>
+						<td class="money-in">{{balance_values["OTHER_IN"]}}</td>
+					</tr>
+					<tr>
+						<th scope="row">Outros (Saída)</th>
+						<td class="money-out">{{balance_values["OTHER_OUT"]}}</td>
+					</tr>
+				</tbody>
+			</table>
+	</div>
+</div>

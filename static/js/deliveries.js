@@ -21,7 +21,28 @@ function handleSearch() {
 		fetch(`/entregas/search?search=${encodeURIComponent(query)}&openonly=${openOnly}`)
 			.then(res => res.text())
 			.then(html => {
-				document.getElementById('deliveriesTableBody').innerHTML = html;
+				const tableBody = document.getElementById('deliveriesTableBody');
+
+				tableBody.innerHTML = html;
+
+				if (!html.trim() && query.trim()) {
+					const row = document.createElement('tr');
+					row.classList.add('empty-search-row');
+					
+					const cell = document.createElement('td');
+					
+					cell.colSpan = tableBody.closest('table').querySelectorAll('thead th').length;
+					cell.classList.add('text-center', 'py-4');
+					
+					const queryStyle = document.createElement('span');
+					queryStyle.textContent = query;
+					queryStyle.classList.add('search-query');
+
+					cell.append('Nenhuma entrega correspondente à pesquisa: ', queryStyle);
+
+					row.appendChild(cell);
+					tableBody.appendChild(row);
+				}
 			});
 	}, 300);
 }

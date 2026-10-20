@@ -5,9 +5,13 @@ from flask import Blueprint, jsonify, render_template, request, session
 from db import format_date, run_select
 from enums.order_status import orderStatus
 from services.home_service import (getCloseOrders, getLateOrders,
-                                   getMissingItems, getNoDeliveryOrders)
-from services.routes_service import (getAvailableBaskets, getAvailableClients,
+                                   getMissingItems, getNoDeliveryOrders, getBalance)
+from services.routes_service import (getAvailableAddresses,
+                                     getAvailableBaskets, getAvailableClients,
+                                     getAvailableCouriers, getAvailableDates,
+                                     getAvailableDeliveryStatus,
                                      getAvailableGroups, getAvailableItems,
+                                     getAvailableOrders,
                                      getAvailableOrderStatus)
 
 home_bp = Blueprint("home_bp", __name__)
@@ -36,7 +40,7 @@ def home():
 	page = min(page, total_pages)
 	offset = (page - 1) * per_page
 
-	columns, rows = run_select(f"""
+	order_columns, order_rows = run_select(f"""
 	SELECT
 	p.id_pedido AS ID,
 	c.nome_razao AS Cliente,
@@ -66,16 +70,16 @@ def home():
 	FETCH NEXT ? ROWS ONLY
 	""", (offset, per_page))
 
-	columns = [
-		columns[3],
-		columns[2],
-		columns[5]
+	order_columns = [
+		order_columns[3],
+		order_columns[2],
+		order_columns[5]
 	]
 
 	today = date.today()
 	limit_date = today + timedelta(days=5)
 
-	rows = [
+	order_rows = [
 		{
 			"id": row[0],
 			"delivery": format_date(row[3]),
@@ -84,29 +88,32 @@ def home():
 			"warning": row[3] is not None and today <= row[3] <= limit_date and orderStatus[row[5]].name not in ("DELIVERED", "CANCELLED"),
 			"late": row[3] is not None and today > row[3] and orderStatus[row[5]].name not in ("DELIVERED", "CANCELLED")
 		}
-		for row in rows
+		for row in order_rows
 	]
 
-	finances = {
-		"receivables": "R$ 1.580,00",
-		"delivery_fee": "R$ 120,00",
-		"invoicing": "R$ 1.700,00",
-	}
+	finances = getBalance()
 
 	available_items = getAvailableItems()
 	available_groups = getAvailableGroups()
 	available_clients = getAvailableClients()
 	available_baskets = getAvailableBaskets()
-	statuses = getAvailableOrderStatus()
+	order_statuses = getAvailableOrderStatus()
 
 	missing_items = getMissingItems()
 	close_orders = getCloseOrders()
 	late_orders = getLateOrders()
 	no_delivery_orders = getNoDeliveryOrders()
+	available_addresses = getAvailableAddresses()
+	available_couriers = getAvailableCouriers()
+
+	available_dates = getAvailableDates()
+	available_orders = getAvailableOrders()
+	delivery_statuses = getAvailableDeliveryStatus()
+	available_addresses = getAvailableAddresses()
 
 	return render_template("home/home.html",
-						rows=rows,
-						columns=columns,
+						order_rows=order_rows,
+						order_columns=order_columns,
 						page=page,
 						total_pages=total_pages,
 						finances=finances,
@@ -116,7 +123,12 @@ def home():
 						available_clients=available_clients,
 						available_baskets=available_baskets,
 						no_delivery_orders=no_delivery_orders,
-						statuses=statuses,
+						available_addresses=available_addresses,
+						available_couriers=available_couriers,
+						available_dates=available_dates,
+						available_orders=available_orders,
+						order_statuses=order_statuses,
+						delivery_statuses=delivery_statuses,
 						missing_items=missing_items,
 						close_orders=close_orders,
 						late_orders=late_orders)

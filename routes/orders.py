@@ -42,7 +42,7 @@ def orders():
 						user=session.get("username"),
 						available_clients=available_clients,
 						available_baskets=available_baskets,
-						statuses=statuses,
+						order_statuses=statuses,
 						available_addresses=available_addresses,
 						today=get_today())
 
