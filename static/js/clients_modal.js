@@ -8,8 +8,7 @@ function openNewClientModal() {
 
 function openViewClientModal(id) {
 	id = parseInt(id, 10);
-	fetch(`/clientes/${id}/data`)
-		.then(res => res.json())
+	fetchJson(`/clientes/${id}/data`)
 		.then(data => {
 			document.getElementById('viewClient-id').value = data.id_cliente;
 			document.getElementById('viewClient-name').value = data.nome_razao;
@@ -23,7 +22,8 @@ function openViewClientModal(id) {
 			resetViewClientModalState();
 			document.getElementById('viewClient-modal').style.display = "flex";
 			toggleSaveButton(['viewClient-name', 'viewClient-phone'], 'viewClient-saveBtn');
-		});
+		})
+		.catch(handleError);
 }
 
 function enableEditClient() {
@@ -53,12 +53,15 @@ function resetViewClientModalState() {
 	document.getElementById('viewClient-cancelBtn').style.display = 'none';
 }
 
-function deleteClient() {
+async function deleteClient() {
 	const id = document.getElementById('viewClient-id').value;
-	if (confirm('Tem certeza que deseja excluir este cliente?')) {
+
+	const confirmed = await openConfirm('Excluir cliente?', 'Tem certeza que deseja excluir este cliente?');
+
+	if (confirmed) {
 		const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 		fetch(`/clientes/${id}/delete`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
-			.then(handleResponse)
+			.then(res => handleResponse(res, 'Cliente excluído com sucesso!'))
 			.catch(handleError);
 	}
 }

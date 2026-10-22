@@ -5,6 +5,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<title>Celebrar Cestas Gourmet</title>
 		<link rel="stylesheet" href="{{ url_for('static', filename='css/login_styles.css')}}">
+		<link rel="stylesheet" href="{{ url_for('static', filename='css/snackbar_styles.css')}}">
 		<link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
 	</head>
 	<body>
@@ -20,15 +21,6 @@
 					<div class="login-header">
 						<h3>Seja bem-vindo!</h3>
 					</div>
-					{% with messages = get_flashed_messages(with_categories=true) %}
-						{% if messages %}
-							{% for category, message in messages %}
-								<div class="flash-message {{ category }}">
-									{{ message }}
-								</div>
-							{% endfor %}
-						{% endif %}
-					{% endwith %}
 					<form method="POST" action="{{url_for('auth_bp.login')}}">
 						<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 						<div class="input-container">
@@ -59,7 +51,15 @@
 				</div>
 			</div>
 		</div>
+		<script src="{{url_for('static', filename='js/snackbar_icons.js')}}"></script>
+		<script src="{{url_for('static', filename='js/snackbar.js')}}"></script>
 		<script src="{{url_for('static', filename='js/common.js')}}"></script>
 		<script src="{{url_for('static', filename='js/login.js')}}"></script>
+
+		{% with messages = get_flashed_messages(with_categories=true) %}
+		{% if messages %}
+		<div id="flash-data" data-messages="{{messages | tojson | forceescape}}" hidden></div>
+		{% endif %}
+		{% endwith %}
 	</body>	
 </html>

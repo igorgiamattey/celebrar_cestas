@@ -18,8 +18,7 @@ function handleSearch() {
 	history.replaceState({}, '', `/pedidos${params.toString() ? `?${params.toString()}` : ''}`)
 
 	searchTimeout = setTimeout(() => {
-		fetch(`/pedidos/search?search=${encodeURIComponent(query)}&openonly=${openOnly}`)
-			.then(res => res.text())
+		fetchText(`/pedidos/search?search=${encodeURIComponent(query)}&openonly=${openOnly}`)
 			.then(html => {
 				const tableBody = document.getElementById('ordersTableBody');
 
@@ -43,7 +42,8 @@ function handleSearch() {
 					row.appendChild(cell);
 					tableBody.appendChild(row);
 				}
-			});
+			})
+			.catch(handleError);
 	}, 300);
 }
 

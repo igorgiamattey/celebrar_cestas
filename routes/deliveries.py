@@ -1,24 +1,26 @@
 import json
 from datetime import date
 
-from flask import (Blueprint, jsonify, redirect, render_template, request,
-                   url_for, session)
+from flask import (Blueprint, flash, jsonify, redirect, render_template,
+                   request, session, url_for)
 
 from db import run_select, run_transaction
 from enums.delivery_status import OPEN_DELIVERY_STATUS, deliveryStatus
 from enums.order_status import orderStatus
 from enums.table_names import Table
-from services.deliveries_service import get_deliveries, courier_exists
+from services.deliveries_service import courier_exists, get_deliveries
+from services.errors import StaleDataError
 from services.routes_service import (getAvailableAddresses,
                                      getAvailableCouriers, getAvailableDates,
                                      getAvailableDeliveryStatus,
                                      getAvailableOrders)
 from services.status_transitions import get_allowed_status
-from services.validate_service import (validate_date_id,
+from services.validate_service import (courier_has_open_deliveries,
+                                       validate_date_id,
                                        validate_delivery_orders,
                                        validate_delivery_status, validate_id,
                                        validate_name, validate_phone,
-                                       validate_status_transition, courier_has_open_deliveries)
+                                       validate_status_transition)
 
 deliveries_bp = Blueprint("deliveries_bp", __name__)
 delivery_mode = "DELIVERY"
@@ -95,10 +97,12 @@ def new_delivery():
 				""", (delivery_id, order, orderStatus.READY.name, delivery_date))
 
 				if cursor.rowcount != 1:
-					raise ValueError("Um ou mais pedidos não estão mais disponíveis para entrega")
+					raise StaleDataError("Um ou mais pedidos não estão mais disponíveis para entrega")
 		
 	except KeyError:
 		return "Dados da entrega inválidos", 400
+	except StaleDataError as e:
+		return str(e), 409
 	except ValueError as e:
 		return str(e), 400
 
@@ -209,6 +213,8 @@ def update_delivery():
 	except ValueError as e:
 		return str(e), 400
 
+	notices = []
+	
 	try:
 		with run_transaction() as cursor:
 			cursor.execute("""
@@ -223,7 +229,7 @@ def update_delivery():
 			""", (courier, delivery_date, status, id, current_status))
 
 			if cursor.rowcount != 1:
-				raise ValueError("A entrega já foi alterada. Recarregue a página.")
+				raise StaleDataError("A entrega já foi alterada. Recarregue a página.")
 
 			if status == deliveryStatus.CANCELLED.name:
 				cursor.execute(f"""
@@ -231,6 +237,9 @@ def update_delivery():
 				SET id_entrega = NULL
 				WHERE id_entrega = ?
 				""", (id,))
+
+				if cursor.rowcount > 0:
+					notices.append(f"{cursor.rowcount} {'pedido removido' if cursor.rowcount == 1 else 'pedidos removidos'} da entrega")
 
 			elif status == deliveryStatus.DELIVERED.name:
 				cursor.execute(f"""
@@ -240,6 +249,9 @@ def update_delivery():
 				AND isDeleted = 0
 				AND status_pedido = ?
 				""", (orderStatus.DELIVERED.name, id, orderStatus.READY.name))
+
+				if cursor.rowcount > 0:
+					notices.append(f"{cursor.rowcount} {'pedido marcado como entregue' if cursor.rowcount == 1 else 'pedidos marcados como entregues'}")
 				
 			elif current_status == deliveryStatus.PENDING.name:
 				placeholders = ", ".join("?" * len(orders))
@@ -264,15 +276,18 @@ def update_delivery():
 					""", (id, order, orderStatus.READY.name, delivery_date, id))
 
 					if cursor.rowcount != 1:
-						raise ValueError("Um ou mais pedidos não estão mais disponíveis para entrega")
+						raise StaleDataError("Um ou mais pedidos não estão mais disponíveis para entrega")
 
-			
-
+	except StaleDataError as e:
+		return str(e), 409
 	except ValueError as e:
 		return str(e), 400
 
+	flash(f"Entrega #{id} atualizada com sucesso!", "success")
+	for notice in notices:
+		flash(notice, "info")
 
-	return redirect(request.referrer or url_for("deliveries_bp.deliveries"))
+	return "", 204
 
 @deliveries_bp.route("/entregas/entregadores/save", methods=["POST"])
 def save_courier():

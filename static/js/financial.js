@@ -7,8 +7,7 @@ function handleSearch() {
 	history.replaceState({}, '', `/financeiro${query ? `?search=${encodeURIComponent(query)}` : ''}`)
 
 	searchTimeout = setTimeout(() => {
-		fetch(`/financeiro/search?search=${encodeURIComponent(query)}`)
-			.then(res => res.text())
+		fetchText(`/financeiro/search?search=${encodeURIComponent(query)}`)
 			.then(html => {
 				const tableBody = document.getElementById('financialTableBody');
 
@@ -32,6 +31,7 @@ function handleSearch() {
 					row.appendChild(cell);
 					tableBody.appendChild(row);
 				}
-			});
+			})
+			.catch(handleError);
 	}, 300);
 }

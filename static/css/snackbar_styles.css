@@ -1,0 +1,122 @@
+:root {
+	--bg-snack: #FFFFFF;
+	--border-color: #e2d8cc;
+	--error-bg: #FDE8E8;
+	--error-txt: #B42318;
+	--error-brd: #B42318;
+	--success-bg: #E6F6EC;
+	--success-txt: #1E6B3A;
+	--success-brd: #1E6B3A;
+	--info-bg: #E0F4F7;
+	--info-txt: #0F5C6B;
+	--info-brd: #0F5C6B;
+	--warning-bg: #FFFBE0;
+	--warning-txt: #7A6000;
+	--warning-brd: #7A6000;
+	--text-dark: #000000;
+}
+
+.snackbar-container {
+	position: fixed;
+	top: 70px;
+	right: 20px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	width: min(300px, calc(100vw - 32px));
+	z-index: 300000;
+	pointer-events: none;
+}
+
+.snackbar {
+	pointer-events: auto;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 12px 14px;
+	border: 1px solid var(--border-color);
+	border-left-width: 4px;
+	border-radius: 6px;
+	background: var(--bg-snack);
+	color: var(--text-dark);
+	font-size: 0.85rem;
+	line-height: 1.4;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	animation: snackbar-in 0.2s ease-out;
+}
+
+.snackbar.leaving {
+	opacity: 0;
+	transform: translateX(24px);
+	transition: opacity 0.2s, transform 0.2s;
+}
+
+.snackbar-icon {
+	display: flex;
+	flex-shrink: 0;
+}
+
+.snackbar-message {
+	flex: 1;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.snackbar-close {
+	flex-shrink: 0;
+	padding: 2px 6px;
+	border: none;
+	background: none;
+	color: inherit;
+	font-size: 1.1rem;
+	line-height: 1;
+	cursor: pointer;
+	opacity: 0.6;
+}
+
+.snackbar-close:hover {
+	opacity: 1;
+}
+
+.snackbar.success {
+	background: var(--success-bg);
+	color: var(--success-txt);
+	border-color: var(--success-brd);
+}
+
+.snackbar.warning {
+	background: var(--warning-bg);
+	color: var(--warning-txt);
+	border-color: var(--warning-brd);
+}
+
+.snackbar.error {
+	background: var(--error-bg);
+	color: var(--error-txt);
+	border-color: var(--error-brd);
+}
+
+.snackbar.info {
+	background: var(--info-bg);
+	color: var(--info-txt);
+	border-color: var(--info-brd);
+}
+
+@keyframes snackbar-in {
+	from {
+		opacity: 0;
+		transform: translateX(24px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.snackbar,
+	.snackbar.leaving {
+		animation: none;
+		transition: none;
+	}
+}

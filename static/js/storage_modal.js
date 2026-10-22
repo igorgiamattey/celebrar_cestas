@@ -58,8 +58,7 @@ document.getElementById('mngGroup-groupSelect').addEventListener('change', funct
 		return;
 	}
 
-	fetch(`/estoque/grupos/${groupId}/data`)
-		.then(res => res.json())
+	fetchJson(`/estoque/grupos/${groupId}/data`)
 		.then(data => {
 			document.getElementById('mngGroup-name').value = data.group_name;
 			document.getElementById('mngGroup-deleteBtn').style.display = 'inline-block';
@@ -67,25 +66,27 @@ document.getElementById('mngGroup-groupSelect').addEventListener('change', funct
 			groupItems = data.items;
 			renderGroupItems();
 		})
-		.catch(err => console.error('Failed to load group data:', err));
+		.catch(err => {
+			console.error('Failed to load group data:', err);
+			showSnackbar('Não foi possível carregar os dados do grupo.', 'error');
+		});
 });
 
 function openMissingItemModal() {
-	fetch('/estoque/falta')
-		.then(res => res.json())
+	fetchJson('/estoque/falta')
 		.then(data => {
 			document.getElementById('missItems-desc').value = data.missing_items || "";
 			document.getElementById('missItem-modal').style.display = "flex";
 		})
 		.catch(err => {
-			console.error("Failed to fetch missing items: ", err)
+			console.error("Failed to fetch missing items: ", err);
+			showSnackbar('Não foi possível carregar os itens faltantes.', 'error');
 		});		
 }
 
 function openViewItemModal(id) {
 	id = parseInt(id, 10);
-	fetch(`/estoque/${id}/data`)
-		.then(res => res.json())
+	fetchJson(`/estoque/${id}/data`)
 		.then(data => {
 			document.getElementById('viewItem-id').value = data.id_insumo;
 			document.getElementById('viewItem-name').value = data.nome_insumo;
@@ -105,7 +106,8 @@ function openViewItemModal(id) {
 			resetViewItemModalState();
 			document.getElementById('viewItem-modal').style.display = "flex";
 			toggleSaveButton(['viewItem-name','viewItem-amount','viewItem-unit','viewItem-minimal','viewItem-cost'], 'viewItem-saveBtn');
-		});
+		})
+		.catch(handleError);
 }
 
 async function openMoveModal(id) {
@@ -123,12 +125,16 @@ async function openMoveModal(id) {
 			<div class="dot"></div>
 		</div>
 	`;
-	const response = await fetch(`/estoque/${id}/movimentacoes`);
-
-	if (!response.ok)
+	
+	let movements;
+	try {
+		movements = await fetchJson(`/estoque/${id}/movimentacoes`);
+	}
+	catch (err) {
+		content.innerHTML = '';
+		handleError(err);
 		return;
-
-	const movements = await response.json();
+	}
 
 	if (movements.length === 0)
 		content.innerHTML = '<p class="no-movements">Nenhuma movimentação registrada.</p>'
@@ -210,38 +216,40 @@ async function saveMove() {
 	move_qty = document.getElementById('newMove-quantity').value;
 	move_obs = document.getElementById('newMove-obs').value;
 
-
 	const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-	const response = await fetch(`/estoque/${id}/nova_movimentacao`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'X-CSRFToken': csrfToken
-		},
-		body: JSON.stringify({
-			type: move_type,
-			quantity: move_qty,
-			obs: move_obs
-		})
-	});
-
-	const data = await response.json();
-
-	if (!response.ok) {
-		alert(data.error);
+	
+	try {
+		await fetchJson(`/estoque/${id}/nova_movimentacao`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-CSRFToken': csrfToken
+			},
+			body: JSON.stringify({
+				type: move_type,
+				quantity: move_qty,
+				obs: move_obs
+			})
+		});
+	}
+	catch (err) {
+		handleError(err);
 		return;
 	}
 
+	queueSnackbar('Movimentação registrada!', 'success');
 	window.location.reload()
-
 }
 
-function deleteItem() {
+async function deleteItem() {
 	const id = document.getElementById('viewItem-id').value;
-	if (confirm('Tem certeza que deseja excluir este item?')) {
+	
+	const confirmed = await openConfirm('Excluir item?', 'Tem certeza que deseja excluir este item?');
+	
+	if (confirmed) {
 		const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 		fetch(`/estoque/${id}/delete`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
-			.then(handleResponse)
+			.then(res => handleResponse(res, 'Item excluído com sucesso!'))
 			.catch(handleError);
 	}
 }
@@ -268,8 +276,7 @@ function resetNewMoveModalState() {
 }
 
 function toggleMissingButton() {
-	fetch('/estoque/falta')
-		.then(res => res.json())
+	fetchJson('/estoque/falta')
 		.then(data => {
 			list = data.missing_items;
 			button = document.getElementById('missItem-btn');
@@ -277,7 +284,8 @@ function toggleMissingButton() {
 			button.title = (list.length === 0) ? "Nenhum item está faltando ou próximo de acabar" : "";
 		})
 		.catch(err => {
-			console.error("Failed to fetch missing items: ", err)
+			console.error("Failed to fetch missing items: ", err);
+			showSnackbar('Não foi possível carregar os itens faltantes.', 'error');
 		});		
 }
 
@@ -287,12 +295,12 @@ function addItemToGroup() {
 	const quantity = parseFloat(qtyInput.value);
 
 	if (!itemId) {
-		alert('Selecione um item.');
+		showSnackbar('Selecione um item.', 'warning');
 		return;
 	}
 
 	if (!quantity || quantity <= 0) {
-		alert('Informe uma quantidade válida');
+		showSnackbar('Informe uma quantidade válida', 'warning');
 		return;
 	}
 
@@ -300,7 +308,7 @@ function addItemToGroup() {
 
 	const existingItem = groupItems.find(existing => existing.item_id === parseInt(itemId));
 	if (existingItem) {
-		alert('Esse item já está no grupo.');
+		showSnackbar('Esse item já está no grupo.', 'error');
 		return;
 	}
 
@@ -348,12 +356,12 @@ function saveGroup() {
 	const groupName = document.getElementById('mngGroup-name').value.trim();
 
 	if (!groupName) {
-		alert('Informe um nome para o grupo.');
+		showSnackbar('Informe um nome para o grupo.', 'warning');
 		return;
 	}
 
 	if (groupItems.length < 2) {
-		alert('Um grupo precisa de pelo menos 2 itens.');
+		showSnackbar('Um grupo precisa de pelo menos 2 itens.', 'warning');
 		return;
 	}
 
@@ -369,18 +377,20 @@ function saveGroup() {
 		headers: {'X-CSRFToken': csrfToken},
 		body: formData
 	})
-	.then(handleResponse)
+	.then(res => handleResponse(res, 'Grupo salvo com sucesso!'))
 	.catch(handleError);
 }
 
-function deleteGroup() {
+async function deleteGroup() {
 	const groupId = document.getElementById('mngGroup-groupSelect').value;
 	if (!groupId) return;
+
+	const confirmed = await openConfirm('Excluir grupo?', 'Tem certeza que deseja excluir este grupo?');
 	
-	if (confirm('Tem certeza que deseja excluir este grupo?')) {
+	if (confirmed) {
 		const csrfToken = document.querySelector('input[name="csrf_token"]').value;	
 		fetch(`/estoque/grupos/${groupId}/delete`, {method: 'POST', headers: {'X-CSRFToken': csrfToken}})
-			.then(handleResponse)
+			.then(res => handleResponse(res, 'Grupo excluído com sucesso!'))
 			.catch(handleError);
 	}
 }

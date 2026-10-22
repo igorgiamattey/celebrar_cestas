@@ -7,8 +7,7 @@ function handleSearch() {
 	history.replaceState({}, '', `/catalogo${query ? `?search=${encodeURIComponent(query)}` : ''}`)
 
 	searchTimeout = setTimeout(() => {
-		fetch(`/catalogo/search?search=${encodeURIComponent(query)}`)
-			.then(res => res.text())
+		fetchText(`/catalogo/search?search=${encodeURIComponent(query)}`)
 			.then(html => {
 				const tableBody = document.getElementById('catalogueTableBody');
 
@@ -32,6 +31,7 @@ function handleSearch() {
 					row.appendChild(cell);
 					tableBody.appendChild(row);
 				}
-			});
+			})
+			.catch(handleError);
 	}, 300);
 }

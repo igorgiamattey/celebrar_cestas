@@ -10,12 +10,19 @@ async function openOrderItemsModal(orderId) {
 		</div>
 	`;
 
-	const [response] = await Promise.all([
-		fetch(`/home/${orderId}/items`),
-		new Promise(resolve => setTimeout(resolve, 500))
-	]);
-	
-	const data = await response.json();
+	let data;
+
+	try {
+		[data] = await Promise.all([
+			fetchJson(`/home/${orderId}/items`),
+			new Promise(resolve => setTimeout(resolve, 500))
+		]);
+	}
+	catch (err) {
+		document.getElementById('orderItems-list').style.display = 'none';
+		handleError(err);
+		return;
+	}
 
 	list.innerHTML = '';
 
@@ -32,13 +39,13 @@ async function openOrderItemsModal(orderId) {
 }
 
 function openMissingItemModal() {
-	fetch('/estoque/falta')
-		.then(res => res.json())
+	fetchJson('/estoque/falta')
 		.then(data => {
 			document.getElementById('missItems-desc').value = data.missing_items || "";
 			document.getElementById('missItem-modal').style.display = "flex";
 		})
 		.catch(err => {
-			console.error("Failed to fetch missing items: ", err)
+			console.error("Failed to fetch missing items: ", err);
+			showSnackbar('Não foi possível carregar os itens faltantes.', 'error');
 		});		
 }

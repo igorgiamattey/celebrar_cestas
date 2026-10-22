@@ -1,25 +1,142 @@
-async function handleResponse(response) {
-	if (!response.ok)
-		throw new Error(await response.text());
+const GENERIC_ERROR = 'Ocorreu um erro inesperado. Tente novamente.';
+const NETWORK_ERROR = 'Erro de conexão. Verifique sua internet e tente novamente.';
+const SNACKBAR_QUEUE_KEY = 'pendingSnackbar';
 
+class ApiError extends Error {
+	constructor(message, status) {
+		super(message);
+		this.name = 'ApiError';
+		this.status = status;
+	}
+}
+
+function queueSnackbar(message, mode) {
+	try {
+		sessionStorage.setItem(SNACKBAR_QUEUE_KEY, JSON.stringify({message, mode}));
+	}
+	catch (_) {
+
+	}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+	let pending = null;
+	
+	try {
+		pending = JSON.parse(sessionStorage.getItem(SNACKBAR_QUEUE_KEY));
+		sessionStorage.removeItem(SNACKBAR_QUEUE_KEY);
+	}
+	catch (_) {
+
+	}
+
+	if (pending && typeof showSnackbar === 'function')
+		showSnackbar(pending.message, pending.mode);
+});
+
+async function  readError(response) {
+	const text = (await response.text()).trim();
+	
+	if (response.status === 401)
+		return 'Sua sessão expirou. Recarregue a página e faça login novamente.';
+
+	if (!text || text.startsWith('<'))
+		return GENERIC_ERROR;
+
+	try {
+		const body = JSON.parse(text);
+		if (body && body.error)
+			return body.error;
+	}
+	catch (_) {
+
+	}
+	
+	return text;
+}
+
+async function checkResponse(response) {
+	if (!response.ok)
+		throw new ApiError(await readError(response), response.status);
+
+	return response;
+}
+
+async function fetchJson(url, options) {
+	const response = await checkResponse(await fetch(url, options));
+	return response.json();	
+}
+
+async function fetchText(url, options) {
+	const response = await checkResponse(await fetch(url, options));
+	return response.text();
+}
+
+async function handleResponse(response, successMessage) {
+	await checkResponse(response);
+
+	if (successMessage)
+		queueSnackbar(successMessage, 'success');
+	
 	window.location.reload();
 }
 
 function handleError(error) {
-	alert(error.message);
+	if (error instanceof ApiError)
+		return showSnackbar(error.message, error.status === 409 ? 'warning' : 'error');
+
+	console.error(error);
+
+	const isNetworkError = error instanceof TypeError && /fetch|network|load failed/i.test(error.message);
+
+	showSnackbar(isNetworkError ? NETWORK_ERROR : GENERIC_ERROR, 'error');
 }
 
-function submitModal(id) {
-	const form = document.getElementById(id);
-	const formData = new FormData(form);
+function submitForm(form, successMessage) {
+	const message = successMessage ?? getFormMessage(form);
 
-	fetch(form.action, {
+	return fetch(form.action, {
 		method: 'POST',
-		body: formData
+		body: new FormData(form)
 	})
-		.then(handleResponse)
+		.then(response => handleResponse(response, message))
 		.catch(handleError);
 }
+
+function submitModal(id, successMessage) {
+	return submitForm(document.getElementById(id), successMessage);
+}
+
+const formName = form => new FormData(form).get('name')?.toString().trim();
+
+const INTERCEPTED_FORMS = {
+	'/novo_cliente': 'Cliente cadastrado com sucesso.',
+	'/clientes/update': form => `Cliente "${formName(form)}" atualizado com sucesso.`,
+	'/novo_item': 'Item cadastrado com sucesso.',
+	'/estoque/update': form => `Item "${formName(form)}" atualizado com sucesso.`,
+}
+
+function getFormMessage(form) {
+	if (!(form instanceof HTMLFormElement) || !form.action)
+		return null;
+
+	const entry = INTERCEPTED_FORMS[new URL(form.action, location.href).pathname];
+
+	if (entry === undefined)
+		return null;
+
+	return typeof entry === 'function' ? entry(form) : entry;
+}
+
+document.addEventListener('submit', (event) => {
+	const form = event.target;
+
+	if (getFormMessage(form) === null)
+		return;
+
+	event.preventDefault();
+	submitForm(form);
+})
 
 document.addEventListener("DOMContentLoaded", () => {
 	const toggle = document.querySelector(".user-menu-toggle");

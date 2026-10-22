@@ -7,8 +7,7 @@ function handleSearch() {
 	history.replaceState({}, '', `/clientes${query ? `?search=${encodeURIComponent(query)}` : ''}`)
 		
 	searchTimeout = setTimeout(() => {
-		fetch(`/clientes/search?search=${encodeURIComponent(query)}`)
-			.then(res => res.text())
+		fetchText(`/clientes/search?search=${encodeURIComponent(query)}`)
 			.then(html => {
 				const tableBody = document.getElementById('clientsTableBody');
 
@@ -32,6 +31,7 @@ function handleSearch() {
 					row.appendChild(cell);
 					tableBody.appendChild(row);
 				}
-			});
+			})
+			.catch(handleError);
 	}, 300);
 }

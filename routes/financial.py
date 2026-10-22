@@ -6,6 +6,7 @@ from enums.financial_status import financialStatus
 from enums.movement_types import (financialMovementCategories,
                                   financialMovementTypes)
 from enums.table_names import Table
+from services.errors import StaleDataError
 from services.financial_service import (get_balance, get_financial,
                                         get_order_total)
 from services.order_service import get_today
@@ -229,10 +230,12 @@ def update_financial():
 			))
 
 			if cursor.rowcount != 1:
-				raise ValueError("Este lançamento já foi alterado")
+				raise StaleDataError("Este lançamento já foi alterado")
 		
 	except KeyError:
 		return "Dados do lançamento inválidos", 400
+	except StaleDataError as e:
+		return str(e), 409
 	except ValueError as e:
 		return str(e), 400
 
@@ -266,7 +269,7 @@ def refund_financial(id):
 			""", (id,))
 
 			if cursor.fetchone():
-				raise ValueError("Esse lançamento já foi estornado")
+				raise StaleDataError("Esse lançamento já foi estornado")
 
 			order_id, fin_type, value, _, supplier = original
 			opposite = (financialMovementTypes.EXPENSE.name
@@ -287,6 +290,8 @@ def refund_financial(id):
 			""", (order_id, opposite, desc, value,
 			      get_today(), financialStatus.PAID.name, supplier, financialMovementCategories.REFUND.name, id))
 
+	except StaleDataError as e:
+		return str(e), 409
 	except ValueError as e:
 		return str(e), 400
 	

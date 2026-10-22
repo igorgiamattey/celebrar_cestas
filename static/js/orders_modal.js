@@ -275,8 +275,7 @@ function openNewOrderModal() {
 
 function openViewOrderModal(id) {
 	id = parseInt(id, 10);
-	fetch(`/pedidos/${id}/data`)
-		.then(res => res.json())
+	fetchJson(`/pedidos/${id}/data`)
 		.then(data => {
 			document.getElementById('viewOrder-id').value = data.id_pedido;
 			viewOrderClientSelector.setValue(data.id_cliente);
@@ -339,27 +338,28 @@ function openViewOrderModal(id) {
 			document.getElementById('viewOrder-modal').style.display = "flex";
 			saveButton('view');
 		})
+		.catch(handleError);
 }
 
 function saveNewOrder() {
 	document.getElementById('newOrder-items').value = JSON.stringify(serialiseOrderBaskets('new'));
 	document.getElementById('newOrder-deliveryDetails').value = JSON.stringify(newOrderDeliveryDetails);
 
-	submitModal('newOrder-form');
+	submitModal('newOrder-form', 'Pedido criado com sucesso!');
 }
 
-function updateOrder() {
+async function updateOrder() {
 	if (originalOrderValues.id_entrega != null) {
 		const newDate = document.getElementById('viewOrder-deliveryDate').value;
 		const dateChanged = newDate !== (originalOrderValues.data_entrega ?? '');
 		const noLongerDelivery = !document.getElementById('viewOrder-isDelivery').checked;
 
-		if ((dateChanged || noLongerDelivery) && !confirm(
+		const confirmed = await openConfirm('Alterar pedido?',
 			`Este pedido faz parte da entrega #${originalOrderValues.id_entrega}. ` +
-			`Alterar a data ou mudar a forma de entrega vai removê-lo. Continuar?`
-		)) {
+			`Alterar a data ou mudar a forma de entrega vai removê-lo. Continuar?`);
+
+		if ((dateChanged || noLongerDelivery) && !confirmed)
 			return;
-		}
 	}
 
 	document.getElementById('viewOrder-items').value = JSON.stringify(serialiseOrderBaskets('view'));
@@ -524,12 +524,12 @@ async function addBasketToOrder(mode) {
 	const quantity = parseInt(qtyInput.value);
 
 	if (!basketId) {
-		alert('Selecione uma cesta.');
+		showSnackbar('Selecione uma cesta.', 'warning');
 		return;
 	}
 
 	if (!quantity || quantity <= 0) {
-		alert('Informe uma quantidade válida');
+		showSnackbar('Informe uma quantidade válida', 'warning');
 		return;
 	}
 
@@ -544,12 +544,18 @@ async function addBasketToOrder(mode) {
 	);
 
 	if (existingBasket) {
-		alert('Essa cesta já foi adicionada ao pedido.');
+		showSnackbar('Essa cesta já foi adicionada ao pedido.', 'error');
 		return;
 	}
 
-	const composition = await fetch(`/pedidos/basket_comp/${selectedBasket.id}`)
-		.then(res => res.json());
+	let composition;
+	try {
+		composition = await fetchJson(`/pedidos/basket_comp/${selectedBasket.id}`)
+	}
+	catch (err) {
+		handleError(err);
+		return;
+	}
 
 	const basket = {
 		basket_id: Number(selectedBasket.id),
@@ -948,12 +954,12 @@ function confirmDeliveryDetails(mode) {
 	const addressTxt = newAddressText.value.trim();
 
 	if (!selector.getValue()) {
-		alert('Selecione um endereço.');
+		showSnackbar('Selecione um endereço.', 'warning');
 		return;
 	}
 
 	if (!addressTxt) {
-		alert('Informe um endereço válido.');
+		showSnackbar('Informe um endereço válido.', 'warning');
 		return;
 	}
 		

@@ -94,13 +94,14 @@ if (viewBasketForm) {
 function saveNewBasket() {
 	document.getElementById('newBasket-items').value = JSON.stringify(newBasketItems);
 
-	submitModal('newBasket-form');
+	submitModal('newBasket-form', 'Cesta criada com sucesso!');
 }
 
 function updateBasket() {
 	document.getElementById('viewBasket-items').value = JSON.stringify(viewBasketItems);
+	const basket_name = document.getElementById('viewBasket-name').value;
 
-	submitModal('viewBasket-form');
+	submitModal('viewBasket-form', `Cesta "${basket_name}" atualizada com sucesso`);
 }
 
 function openNewBasketModal() {
@@ -121,8 +122,7 @@ function openNewBasketModal() {
 
 function openViewBasketModal(id) {
 	id = parseInt(id, 10);
-	fetch(`/catalogo/${id}/data`)
-		.then(res => res.json())
+	fetchJson(`/catalogo/${id}/data`)
 		.then(data => {
 			document.getElementById('viewBasket-id').value = data.id_produto;
 			document.getElementById('viewBasket-name').value = data.nome_cesta;
@@ -145,7 +145,8 @@ function openViewBasketModal(id) {
 				'viewBasket-name',
 				'viewBasket-price'
 			], 'viewBasket-saveBtn', [viewBasketItems]);
-		});
+		})
+		.catch(handleError);
 }
 
 function enableEditBasket() {
@@ -197,13 +198,15 @@ function resetViewBasketModalState() {
 	renderBasketItems('view');
 }
 
-function deleteBasket() {
+async function deleteBasket() {
 	const id = document.getElementById('viewBasket-id').value;
 
-	if (confirm('Tem certeza que deseja excluir esta cesta?')) {
+	const confirmed = await openConfirm('Excluir cesta?', 'Tem certeza que deseja excluir esta cesta?');
+	
+	if (confirmed) {
 		const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 		fetch(`/catalogo/${id}/delete`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
-			.then(handleResponse)
+			.then(res => handleResponse(res, 'Cesta excluída com sucesso!'))
 			.catch(handleError);
 	}
 }
@@ -219,12 +222,12 @@ function addItemToBasket(mode) {
 	const quantity = parseFloat(qtyInput.value.replace(',','.'));
 
 	if (!itemId) {
-		alert('Selecione um item.');
+		showSnackbar('Selecione um item.', 'warning');
 		return;
 	}
 
 	if (!quantity || quantity <= 0) {
-		alert('Informe uma quantidade válida');
+		showSnackbar('Informe uma quantidade válida', 'warning');
 		return;
 	}
 
@@ -236,7 +239,7 @@ function addItemToBasket(mode) {
 			selectedItem.unit === 'UN') &&
 			!Number.isInteger(quantity)
 		) {
-			alert('A quantidade deve ser um número inteiro.')
+			showSnackbar('A quantidade deve ser um número inteiro.', 'warning');
 			return;
 		}
 
@@ -259,7 +262,7 @@ function addItemToBasket(mode) {
 	);
 
 	if (existingItem) {
-		alert('Esse item já foi adicionado à cesta.');
+		showSnackbar('Esse item já foi adicionado à cesta.', 'error');
 		return;
 	}
 

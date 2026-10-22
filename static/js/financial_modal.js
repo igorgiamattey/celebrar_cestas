@@ -120,15 +120,17 @@ function updateDateField(status, mode) {
 		input.value = '';
 }
 
-function refundFinancial() {
+async function refundFinancial() {
 	const id = document.getElementById('viewFinancial-id').value;
-
-	if (!confirm('Tem certeza que deseja estornar esse lançamento? Será criado um lançamento de estorno com o valor de oposto.'))
+	
+	const confirmed = await openConfirm('Confirmar estorno?', 'Tem certeza que deseja estornar esse lançamento? Será criado um lançamento de estorno com o valor de oposto.');
+	
+	if (!confirmed)
 		return;
 
 	const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 	fetch(`/financeiro/${id}/estornar`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
-		.then(handleResponse)
+		.then(res => handleResponse(res, 'Lançamento estornado com sucesso!'))
 		.catch(handleError);
 }
 
@@ -297,11 +299,13 @@ if (viewFinancialForm) {
 }
 
 function saveNewFinancial() {
-	submitModal('newFinancial-form');
+	submitModal('newFinancial-form', 'Lançamento criado com sucesso!');
 }
 
 function updateFinancial() {
-	submitModal('viewFinancial-form');
+	const financial_id = document.getElementById('viewFinancial-id').value;
+
+	submitModal('viewFinancial-form', `Lançamento #${financial_id} atualizado com sucesso!`);
 }
 
 function saveButton(mode) {
@@ -354,8 +358,7 @@ function openNewFinancialModal() {
 
 function openViewFinancialModal(id) {
 	id = parseInt(id, 10);
-	fetch(`/financeiro/${id}/data`)
-		.then(res => res.json())
+	fetchJson(`/financeiro/${id}/data`)
 		.then(data => {
 			originalFinancialValues = {
 				id_lancamento: data.id_lancamento,
@@ -377,6 +380,7 @@ function openViewFinancialModal(id) {
 			document.getElementById('viewFinancial-modal').style.display = "flex";
 			saveButton('view');
 		})
+		.catch(handleError);
 }
 
 function enableEditFinancial() {

@@ -1,7 +1,7 @@
 import os
 
 from dotenv import load_dotenv
-from flask import Flask, redirect, request, session, url_for
+from flask import Flask, flash, jsonify, redirect, request, session, url_for
 from flask_wtf.csrf import CSRFProtect
 
 from error_handlers import register_error_handlers
@@ -46,6 +46,12 @@ app.config.update(
 
 register_error_handlers(app)
 
+def is_navigation():
+	mode = request.headers.get("Sec-Fetch-Mode")
+	if mode:
+		return mode == "navigate"
+	return request.accept_mimetypes.best != "application/json"
+
 @app.before_request
 def require_login():
 	if request.endpoint is None:
@@ -55,6 +61,10 @@ def require_login():
 		return
 
 	if "user_id" not in session:
+		if not is_navigation():
+			return jsonify(error="Sessão expirada. Faça login novamente."), 401
+		
+		flash("Sua sessão expirou. Faça login novamente.", "warning")
 		return redirect(url_for("auth_bp.login"))
 
 if __name__ == "__main__":

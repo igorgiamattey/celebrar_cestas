@@ -6,6 +6,7 @@
 		<title>{% block title %}Celebrar Cestas Gourmet{% endblock %}</title>
 		<link rel="stylesheet" href="{{ url_for('static', filename='css/tom-select.default.css')}}">
 		<link rel="stylesheet" href="{{ url_for('static', filename='css/base_styles.css')}}">
+		<link rel="stylesheet" href="{{ url_for('static', filename='css/snackbar_styles.css')}}">
 		<link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
 		{% block extra_css %}{% endblock %}
 	</head>
@@ -88,9 +89,20 @@
 
 		{% block modals %}{% endblock %}
 		{% block scripts %}
+		{% include 'confirm.html' %}
+		
+		<script src="{{url_for('static', filename='js/confirm.js')}}"></script>
+		<script src="{{url_for('static', filename='js/snackbar_icons.js')}}"></script>
+		<script src="{{url_for('static', filename='js/snackbar.js')}}"></script>
 		<script src="{{url_for('static', filename='js/icons.js')}}"></script>
 		<script src="{{url_for('static', filename='js/common.js')}}"></script>
 		{% endblock %}
+
+		{% with messages = get_flashed_messages(with_categories=true) %}
+		{% if messages %}
+		<div id="flash-data" data-messages="{{messages | tojson | forceescape}}" hidden></div>
+		{% endif %}
+		{% endwith %}
 
 	</body>
 </html>

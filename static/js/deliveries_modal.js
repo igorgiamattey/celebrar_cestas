@@ -9,8 +9,23 @@ let defaultDeliveryStatus = 'PENDING';
 
 let couriers = []
 
+const availableCouriers = JSON.parse(
+	document.getElementById('newDelivery-courier').dataset.couriers
+);
 
-const mngCourierCourierSelector = null;
+const availableDeliveryStatuses = JSON.parse(
+	document.getElementById('newDelivery-status').dataset.status
+);
+
+const availableOrders = JSON.parse(
+	document.getElementById('newDelivery-orders').dataset.orders
+);
+
+const availableDates = JSON.parse(
+	document.getElementById('newDelivery-date').dataset.dates
+);
+
+let mngCourierCourierSelector = null;
 const mngCouriersForm = document.getElementById('mngCourier-modal');
 if (mngCouriersForm) {
 	document.getElementById('mngCourier-courierSelect').addEventListener('change', function() {
@@ -22,13 +37,15 @@ if (mngCouriersForm) {
 			return;
 		}
 
-		fetch(`/entregas/entregadores/${courierId}/data`)
-			.then(res => res.json())
+		fetchJson(`/entregas/entregadores/${courierId}/data`)
 			.then(data => {
 				document.getElementById('mngCourier-name').value = data.name;
 				document.getElementById('mngCourier-phone').value = data.phone;
 			})
-			.catch(err => console.error('Failed to load courier:', err));
+			.catch(err => {
+				console.error('Failed to load courier:', err);
+				showSnackbar('Não foi possível carregar o entregador.', 'error');
+			});
 	});
 
 	mngCourierCourierSelector = new TomSelect('#mngCourier-courierSelect', {
@@ -47,22 +64,6 @@ if (mngCouriersForm) {
 		]
 	});
 }
-
-const availableCouriers = JSON.parse(
-	document.getElementById('newDelivery-courier').dataset.couriers
-);
-
-const availableDeliveryStatuses = JSON.parse(
-	document.getElementById('newDelivery-status').dataset.status
-);
-
-const availableOrders = JSON.parse(
-	document.getElementById('newDelivery-orders').dataset.orders
-);
-
-const availableDates = JSON.parse(
-	document.getElementById('newDelivery-date').dataset.dates
-);
 
 const newDeliveryCourierSelector = new TomSelect('#newDelivery-courier', {
 	options: availableCouriers,
@@ -251,8 +252,7 @@ function openNewDeliveryModal() {
 
 function openViewDeliveryModal(id) {
 	id = parseInt(id, 10);
-	fetch(`/entregas/${id}/data`)
-		.then(res => res.json())
+	fetchJson(`/entregas/${id}/data`)
 		.then(data => {
 			document.getElementById('viewDelivery-id').value = data.id_entrega;
 			viewDeliveryCourierSelector.setValue(data.id_entregador ?? '', true);
@@ -293,17 +293,18 @@ function openViewDeliveryModal(id) {
 			document.getElementById('viewDelivery-modal').style.display = "flex";
 			saveButton('view');
 		})
+		.catch(handleError);
 }
 
 function saveNewDelivery() {
 	document.getElementById('newDelivery-items').value = JSON.stringify(serialiseDeliveryOrders('new'));
 
-	submitModal('newDelivery-form');
+	submitModal('newDelivery-form', 'Entrega criada com sucesso!');
 }
 
 function updateDelivery() {
 	document.getElementById('viewDelivery-items').value = JSON.stringify(serialiseDeliveryOrders('view'));
-
+	
 	submitModal('viewDelivery-form');
 }
 
@@ -370,7 +371,7 @@ function addOrderToDelivery(mode) {
 	const orderId = Number(orderSelector.getValue());
 
 	if (!orderId) {
-		alert('Selecione um pedido.');
+		showSnackbar('Selecione um pedido.', 'warning');
 		return;
 	}
 
@@ -379,7 +380,7 @@ function addOrderToDelivery(mode) {
 	);
 
 	if (existingOrder) {
-		alert('Esse pedido já foi adicionado.');
+		showSnackbar('Esse pedido já foi adicionado.', 'error');
 		return;
 	}
 
@@ -543,7 +544,7 @@ function saveCourier() {
 	const courierId = mngCourierCourierSelector.getValue();
 
 	if (!name) {
-		alert('O entregador precisa de um nome.');
+		showSnackbar('O entregador precisa de um nome.', 'warning');
 		return;
 	}
 	
@@ -561,7 +562,7 @@ function saveCourier() {
 		headers: {'X-CSRFToken': csrfToken},
 		body: formData
 	})
-	.then(handleResponse)
+	.then(res => handleResponse(res, 'Entregador salvo com sucesso!'))
 	.then(() => {
 		const courier ={
 			id: courierId ? Number(courierId) : null,
@@ -588,8 +589,10 @@ function saveCourier() {
 	.catch(handleError);
 }
 
-function deleteCourier(courier, index) {
-	if (!confirm('Tem certeza que deseja excluir este entregador?')) {
+async function deleteCourier(courier, index) {
+	const confirmed = await openConfirm('Excluir entregador?', 'Tem certeza que deseja excluir este entregador?');
+	
+	if (!confirmed) {
 		return;
 	}
 
@@ -597,13 +600,13 @@ function deleteCourier(courier, index) {
 	
 	
 	if (!courierId) {
-		alert('Não foi possível identificar o entregador.');
+		showSnackbar('Não foi possível identificar o entregador.', 'error');
 		return;
 	}
 	
 	const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 	fetch(`/entregas/entregadores/${courierId}/delete`, {method: 'POST', headers: {'X-CSRFToken': csrfToken}})
-		.then(handleResponse)
+		.then(res => handleResponse(res, 'Entregador excluído com sucesso!'))
 		.then(() => {
 			couriers.splice(index, 1);
 			renderCouriers()

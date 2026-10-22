@@ -1,9 +1,15 @@
 {% for row in rows %}
 <tr>
 	{% for val in row %}
-	<td>
-		{{val}}
-	</td>
+		{% if loop.index == 1 %}
+			<td title="{{val}}">
+				<div>#{{val}}</div>
+			</td>
+		{% else %}
+			<td>
+				{{val}}
+			</td>
+		{% endif %}
 	{% endfor %}
 	<td><button class="btn-view" data-id="{{row[0]}}" onclick="openViewFinancialModal(this.dataset.id)">
 		<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">

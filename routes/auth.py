@@ -11,13 +11,9 @@ def login():
 	if request.method == "GET":
 		return render_template("login.html")
 
-	try:	
-		login_id = request.form.get("login_id", "")
-		password = request.form.get("password", "")
-	except ValueError as e:
-		flash(str(e), "error")
-		return redirect(url_for("auth_bp.login"))
-
+	login_id = request.form.get("login_id", "")
+	password = request.form.get("password", "")
+	
 	query = """
 	SELECT id_usuario, nome_usuario, senha_hash
 	FROM IGOR_CG_USUARIOS
@@ -43,4 +39,5 @@ def login():
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
 	session.clear()
+	flash("Você saiu da sua conta.", "info")
 	return redirect(url_for("auth_bp.login"))

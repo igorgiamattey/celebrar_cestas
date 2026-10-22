@@ -1,14 +1,16 @@
 import json
 
-from flask import (Blueprint, jsonify, redirect, render_template, request,
-                   session, url_for)
+from flask import (Blueprint, flash, jsonify, redirect, render_template,
+                   request, session, url_for)
 
 from db import run_select, run_transaction
-from enums.order_status import OPEN_ORDER_STATUS, orderStatus
 from enums.delivery_status import deliveryStatus
+from enums.order_status import OPEN_ORDER_STATUS, orderStatus
 from enums.table_names import Table
+from services.errors import StaleDataError
 from services.order_service import (as_date, get_basket_composition,
-                                    get_orders, get_today, update_order_stock, save_delivery_address)
+                                    get_orders, get_today,
+                                    save_delivery_address, update_order_stock)
 from services.routes_service import (getAvailableAddresses,
                                      getAvailableBaskets, getAvailableClients,
                                      getAvailableOrderStatus)
@@ -290,6 +292,8 @@ def update_order():
 	except ValueError as e:
 		return str(e), 400
 	
+	notices = []
+	
 	try:
 		with run_transaction() as cursor:
 			if is_delivery:
@@ -314,7 +318,7 @@ def update_order():
 			""", (client, date, deliveryDate, status, orderPrice, obs, items, is_delivery, address_id, delivery_fee, id, current_status))
 
 			if cursor.rowcount != 1:
-				raise ValueError("O pedido já foi alterado. Recarregue a página.")
+				raise StaleDataError("O pedido já foi alterado. Recarregue a página.")
 
 			if release:
 				cursor.execute("""
@@ -339,6 +343,8 @@ def update_order():
 					AND isDeleted = 0
 					""", (id,released_delivery_id))
 
+					notices.append(f"Pedido removido da entrega #{released_delivery_id}.")
+
 					cursor.execute("""
 					SELECT COUNT(*)
 					FROM IGOR_CG_PEDIDOS
@@ -355,6 +361,8 @@ def update_order():
 						WHERE id_entrega = ?
 						AND isDeleted = 0
 						""", (deliveryStatus.CANCELLED.name, released_delivery_id))
+
+						notices.append(f"Entrega #{released_delivery_id} cancelada por ficar sem pedidos.")
 			
 			changed = items_payload != json.loads(current_items)
 
@@ -364,9 +372,11 @@ def update_order():
 
 				if status == "CONFIRMED":
 					update_order_stock(cursor, items_payload, "deduct", id)
+					notices.append("Estoque atualizado: itens do pedido descontados.")
 
 			if status == "CANCELLED" and current_status not in {"PENDING", "CANCELLED"}:
 				update_order_stock(cursor, items_payload, "increase", id)
+				notices.append("Estoque atualizado: itens do pedido devolvidos.")
 			
 			cursor.execute("""
 			DELETE FROM IGOR_CG_CESTAS_PEDIDO
@@ -380,7 +390,13 @@ def update_order():
 				VALUES (?, ?, ?)
 				""", (item['basket_id'], id, item['quantity']))
 
+	except StaleDataError as e:
+		return str(e), 409
 	except ValueError as e:
 		return str(e), 400
 
-	return redirect(url_for("orders_bp.orders"))
+	flash(f"Pedido #{id} atualizado com sucesso!", "success")
+	for notice in notices:
+		flash(notice, "info")
+
+	return "", 204

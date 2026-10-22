@@ -7,8 +7,7 @@ function handleSearch() {
 	history.replaceState({}, '', `/estoque${query ? `?search=${encodeURIComponent(query)}` : ''}`)
 		
 	searchTimeout = setTimeout(() => {
-		fetch(`/estoque/search?search=${encodeURIComponent(query)}`)
-			.then(res => res.text())
+		fetchText(`/estoque/search?search=${encodeURIComponent(query)}`)
 			.then(html => {
 				const tableBody = document.getElementById('storageTableBody');
 
@@ -32,6 +31,7 @@ function handleSearch() {
 					row.appendChild(cell);
 					tableBody.appendChild(row);
 				}
-			});
+			})
+			.catch(handleError);
 	}, 300);
 }
