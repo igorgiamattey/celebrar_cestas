@@ -99,7 +99,8 @@ def get_balance():
 	CAT = financialMovementCategories
 
 	_, rows = run_select("""
-	SELECT tipo, categoria, SUM(valor)
+	SELECT
+	tipo, categoria, SUM(valor)
 	FROM IGOR_CG_LANCAMENTOS_FIN
 	WHERE status_pagamento = ?
 	AND isDeleted = 0
@@ -124,3 +125,38 @@ def get_balance():
 
 	return balance
 
+def get_monthly_statement():
+	monthName = {
+		1: "Jan", 2: "Fev", 3: "Mar",
+		4: "Abr", 5: "Mai", 6: "Jun",
+		7: "Jul", 8: "Ago", 9: "Set",
+		10: "Out", 11: "Nov", 12: "Dez"
+	}
+
+	IN = financialMovementTypes.INCOME.name
+	OUT = financialMovementTypes.EXPENSE.name
+	
+	_, rows = run_select("""
+	SELECT
+	YEAR(data_pagamento) AS Ano,
+	MONTH(data_pagamento) AS [Mês],
+	SUM(CASE WHEN tipo = ? THEN valor ELSE 0 END) AS Entrada,
+	SUM(CASE WHEN tipo = ? THEN valor ELSE 0 END) AS [Saída]
+	FROM IGOR_CG_LANCAMENTOS_FIN
+	WHERE isDeleted = 0
+	AND data_pagamento IS NOT NULL
+	GROUP BY YEAR(data_pagamento), MONTH(data_pagamento)
+	ORDER BY Ano, [Mês]
+	""", (IN, OUT))
+
+	rows = [
+		(
+			f"{monthName[row[1]]}/{row[0]}",
+			format_currency(row[2]),
+			format_currency(row[3]),
+			format_currency(row[2] - row[3])
+		)
+		for row in rows
+	]
+
+	return rows

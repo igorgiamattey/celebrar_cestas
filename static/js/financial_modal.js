@@ -437,3 +437,7 @@ function resetViewFinancialModalState() {
 function openBalance() {
 	document.getElementById('viewBalance-modal').style.display = 'flex';
 }
+
+function openMonthStatement() {
+	document.getElementById('viewStatement-modal').style.display = 'flex';
+}

@@ -8,7 +8,7 @@ from enums.movement_types import (financialMovementCategories,
 from enums.table_names import Table
 from services.errors import StaleDataError
 from services.financial_service import (get_balance, get_financial,
-                                        get_order_total)
+                                        get_order_total, get_monthly_statement)
 from services.order_service import get_today
 from services.routes_service import (getAvailableFinancialCategoriesByType,
                                      getAvailableFinancialStatus,
@@ -34,6 +34,7 @@ def financial():
 	available_types = getAvailableFinancialTypes()
 	cat_by_type = getAvailableFinancialCategoriesByType()
 	balance_values = get_balance()
+	statement_rows = get_monthly_statement()
 
 	return render_template("financial/financial.html",
 						columns=columns,
@@ -47,6 +48,7 @@ def financial():
 						available_orders=available_orders,
 						financial_statuses=statuses,
 						balance_values=balance_values,
+						statement_rows=statement_rows,
 						today=get_today())
 
 @financial_bp.route("/financeiro/search")

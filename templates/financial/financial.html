@@ -24,6 +24,7 @@
 		</div>
 		<button class="btn-add" onclick="openNewFinancialModal()">NOVO LANÇAMENTO</button>
 		<button class="btn-add" onclick="openBalance()">VER BALANÇO TOTAL</button>
+		<button class="btn-add" onclick="openMonthStatement()">EXTRATO MENSAL</button>
 	</div>
 
 	<div class="card">
@@ -68,6 +69,7 @@
 {% include 'financial/_register_financial_modal.html' %}
 {% include 'financial/_view_financial_modal.html' %}
 {% include 'financial/_view_balance_modal.html' %}
+{% include 'financial/_view_statement_modal.html' %}
 {% endblock %}
 
 {% block scripts %}

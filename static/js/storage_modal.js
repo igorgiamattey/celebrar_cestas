@@ -140,17 +140,19 @@ async function openMoveModal(id) {
 		content.innerHTML = '<p class="no-movements">Nenhuma movimentação registrada.</p>'
 	else {
 		content.innerHTML = `
-			<table class="moves-table">
-				<thead>
-					<tr>
-						<th>Tipo</th>
-						<th>Qtd.</th>
-						<th>Data</th>
-						<th>Observação</th>
-					</tr>
-				</thead>
-				<tbody></tbody>
-			</table>
+			<div class="table-scroll">
+				<table class="moves-table">
+					<thead>
+						<tr>
+							<th>Tipo</th>
+							<th>Qtd.</th>
+							<th>Data</th>
+							<th>Observação</th>
+						</tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+			</div>
 		`;
 
 		const tbody = content.querySelector('tbody');
