@@ -17,6 +17,9 @@ from routes.storage import storage_bp
 load_dotenv()
 app = Flask(__name__)
 
+APP_ENV = os.getenv("APP_ENV", "development").lower()
+IS_PROD = APP_ENV == "production"
+
 app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY")
 
 if not app.config["SECRET_KEY"]:
@@ -41,16 +44,20 @@ PUBLIC_ENDPOINTS = {
 app.config.update(
 	SESSION_COOKIE_HTTPONLY=True,
 	SESSION_COOKIE_SAMESITE="Lax",
-	SESSION_COOKIE_SECURE=False
+	SESSION_COOKIE_SECURE=IS_PROD
 )
 
 register_error_handlers(app)
 
 def is_navigation():
 	mode = request.headers.get("Sec-Fetch-Mode")
-	if mode:
+	
+	if mode is not None:
 		return mode == "navigate"
-	return request.accept_mimetypes.best != "application/json"
+	
+	return request.accept_mimetypes.accept_html and (
+		request.accept_mimetypes["text/html"] >= request.accept_mimetypes["application/json"]
+	)
 
 @app.before_request
 def require_login():
@@ -68,4 +75,4 @@ def require_login():
 		return redirect(url_for("auth_bp.login"))
 
 if __name__ == "__main__":
-	app.run(debug=True)
+	app.run(debug=not IS_PROD)
