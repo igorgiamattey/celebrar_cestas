@@ -47,6 +47,10 @@ app.config.update(
 	SESSION_COOKIE_SECURE=IS_PROD
 )
 
+@app.route("/health")
+def health_check():
+	return jsonify(status="ok"), 200
+
 register_error_handlers(app)
 
 def is_navigation():
