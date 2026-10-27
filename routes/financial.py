@@ -8,11 +8,12 @@ from enums.movement_types import (financialMovementCategories,
 from enums.table_names import Table
 from services.errors import StaleDataError
 from services.financial_service import (get_balance, get_financial,
-                                        get_order_total, get_monthly_statement)
+                                        get_monthly_statement, get_order_total)
 from services.order_service import get_today
 from services.routes_service import (getAvailableFinancialCategoriesByType,
                                      getAvailableFinancialStatus,
                                      getAvailableFinancialTypes,
+                                     getAvailableMonths,
                                      getAvailableOrdersFinancial)
 from services.status_transitions import get_allowed_status
 from services.validate_service import (validate_financial_category,
@@ -33,6 +34,7 @@ def financial():
 	statuses = getAvailableFinancialStatus()
 	available_types = getAvailableFinancialTypes()
 	cat_by_type = getAvailableFinancialCategoriesByType()
+	available_months = getAvailableMonths()
 	balance_values = get_balance()
 	statement_rows = get_monthly_statement()
 
@@ -46,6 +48,7 @@ def financial():
 						available_types=available_types,
 						available_categories=cat_by_type,
 						available_orders=available_orders,
+						available_months=available_months,
 						financial_statuses=statuses,
 						balance_values=balance_values,
 						statement_rows=statement_rows,

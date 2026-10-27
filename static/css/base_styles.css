@@ -316,7 +316,7 @@ body.fit-viewport .dashboard-container {
 
 .search-icon {
 	position: absolute;
-	left: 10px;
+	left: 14px;
 	top: 50%;
 	transform: translateY(-50%);
 	display: flex;
@@ -537,6 +537,27 @@ body.fit-viewport .dashboard-container {
 
 html .ts-wrapper.single .ts-control::after {
 	display: none !important;
+}
+
+.ts-wrapper .ts-control > .item,
+.ts-wrapper .ts-control > input {
+	font-size: inherit;
+	line-height: inherit;
+	margin: 0 !important;
+	padding: 0 !important;
+	height: auto;
+	min-height: 0;
+	border: 0;
+}
+
+.ts-wrapper.single.has-items .ts-control > input {
+	position: absolute;
+	left: 0;
+	width: 100%;
+	min-width: 0 !important;
+	opacity: 0;
+	margin: 0 !important;
+	padding: 0 !important;
 }
 
 .search-query {

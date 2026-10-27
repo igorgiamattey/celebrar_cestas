@@ -1,3 +1,39 @@
+.filter-wrapper {
+	position: relative;
+	width: 100%;
+	margin-top: 5%;
+}
+
+.filter-wrapper .ts-wrapper {
+	margin: 0;
+}
+
+.filter-wrapper .ts-wrapper .ts-control {
+	position: relative;
+	padding: 8px 36px 8px 38px;
+	border: 1px solid var(--primary-color);
+	border-radius: 999px;
+	background-color: var(--bg-card);
+	font-size: 0.8rem;
+	/* width: 100%;
+	outline: none; */
+}
+
+.calendar-icon {
+	position: absolute;
+	left: 14px;
+	top: 50%;
+	transform: translateY(-50%);
+	display: flex;
+	color: var(--text-header);
+	pointer-events: none;
+}
+
+.calendar-icon svg {
+	width: 16px;
+	height: 16px;
+}
+
 .mini-table th:first-child,
 .mini-table td:first-child {
 	display: table-cell;

@@ -11,17 +11,14 @@ def get_financial():
 	page = request.args.get("page", 1, type=int)
 	page = max(page, 1)
 	search = request.args.get("search", "", type=str)
+	month_filter = request.args.get("month", type=int)
 	per_page = 1000
 
 	where_clause = "WHERE isDeleted = 0"
 	params = []
 	if search:
-		search_param = f"%{search}%"
-		conditions = [
-			"CONVERT(VARCHAR(10), data_pagamento, 103) LIKE ?",
-		]
-		params.extend([search_param])
-
+		conditions = []
+		
 		matching_status = [s.name for s in financialStatus if search.lower() in s.value.lower()]
 		matching_types = [t.name for t in financialMovementTypes if search.lower() in t.value.lower()]
 		matching_categories = [c.name for c in financialMovementCategories if search.lower() in c.value.lower()]
@@ -36,6 +33,12 @@ def get_financial():
 			params.extend(matching_categories)
 
 		where_clause += " AND (" + " OR ".join(conditions) + ")"
+
+	if month_filter:
+		year = month_filter//100
+		month = month_filter%100
+		where_clause += f" AND YEAR(data_pagamento) = ? AND MONTH(data_pagamento) = ?"
+		params.extend([year, month])
 
 	_, count_rows = run_select(f"""
 	SELECT COUNT(*)

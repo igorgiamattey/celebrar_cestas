@@ -1,10 +1,10 @@
 from enum import Enum
 
 class storageMovementTypes(Enum):
-	SAIDA = "Saída"
-	ENTRADA = "Entrada"
-	SAIDA_PEDIDO = "Saída (Pedido)"
-	ENTRADA_PEDIDO = "Entrada (Pedido)"
+	DECREASE = "Saída"
+	INCREASE = "Entrada"
+	DECREASE_ORDER = "Saída (Pedido)"
+	INCREASE_ORDER = "Entrada (Pedido)"
 
 class financialMovementTypes(Enum):
 	EXPENSE = "Saída"

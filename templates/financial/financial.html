@@ -17,10 +17,19 @@
 				class="search-bar"
 				type="text"
 				id="financial-search-bar"
-				placeholder="Tipo/Data/Status/Categoria..."
+				placeholder="Tipo/Categoria/Status..."
 				oninput="handleSearch()"
 			>
 			<button type="button" class="search-clear" id="search-clear" title="Limpar pesquisa"></button>
+		</div>
+		<div class="filter-wrapper">
+			<span class="calendar-icon" id="calendar-icon"></span>
+			<input
+				id="filter-month"
+				name="month"
+				data-months='{{available_months|tojson}}'
+				placeholder="Escolha o mês..."
+			>
 		</div>
 		<button class="btn-add" onclick="openNewFinancialModal()">NOVO LANÇAMENTO</button>
 		<button class="btn-add" onclick="openBalance()">VER BALANÇO TOTAL</button>

@@ -290,6 +290,35 @@ def getAvailableFinancialCategoriesByType():
 
 	return categories
 
+def getAvailableMonths():
+	monthName = {
+		1: "Janeiro", 2: "Fevereiro", 3: "Março",
+		4: "Abril", 5: "Maio", 6: "Junho",
+		7: "Julho", 8: "Agosto", 9: "Setembro",
+		10: "Outubro", 11: "Novembro", 12: "Dezembro"
+	}
+
+	_, rows = run_select("""
+	SELECT
+	YEAR(data_pagamento) AS Ano,
+	MONTH(data_pagamento) AS [Mês]
+	FROM IGOR_CG_LANCAMENTOS_FIN
+	WHERE isDeleted = 0
+	AND data_pagamento IS NOT NULL
+	GROUP BY YEAR(data_pagamento), MONTH(data_pagamento)
+	ORDER BY Ano, [Mês]
+	""")
+
+	months = [
+		{
+			"id": row[0] * 100 + row[1],
+			"title": f"{monthName[row[1]]}/{row[0]}"
+		}
+		for row in rows
+	]
+
+	return months
+
 def countRows(table, where_clause="", params=()):
 	_, rows = run_select(f"""
 	SELECT COUNT(*)

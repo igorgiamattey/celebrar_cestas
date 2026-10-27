@@ -1,8 +1,8 @@
 let originalItemsValues = {};
 let groupItems = []
 
-const outMove = "SAIDA"
-const inMove = "ENTRADA"
+const outMove = "DECREASE"
+const inMove = "INCREASE"
 
 const availableItems = JSON.parse(
 	document.getElementById('mngGroup-itemSelect').dataset.items

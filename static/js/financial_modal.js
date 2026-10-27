@@ -150,6 +150,24 @@ const availableOrders = JSON.parse(
 	document.getElementById('newFinancial-order').dataset.orders
 );
 
+const availableMonths = JSON.parse(
+	document.getElementById('filter-month').dataset.months
+);
+
+const monthFilter = new TomSelect('#filter-month', {
+	options: [
+		{id: '', title: 'Todos'},
+		...availableMonths
+	],
+	valueField: 'id',
+	labelField: 'title',
+	searchField: 'title',
+	create: false,
+	maxItems: 1,
+	maxOptions: null,
+	onChange: () => handleSearch()
+});
+
 const newFinancialTypeSelector = new TomSelect('#newFinancial-type', {
 	options: availableTypes,
 	valueField: 'id',
@@ -440,4 +458,8 @@ function openBalance() {
 
 function openMonthStatement() {
 	document.getElementById('viewStatement-modal').style.display = 'flex';
+}
+
+function filterTable(value) {
+	console.log(value);
 }

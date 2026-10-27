@@ -47,8 +47,8 @@ def storage():
 	]
 
 	available_movements = [
-		storageMovementTypes.ENTRADA,
-		storageMovementTypes.SAIDA
+		storageMovementTypes.INCREASE,
+		storageMovementTypes.DECREASE
 	]
 
 	return render_template("storage/storage.html",
@@ -188,10 +188,10 @@ def save_move(id):
 		obs = validate_opt_text(data.get("obs", ""), "Observação", 255)
 
 		with run_transaction() as cursor:
-			if movement_type == storageMovementTypes.SAIDA.name:
+			if movement_type == storageMovementTypes.DECREASE.name:
 				update_stock(cursor, id, quantity, None, "deduct", movement_type, obs)
 
-			elif movement_type == storageMovementTypes.ENTRADA.name:
+			elif movement_type == storageMovementTypes.INCREASE.name:
 				update_stock(cursor, id, quantity, None, "increase", movement_type, obs)
 
 			else:

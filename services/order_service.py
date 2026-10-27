@@ -103,8 +103,8 @@ def update_stock(cursor, item_id, qty, order_id, operation, move_type, obs=""):
 
 def update_order_stock(cursor, items_payload, operation, order_id=None):
 	move = {
-		"deduct": storageMovementTypes.SAIDA_PEDIDO,
-		"increase": storageMovementTypes.ENTRADA_PEDIDO
+		"deduct": storageMovementTypes.DECREASE_ORDER,
+		"increase": storageMovementTypes.INCREASE_ORDER
 	}.get(operation)
 
 	if move is None:
@@ -282,9 +282,9 @@ def get_orders():
 			where_clause += " AND (" + " OR ".join(conditions) + ")"
 
 	if open_only:
-			open_status = [orderStatus.PENDING.name, orderStatus.CONFIRMED.name, orderStatus.PREPARING.name, orderStatus.READY.name]
-			where_clause += f" AND p.status_pedido IN ({','.join('?' * len(open_status))})"
-			params.extend(open_status)
+		open_status = [orderStatus.PENDING.name, orderStatus.CONFIRMED.name, orderStatus.PREPARING.name, orderStatus.READY.name]
+		where_clause += f" AND p.status_pedido IN ({','.join('?' * len(open_status))})"
+		params.extend(open_status)
 
 	_, count_rows = run_select(f"""
 	SELECT COUNT(*)
