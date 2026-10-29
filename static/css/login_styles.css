@@ -119,6 +119,16 @@ body {
 	transition: transform 0.5s ease, box-shadow 0.5s ease;
 }
 
+/* .logo-wrapper::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: 99;
+	background:
+		linear-gradient(red, red) center / 1px 100% no-repeat,
+		linear-gradient(red, red) center / 100% 1px no-repeat;
+} */
+
 .logo-wrapper:hover {
 	transform: scale(1.08);
 	box-shadow: 0 0 30px var(--gradient-aux)
@@ -135,6 +145,7 @@ body {
 
 .logo-text {
 	z-index: 1;
+	transform: translate(1.42%, 2.75%);
 }
 
 .logo-deco {
