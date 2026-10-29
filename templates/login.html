@@ -35,14 +35,17 @@
 									toggleLoginButton(['login_id', 'password'], 'login-button');
 								"
 							> 
-							<input
-								type="password"
-								name="password"
-								id="password"
-								placeholder="Senha"
-								autocomplete="off"
-								oninput="toggleLoginButton(['login_id', 'password'], 'login-button')"
-							> 
+							<div class="password-wrapper">
+								<input
+									type="password"
+									name="password"
+									id="password"
+									placeholder="Senha"
+									autocomplete="off"
+									oninput="toggleLoginButton(['login_id', 'password'], 'login-button')"
+								>
+								<button type="button" class="toggle-password" id="toggle-password" tabindex="-1"></button>
+							</div>
 							<div class="button-container">
 								<button class="login-button" id="login-button" type="submit" disabled>Entrar</button> 
 							</div>
@@ -54,6 +57,7 @@
 		<script src="{{url_for('static', filename='js/snackbar_icons.js')}}"></script>
 		<script src="{{url_for('static', filename='js/snackbar.js')}}"></script>
 		<script src="{{url_for('static', filename='js/common.js')}}"></script>
+		<script src="{{url_for('static', filename='js/icons.js')}}"></script>
 		<script src="{{url_for('static', filename='js/login.js')}}"></script>
 
 		{% with messages = get_flashed_messages(with_categories=true) %}

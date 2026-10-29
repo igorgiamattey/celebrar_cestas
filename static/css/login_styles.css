@@ -112,13 +112,16 @@ body {
 .logo-wrapper {
 	position: relative;
 	width: 100%;
-	max-width: 400px;
+	max-width: 450px;
 	aspect-ratio: 1/1;
-	transition: transform 0.3 ease, filter 0.3s ease;
+	border-radius: 50%;
+	box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+	transition: transform 0.5s ease, box-shadow 0.5s ease;
 }
 
 .logo-wrapper:hover {
 	transform: scale(1.08);
+	box-shadow: 0 0 30px var(--gradient-aux)
 }
 
 .logo-text,
@@ -142,15 +145,6 @@ body {
 @keyframes spinLeaves {
   from { transform: rotate(0deg); }
   to { transform: rotate(-360deg); }
-}
-
-.registration-actions {
-	display: flex;
-	justify-content: right;
-	align-items: center;
-	width: 100%;
-	gap: 10px;
-	margin-top: -12px;
 }
 
 .button-container {
@@ -184,4 +178,30 @@ body {
 
 .login-button:active {
 	transform: scale(0.98);
+}
+
+.password-wrapper {
+	position: relative;
+}
+
+.toggle-password {
+	position: absolute;
+	top: 50%;
+	right: 10px;
+	transform: translateY(-50%);
+	display: flex;
+	align-items: center;
+	padding: 4px;
+	border: none;
+	background: none;
+	color: var(--primary-color);
+	cursor: pointer;
+}
+
+.toggle-password:hover {
+	color: var(--gradient-aux);
+}
+
+input[type="password"]::-ms-reveal {
+	display: none;
 }

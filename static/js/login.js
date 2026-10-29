@@ -13,5 +13,22 @@ function toggleLoginButton(fieldIds, buttonId) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+	const input = document.getElementById('password');
+	setPasswordVisible(false);
+
+	document.getElementById('toggle-password').addEventListener('click', () => {
+		setPasswordVisible(input.type === 'password');
+		input.focus();
+	});
+	
 	toggleLoginButton(['login_id', 'password'], 'login-button')
 });
+
+function setPasswordVisible(visible) {
+	const input = document.getElementById('password');
+	const button = document.getElementById('toggle-password');
+
+	input.type = visible ? 'text' : 'password';
+	button.innerHTML = visible ? ICON_HIDE_PWD : ICON_SHOW_PWD;
+	button.title = visible ? 'Ocultar senha' : 'Mostrar senha';
+}
