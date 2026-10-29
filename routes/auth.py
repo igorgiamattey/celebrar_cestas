@@ -15,9 +15,9 @@ def login():
 	password = request.form.get("password", "")
 	
 	query = """
-	SELECT id_usuario, nome_usuario, senha_hash
-	FROM IGOR_CG_USUARIOS
-	WHERE (LOWER(email) = ? OR LOWER(nome_usuario) = ?)
+	SELECT user_id, username, hash_pwd
+	FROM CELEBRAR_USERS
+	WHERE (LOWER(user_email) = ? OR LOWER(username) = ?)
 	AND isDeleted = 0
 	"""
 

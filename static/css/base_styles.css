@@ -565,6 +565,7 @@ html .ts-wrapper.single .ts-control::after {
 	text-decoration: underline;
 }
 
+.home-order-mini-table .empty-search-row td,
 .mini-table .empty-search-row td {
     display: table-cell;
     width: auto;

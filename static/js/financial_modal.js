@@ -12,46 +12,49 @@ function setPlaceholder(selector, text) {
 
 function fillViewModal(data) {
 	viewFinancialEditing = false;
-	document.getElementById('viewFinancial-id').value = data.id_lancamento;
+	document.getElementById('viewFinancial-id').value = data.payment_id;
 
-	viewFinancialTypeSelector.setValue(data.tipo, true);
+	viewFinancialTypeSelector.setValue(data.payment_type, true);
 	viewFinancialCategorySelector.clear(true);
 	viewFinancialCategorySelector.clearOptions();
-	viewFinancialCategorySelector.addOptions(availableCategories[data.tipo] || []);
-	viewFinancialCategorySelector.setValue(data.categoria, true);
+	viewFinancialCategorySelector.addOptions(availableCategories[data.payment_type] || []);
+	viewFinancialCategorySelector.setValue(data.payment_category, true);
 
-	activateExtraField(data.categoria, 'view');
+	activateExtraField(data.payment_category, 'view');
 
 	viewFinancialStatusSelector.clear(true);
 	viewFinancialStatusSelector.clearOptions();
 	availableFinancialStatuses
 		.filter(s => data.allowed_status.includes(s.id))
 		.forEach(s => viewFinancialStatusSelector.addOption(s));
-	viewFinancialStatusSelector.setValue(data.status_pagamento, true);
+	viewFinancialStatusSelector.setValue(data.payment_status, true);
 
-	viewFinancialOrderSelector.setValue(data.id_pedido ?? '', true);
-	document.getElementById('viewFinancial-supplier').value = data.fornecedor ?? '';
+	viewFinancialOrderSelector.setValue(data.order_id ?? '', true);
+	document.getElementById('viewFinancial-supplier').value = data.supplier ?? '';
 
-	document.getElementById('viewFinancial-description').value = data.descricao;
+	document.getElementById('viewFinancial-description').value = data.payment_description;
 
 	const valueInput = document.getElementById('viewFinancial-value');
-	valueInput.value = Number(data.valor).toFixed(2);
-	valueInput.readOnly = data.categoria === 'ORDER_PAYMENT';
+	valueInput.value = Number(data.payment_value).toFixed(2);
+	valueInput.readOnly = data.payment_category === 'ORDER_PAYMENT';
 	valueInput.dispatchEvent(new Event('input', {bubbles: true}));
 
-	document.getElementById('viewFinancial-date').value = data.data_pagamento ?? '';
-	updateDateField(data.status_pagamento, 'view');
+	document.getElementById('viewFinancial-date').value = data.payment_date ?? '';
+	updateDateField(data.payment_status, 'view');
 
-	const canRefund = data.status_pagamento === 'PAID'
+	const canRefund = data.payment_status === 'PAID'
 		&& !data.refunded
-		&& data.categoria !== 'REFUND';
+		&& data.payment_category !== 'REFUND';
 	document.getElementById('viewFinancial-refundBtn').style.display = canRefund
 		? 'inline-block'
 		: 'none'
 }
 
 function fillOrderValue(orderId, mode) {
-	const selector = mode === 'new' ? newFinancialOrderSelector : viewFinancialOrderSelector;
+	const selector = mode === 'new'
+		? newFinancialOrderSelector
+		: viewFinancialOrderSelector;
+
 	const input = document.getElementById(`${mode}Financial-value`);
 	const order = selector.options[orderId];
 
@@ -70,7 +73,9 @@ function fillOrderValue(orderId, mode) {
 }
 
 function updateCategoryOptions(type, mode) {
-	const catSelector = mode === 'new' ? newFinancialCategorySelector : viewFinancialCategorySelector;
+	const catSelector = mode === 'new'
+		? newFinancialCategorySelector
+		: viewFinancialCategorySelector;
 
 	const allowedCats = availableCategories[type] || [];
 	catSelector.clear();
@@ -89,10 +94,14 @@ function updateCategoryOptions(type, mode) {
 }
 
 function activateExtraField(cat, mode) {
+	const orderSelector = mode === 'new'
+		? newFinancialOrderSelector
+		: viewFinancialOrderSelector;
+
 	const showOrder = document.getElementById(`${mode}Financial-showOrder`);
 	const showSupplier = document.getElementById(`${mode}Financial-showSupplier`);
-	const orderSelector = mode === 'new' ? newFinancialOrderSelector : viewFinancialOrderSelector;
 	const supplierInput = document.getElementById(`${mode}Financial-supplier`);
+
 	const orderCat = 'ORDER_PAYMENT';
 	const supplierCat = 'MARKET';
 
@@ -101,6 +110,7 @@ function activateExtraField(cat, mode) {
 
 	if (cat !== orderCat)
 		orderSelector.clear();
+
 	if (cat !== supplierCat)
 		supplierInput.value = '';
 }
@@ -111,7 +121,10 @@ function updateDateField(status, mode) {
 	const requiresDate = REQUIRED_DATE_STATUSES.includes(status)
 
 	const canEdit = mode === 'new'
-		|| (viewFinancialEditing && EDITABLE_DATE_ORIGINS.includes(originalFinancialValues.status_pagamento));
+		|| (
+			viewFinancialEditing &&
+			EDITABLE_DATE_ORIGINS.includes(originalFinancialValues.payment_status)
+		);
 
 	label.textContent = requiresDate ? 'Data de Pagamento*:' : 'Data de Pagamento:';
 	input.disabled = !(requiresDate && canEdit);
@@ -129,7 +142,7 @@ async function refundFinancial() {
 		return;
 
 	const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-	fetch(`/financeiro/${id}/estornar`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
+	fetch(`/refund/${id}`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
 		.then(res => handleResponse(res, 'Lançamento estornado com sucesso!'))
 		.catch(handleError);
 }
@@ -376,18 +389,18 @@ function openNewFinancialModal() {
 
 function openViewFinancialModal(id) {
 	id = parseInt(id, 10);
-	fetchJson(`/financeiro/${id}/data`)
+	fetchJson(`/financial_data/${id}`)
 		.then(data => {
 			originalFinancialValues = {
-				id_lancamento: data.id_lancamento,
-				id_pedido: data.id_pedido,
-				tipo: data.tipo,
-				categoria: data.categoria,
-				descricao: data.descricao,
-				status_pagamento: data.status_pagamento,
-				fornecedor: data.fornecedor,
-				valor: data.valor,
-				data_pagamento: data.data_pagamento,
+				payment_id: data.payment_id,
+				order_id: data.order_id,
+				payment_type: data.payment_type,
+				payment_category: data.payment_category,
+				payment_description: data.payment_description,
+				payment_status: data.payment_status,
+				supplier: data.supplier,
+				payment_value: data.payment_value,
+				payment_date: data.payment_date,
 				allowed_status: data.allowed_status,
 				refunded: data.refunded
 			};
@@ -458,8 +471,4 @@ function openBalance() {
 
 function openMonthStatement() {
 	document.getElementById('viewStatement-modal').style.display = 'flex';
-}
-
-function filterTable(value) {
-	console.log(value);
 }

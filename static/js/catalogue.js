@@ -7,7 +7,7 @@ function handleSearch() {
 	history.replaceState({}, '', `/catalogo${query ? `?search=${encodeURIComponent(query)}` : ''}`)
 
 	searchTimeout = setTimeout(() => {
-		fetchText(`/catalogo/search?search=${encodeURIComponent(query)}`)
+		fetchText(`/search_basket?search=${encodeURIComponent(query)}`)
 			.then(html => {
 				const tableBody = document.getElementById('catalogueTableBody');
 

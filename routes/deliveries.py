@@ -48,15 +48,16 @@ def deliveries():
 						delivery_statuses=statuses,
 						available_addresses=available_addresses)
 
-@deliveries_bp.route("/entregas/search")
+@deliveries_bp.route("/search_delivery")
 def deliveries_search():
-	columns, rows, _, _, _ = get_deliveries()
+	columns, rows, _, _, search = get_deliveries()
 
 	return render_template("deliveries/_deliveries_table_rows.html",
 							columns=columns,
-							rows=rows)
+							rows=rows,
+							search=search)
 
-@deliveries_bp.route("/nova_entrega", methods=["POST"])
+@deliveries_bp.route("/new_delivery", methods=["POST"])
 def new_delivery():
 	try:
 		orders = json.loads(request.form.get("items", ""))
@@ -65,7 +66,7 @@ def new_delivery():
 
 	try:
 		courier = request.form.get("courier", type=int) or None
-		if courier is not None and not validate_id(Table.Couriers, "id_entregador", courier):
+		if courier is not None and not validate_id(Table.Couriers, "courier_id", courier):
 			return "Entregador inválido", 400
 		date_id = request.form["date"]
 		if not validate_date_id(date_id):
@@ -76,9 +77,9 @@ def new_delivery():
 		
 		with run_transaction() as cursor:			
 			cursor.execute("""
-			INSERT INTO IGOR_CG_ENTREGAS
-			(id_entregador, data_entrega, status_entrega)
-			OUTPUT INSERTED.id_entrega
+			INSERT INTO CELEBRAR_DELIVERIES
+			(courier_id, delivery_date, delivery_status)
+			OUTPUT INSERTED.delivery_id
 			VALUES (?, ?, ?)
 			""", (courier, delivery_date, status))
 
@@ -86,14 +87,14 @@ def new_delivery():
 
 			for order in orders:
 				cursor.execute("""
-				UPDATE IGOR_CG_PEDIDOS
-				SET id_entrega = ?
-				WHERE id_pedido = ?
+				UPDATE CELEBRAR_ORDERS
+				SET delivery_id = ?
+				WHERE order_id = ?
 				AND isDeleted = 0
 				AND isDelivery = 1
-				AND id_entrega IS NULL
-				AND status_pedido = ?
-				AND data_entrega = ?
+				AND delivery_id IS NULL
+				AND order_status = ?
+				AND delivery_date = ?
 				""", (delivery_id, order, orderStatus.READY.name, delivery_date))
 
 				if cursor.rowcount != 1:
@@ -108,16 +109,16 @@ def new_delivery():
 
 	return redirect(request.referrer or url_for("deliveries_bp.deliveries"))
 
-@deliveries_bp.route("/entregas/<int:id>/data")
+@deliveries_bp.route("/delivery_data/<int:id>")
 def delivery_data(id):
 	columns, rows = run_select("""
 	SELECT
-	d.id_entrega, d.id_entregador, c.nome_entregador,
-	d.data_entrega, d.status_entrega
-	FROM IGOR_CG_ENTREGAS d
-	LEFT JOIN IGOR_CG_ENTREGADORES c
-	ON d.id_entregador = c.id_entregador
-	WHERE d.id_entrega = ? AND d.isDeleted = 0
+	d.delivery_id, d.courier_id, c.courier_name,
+	d.delivery_date, d.delivery_status
+	FROM CELEBRAR_DELIVERIES d
+	LEFT JOIN CELEBRAR_COURIERS c
+	ON d.courier_id = c.courier_id
+	WHERE d.delivery_id = ? AND d.isDeleted = 0
 	""", (id,))
 
 	if not rows:
@@ -126,20 +127,20 @@ def delivery_data(id):
 	row = rows[0]
 	delivery = dict(zip(columns, row))
 
-	if delivery["data_entrega"]:
-		delivery["data_entrega"] = delivery["data_entrega"].strftime("%Y-%m-%d")
+	if delivery["delivery_date"]:
+		delivery["delivery_date"] = delivery["delivery_date"].strftime("%Y-%m-%d")
 
 	_, order_rows = run_select("""
 	SELECT
-	p.id_pedido, c.nome_razao, a.endereco
-	FROM IGOR_CG_PEDIDOS p
-	LEFT JOIN IGOR_CG_CLIENTES c
-	ON p.id_cliente = c.id_cliente
-	LEFT JOIN IGOR_CG_ENDERECOS_CLIENTES a
-	ON p.id_endereco = a.id_endereco
-	WHERE p.id_entrega = ?
-	AND p.isDeleted = 0
-	ORDER BY p.id_pedido
+	o.order_id, c.client_name, a.address_txt
+	FROM CELEBRAR_ORDERS o
+	LEFT JOIN CELEBRAR_CLIENTS c
+	ON o.client_id = c.client_id
+	LEFT JOIN CELEBRAR_ADDRESSES a
+	ON o.address_id = a.address_id
+	WHERE o.delivery_id = ?
+	AND o.isDeleted = 0
+	ORDER BY o.order_id
 	""", (id,))
 
 	delivery["orders"] = [
@@ -147,24 +148,24 @@ def delivery_data(id):
 		for o_row in order_rows
 	]
 	
-	delivery["allowed_status"] = sorted(get_allowed_status(delivery["status_entrega"], delivery_mode))
+	delivery["allowed_status"] = sorted(get_allowed_status(delivery["delivery_status"], delivery_mode))
 
 	delivery["available_orders"] = getAvailableOrders(id)
 	delivery["available_dates"] = getAvailableDates(id)
 
 	return jsonify(delivery)
 
-@deliveries_bp.route("/entregas/update", methods=["POST"])
+@deliveries_bp.route("/update_delivery", methods=["POST"])
 def update_delivery():
 	try:
 		id = request.form["id"]
-		if not validate_id(Table.Deliveries, "id_entrega", id):
+		if not validate_id(Table.Deliveries, "delivery_id", id):
 			raise ValueError("Entrega inválida")
 		status = validate_delivery_status(request.form["status"])
 		courier = None
 		if request.form.get("courier"):
 			courier = request.form.get("courier", type=int) or None
-			if courier is None or not validate_id(Table.Couriers, "id_entregador", courier):
+			if courier is None or not validate_id(Table.Couriers, "courier_id", courier):
 				return "Entregador inválido", 400
 
 		if courier is None and status in (deliveryStatus.TRANSIT.name, deliveryStatus.DELIVERED.name):
@@ -176,9 +177,9 @@ def update_delivery():
 
 	_, data_rows = run_select("""
 	SELECT
-	data_entrega, status_entrega
-	FROM IGOR_CG_ENTREGAS
-	WHERE id_entrega = ?
+	delivery_date, delivery_status
+	FROM CELEBRAR_DELIVERIES
+	WHERE delivery_id = ?
 	AND isDeleted = 0
 	""", (id,))
 
@@ -218,14 +219,14 @@ def update_delivery():
 	try:
 		with run_transaction() as cursor:
 			cursor.execute("""
-			UPDATE IGOR_CG_ENTREGAS
+			UPDATE CELEBRAR_DELIVERIES
 			SET
-			id_entregador = ?,
-			data_entrega = ?,
-			status_entrega = ?
-			WHERE id_entrega = ?
+			courier_id = ?,
+			delivery_date = ?,
+			delivery_status = ?
+			WHERE delivery_id = ?
 			AND isDeleted = 0
-			AND status_entrega = ?
+			AND delivery_status = ?
 			""", (courier, delivery_date, status, id, current_status))
 
 			if cursor.rowcount != 1:
@@ -233,9 +234,9 @@ def update_delivery():
 
 			if status == deliveryStatus.CANCELLED.name:
 				cursor.execute(f"""
-				UPDATE IGOR_CG_PEDIDOS
-				SET id_entrega = NULL
-				WHERE id_entrega = ?
+				UPDATE CELEBRAR_ORDERS
+				SET delivery_id = NULL
+				WHERE delivery_id = ?
 				""", (id,))
 
 				if cursor.rowcount > 0:
@@ -243,11 +244,11 @@ def update_delivery():
 
 			elif status == deliveryStatus.DELIVERED.name:
 				cursor.execute(f"""
-				UPDATE IGOR_CG_PEDIDOS
-				SET status_pedido = ?
-				WHERE id_entrega = ?
+				UPDATE CELEBRAR_ORDERS
+				SET order_status = ?
+				WHERE delivery_id = ?
 				AND isDeleted = 0
-				AND status_pedido = ?
+				AND order_status = ?
 				""", (orderStatus.DELIVERED.name, id, orderStatus.READY.name))
 
 				if cursor.rowcount > 0:
@@ -257,22 +258,22 @@ def update_delivery():
 				placeholders = ", ".join("?" * len(orders))
 
 				cursor.execute(f"""
-				UPDATE IGOR_CG_PEDIDOS
-				SET id_entrega = NULL
-				WHERE id_entrega = ?
-				AND id_pedido NOT IN ({placeholders})
+				UPDATE CELEBRAR_ORDERS
+				SET delivery_id = NULL
+				WHERE delivery_id = ?
+				AND order_id NOT IN ({placeholders})
 				""", (id, *orders))
 
 				for order in orders:
 					cursor.execute("""
-					UPDATE IGOR_CG_PEDIDOS
-					SET id_entrega = ?
-					WHERE id_pedido = ?
+					UPDATE CELEBRAR_ORDERS
+					SET delivery_id = ?
+					WHERE order_id = ?
 					AND isDeleted = 0
 					AND isDelivery = 1
-					AND status_pedido = ?
-					AND data_entrega = ?
-					AND (id_entrega is NULL OR id_entrega = ?)
+					AND order_status = ?
+					AND delivery_date = ?
+					AND (delivery_id is NULL OR delivery_id = ?)
 					""", (id, order, orderStatus.READY.name, delivery_date, id))
 
 					if cursor.rowcount != 1:
@@ -289,12 +290,12 @@ def update_delivery():
 
 	return "", 204
 
-@deliveries_bp.route("/entregas/entregadores/save", methods=["POST"])
+@deliveries_bp.route("/save_courier", methods=["POST"])
 def save_courier():
 	try:
 		courier_id = request.form.get("courier_id")
 		if courier_id:
-			if not validate_id(Table.Couriers, "id_entregador", courier_id):
+			if not validate_id(Table.Couriers, "courier_id", courier_id):
 				raise ValueError("Entregador inválido")
 		name = validate_name(request.form["courier_name"])
 		phone = validate_phone(request.form["courier_phone"])
@@ -308,26 +309,26 @@ def save_courier():
 	with run_transaction() as cursor:
 		if courier_id:
 			cursor.execute("""
-			UPDATE IGOR_CG_ENTREGADORES
+			UPDATE CELEBRAR_COURIERS
 			SET
-			nome_entregador = ?,
-			telefone = ?
-			WHERE id_entregador = ?
+			courier_name = ?,
+			courier_phone = ?
+			WHERE courier_id = ?
 			""", (name, phone, courier_id))
 
 		else:
 			cursor.execute("""
-			INSERT INTO IGOR_CG_ENTREGADORES
-			(nome_entregador, telefone)
+			INSERT INTO CELEBRAR_COURIERS
+			(courier_name, courier_phone)
 			VALUES (?, ?)
 			""", (name, phone))
 
 	return redirect(url_for("deliveries_bp.deliveries"))
 
-@deliveries_bp.route("/entregas/entregadores/<int:id>/delete", methods=["POST"])
+@deliveries_bp.route("/delete_courier/<int:id>", methods=["POST"])
 def delete_courier(id):
 	try:
-		if not validate_id(Table.Couriers, "id_entregador", id):
+		if not validate_id(Table.Couriers, "courier_id", id):
 			raise ValueError("Entregador inválido")
 		if courier_has_open_deliveries(id):
 			raise ValueError("Esse entregador tem uma entrega em aberto")
@@ -336,20 +337,20 @@ def delete_courier(id):
 	
 	with run_transaction() as cursor:
 		cursor.execute("""
-		UPDATE IGOR_CG_ENTREGADORES
+		UPDATE CELEBRAR_COURIERS
 		SET
 		isDeleted = 1
-		WHERE id_entregador = ?
+		WHERE courier_id = ?
 		""", (id,))
 
 	return "", 204
 
-@deliveries_bp.route("/entregas/entregadores/<int:id>/data")
+@deliveries_bp.route("/courier_data/<int:id>")
 def courier_data(id):
 	_, rows = run_select("""
-	SELECT nome_entregador, telefone
-	FROM IGOR_CG_ENTREGADORES
-	WHERE id_entregador = ?
+	SELECT courier_name, courier_phone
+	FROM CELEBRAR_COURIERS
+	WHERE courier_id = ?
 	AND isDeleted = 0
 	""", (id,))
 

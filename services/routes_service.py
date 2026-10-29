@@ -1,8 +1,8 @@
 from db import format_date, run_select
 from enums.delivery_status import deliveryStatus
 from enums.financial_status import financialStatus
-from enums.movement_types import (financialMovementCategories,
-                                  financialMovementTypes, CAT_BY_TYPE)
+from enums.movement_types import (CAT_BY_TYPE, financialMovementCategories,
+                                  financialMovementTypes)
 from enums.order_status import orderStatus
 from enums.unit_measurement import Unit
 
@@ -10,11 +10,11 @@ from enums.unit_measurement import Unit
 def getAvailableGroups():
 	_, rows = run_select("""
 	SELECT
-	id_grupo,
-	nome_grupo
-	FROM IGOR_CG_GRUPOS_ITEM
+	group_id,
+	group_name
+	FROM CELEBRAR_GROUPS
 	WHERE isDeleted = 0
-	ORDER BY nome_grupo
+	ORDER BY group_name
 	""")
 
 	available_groups = [
@@ -31,12 +31,12 @@ def getAvailableGroups():
 def getAvailableItems():
 	_, rows = run_select("""
 	SELECT
-	id_insumo,
-	nome_insumo,
-	unidade_medida
-	FROM IGOR_CG_ESTOQUE
+	item_id,
+	item_name,
+	item_unit
+	FROM CELEBRAR_STORAGE
 	WHERE isDeleted = 0
-	ORDER BY nome_insumo
+	ORDER BY item_name
 	""")
 
 	available_items = [
@@ -54,10 +54,10 @@ def getAvailableItems():
 def getAvailableClients():
 	_, rows = run_select("""
 	SELECT
-	id_cliente, nome_razao
-	FROM IGOR_CG_CLIENTES
+	client_id, client_name
+	FROM CELEBRAR_CLIENTS
 	WHERE isDeleted = 0
-	ORDER BY nome_razao
+	ORDER BY client_name
 	""")
 
 	available_clients = [
@@ -73,10 +73,10 @@ def getAvailableClients():
 def getAvailableCouriers():
 	_, rows = run_select("""
 	SELECT
-	id_entregador, nome_entregador, telefone
-	FROM IGOR_CG_ENTREGADORES
+	courier_id, courier_name, courier_phone
+	FROM CELEBRAR_COURIERS
 	WHERE isDeleted = 0
-	ORDER BY nome_entregador
+	ORDER BY courier_name
 	""")
 
 	available_couriers = [
@@ -93,10 +93,10 @@ def getAvailableCouriers():
 def getAvailableBaskets():
 	_, rows = run_select("""
 	SELECT
-	id_produto, nome_cesta, preco_venda
-	FROM IGOR_CG_PRODUTOS
+	basket_id, basket_name, basket_price
+	FROM CELEBRAR_BASKETS
 	WHERE isDeleted = 0
-	ORDER BY nome_cesta
+	ORDER BY basket_name
 	""")
 
 	available_baskets = [
@@ -146,17 +146,17 @@ def getAvailableUnits():
 def getAvailableAddresses():
 	_, rows = run_select("""
 	SELECT
-	id_endereco, id_cliente, endereco
-	FROM IGOR_CG_ENDERECOS_CLIENTES
+	address_id, client_id, address_txt
+	FROM CELEBRAR_ADDRESSES
 	WHERE isDeleted = 0
-	ORDER BY endereco, id_endereco
+	ORDER BY address_txt, address_id
 	""")
 
 	available_addresses = [
 		{
 			"id": row[0],
-			"id_cliente": row[1],
-			"endereco": row[2]
+			"client_id": row[1],
+			"address_txt": row[2]
 		}
 		for row in rows
 	]
@@ -168,14 +168,14 @@ def getAvailableDates(delivery_id=None):
 
 	_, rows = run_select("""
 	SELECT DISTINCT
-	data_entrega
-	FROM IGOR_CG_PEDIDOS
+	delivery_date
+	FROM CELEBRAR_ORDERS
 	WHERE isDeleted = 0
 	AND isDelivery = 1
-	AND (id_entrega IS NULL OR id_entrega = ?)
-	AND data_entrega IS NOT NULL
-	AND status_pedido = ?
-	ORDER BY data_entrega
+	AND (delivery_id IS NULL OR delivery_id = ?)
+	AND delivery_date IS NOT NULL
+	AND order_status = ?
+	ORDER BY delivery_date
 	""", (delivery_id, status))
 
 	available_dates = [
@@ -193,21 +193,21 @@ def getAvailableOrders(delivery_id=None):
 
 	_, rows = run_select("""
 	SELECT  
-	p.id_pedido,
-	c.nome_razao,
-	a.endereco,
-	p.data_entrega
-	FROM IGOR_CG_PEDIDOS p
-	JOIN IGOR_CG_CLIENTES c
-	ON p.id_cliente = c.id_cliente
-	JOIN IGOR_CG_ENDERECOS_CLIENTES a
-	ON p.id_endereco = a.id_endereco
-	WHERE p.isDeleted = 0
-	AND p.isDelivery = 1
-	AND (p.id_entrega IS NULL OR p.id_entrega = ?)
-	AND p.status_pedido = ?
+	o.order_id,
+	c.client_name,
+	a.address_txt,
+	o.delivery_date
+	FROM CELEBRAR_ORDERS o
+	JOIN CELEBRAR_CLIENTS c
+	ON o.client_id = c.client_id
+	JOIN CELEBRAR_ADDRESSES a
+	ON o.address_id = a.address_id
+	WHERE o.isDeleted = 0
+	AND o.isDelivery = 1
+	AND (o.delivery_id IS NULL OR o.delivery_id = ?)
+	AND o.order_status = ?
 	AND a.isDeleted = 0
-	ORDER BY p.data_entrega, p.id_pedido;
+	ORDER BY o.delivery_date, o.order_id;
 	""", (delivery_id, status))
 
 	available_orders = [
@@ -224,24 +224,24 @@ def getAvailableOrders(delivery_id=None):
 def getAvailableOrdersFinancial():
 	_, rows = run_select("""
 	SELECT  
-	p.id_pedido,
-	c.nome_razao,
-	p.data_entrega,
-	p.valor_total,
-	p.status_pedido
-	FROM IGOR_CG_PEDIDOS p
-	JOIN IGOR_CG_CLIENTES c
-	ON p.id_cliente = c.id_cliente
-	LEFT JOIN IGOR_CG_ENDERECOS_CLIENTES a
-	ON p.id_endereco = a.id_endereco
-	WHERE p.isDeleted = 0
-	AND p.status_pedido <> ?
+	o.order_id,
+	c.client_name,
+	o.delivery_date,
+	o.order_total,
+	o.order_status
+	FROM CELEBRAR_ORDERS o
+	JOIN CELEBRAR_CLIENTS c
+	ON o.client_id = c.client_id
+	LEFT JOIN CELEBRAR_ADDRESSES a
+	ON o.address_id = a.address_id
+	WHERE o.isDeleted = 0
+	AND o.order_status <> ?
 	AND NOT EXISTS (
 		SELECT 1
-		FROM IGOR_CG_LANCAMENTOS_FIN f
-		WHERE f.id_pedido = p.id_pedido
-		AND f.status_pagamento IN (?, ?))
-	ORDER BY p.id_pedido;
+		FROM CELEBRAR_FINANCIAL_PAYMENTS f
+		WHERE f.order_id = o.order_id
+		AND f.payment_status IN (?, ?))
+	ORDER BY o.order_id;
 	""", (orderStatus.CANCELLED.name, financialStatus.PENDING.name, financialStatus.PAID.name))
 
 	available_orders = [
@@ -300,12 +300,12 @@ def getAvailableMonths():
 
 	_, rows = run_select("""
 	SELECT
-	YEAR(data_pagamento) AS Ano,
-	MONTH(data_pagamento) AS [Mês]
-	FROM IGOR_CG_LANCAMENTOS_FIN
+	YEAR(payment_date) AS Ano,
+	MONTH(payment_date) AS [Mês]
+	FROM CELEBRAR_FINANCIAL_PAYMENTS
 	WHERE isDeleted = 0
-	AND data_pagamento IS NOT NULL
-	GROUP BY YEAR(data_pagamento), MONTH(data_pagamento)
+	AND payment_date IS NOT NULL
+	GROUP BY YEAR(payment_date), MONTH(payment_date)
 	ORDER BY Ano, [Mês]
 	""")
 

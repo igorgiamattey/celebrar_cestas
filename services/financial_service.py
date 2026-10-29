@@ -2,9 +2,9 @@ from flask import request
 
 from db import format_currency, format_date_year, run_select
 from enums.financial_status import financialStatus
-from enums.order_status import orderStatus
 from enums.movement_types import (financialMovementCategories,
                                   financialMovementTypes)
+from enums.order_status import orderStatus
 
 
 def get_financial():
@@ -23,13 +23,13 @@ def get_financial():
 		matching_types = [t.name for t in financialMovementTypes if search.lower() in t.value.lower()]
 		matching_categories = [c.name for c in financialMovementCategories if search.lower() in c.value.lower()]
 		if matching_status:
-			conditions.append(f"status_pagamento IN ({','.join('?' * len(matching_status))})")
+			conditions.append(f"payment_status IN ({','.join('?' * len(matching_status))})")
 			params.extend(matching_status)
 		if matching_types:
-			conditions.append(f"tipo IN ({','.join('?' * len(matching_types))})")
+			conditions.append(f"payment_type IN ({','.join('?' * len(matching_types))})")
 			params.extend(matching_types)
 		if matching_categories:
-			conditions.append(f"categoria IN ({','.join('?' * len(matching_categories))})")
+			conditions.append(f"payment_category IN ({','.join('?' * len(matching_categories))})")
 			params.extend(matching_categories)
 
 		where_clause += " AND (" + " OR ".join(conditions) + ")"
@@ -37,12 +37,12 @@ def get_financial():
 	if month_filter:
 		year = month_filter//100
 		month = month_filter%100
-		where_clause += f" AND YEAR(data_pagamento) = ? AND MONTH(data_pagamento) = ?"
+		where_clause += f" AND YEAR(payment_date) = ? AND MONTH(payment_date) = ?"
 		params.extend([year, month])
 
 	_, count_rows = run_select(f"""
 	SELECT COUNT(*)
-	FROM IGOR_CG_LANCAMENTOS_FIN
+	FROM CELEBRAR_FINANCIAL_PAYMENTS
 	{where_clause}
 	""", tuple(params))
 
@@ -54,15 +54,15 @@ def get_financial():
 
 	columns, rows = run_select(f"""
 	SELECT
-	id_lancamento AS ID,
-	tipo AS Tipo,
-	data_pagamento AS Data,
-	valor AS Valor,
-	status_pagamento AS Status,
-	categoria AS Categoria
-	FROM IGOR_CG_LANCAMENTOS_FIN
+	payment_id AS ID,
+	payment_type AS Tipo,
+	payment_date AS Data,
+	payment_value AS Valor,
+	payment_status AS Status,
+	payment_category AS Categoria
+	FROM CELEBRAR_FINANCIAL_PAYMENTS
 	{where_clause}
-	ORDER BY id_lancamento DESC
+	ORDER BY payment_id DESC
 	OFFSET ? ROWS
 	FETCH NEXT ? ROWS ONLY
 	""", (*params, offset, per_page))
@@ -83,11 +83,11 @@ def get_financial():
 
 def get_order_total(order_id):
 	_, rows = run_select("""
-	SELECT valor_total
-	FROM IGOR_CG_PEDIDOS
-	WHERE id_pedido = ?
+	SELECT order_total
+	FROM CELEBRAR_ORDERS
+	WHERE order_id = ?
 	AND isDeleted = 0
-	AND status_pedido <> ?
+	AND order_status <> ?
 	""", (order_id, orderStatus.CANCELLED.name))
 
 	if not rows:
@@ -103,17 +103,17 @@ def get_balance():
 
 	_, rows = run_select("""
 	SELECT
-	tipo, categoria, SUM(valor)
-	FROM IGOR_CG_LANCAMENTOS_FIN
-	WHERE status_pagamento = ?
+	payment_type, payment_category, SUM(payment_value)
+	FROM CELEBRAR_FINANCIAL_PAYMENTS
+	WHERE payment_status = ?
 	AND isDeleted = 0
-	GROUP BY tipo, categoria
+	GROUP BY payment_type, payment_category
 	""", (financialStatus.PAID.name,))
 
-	totals = {(tipo, cat): total for tipo, cat, total in rows}
+	totals = {(fin_type, fin_cat): total for fin_type, fin_cat, total in rows}
 
-	income = sum((value for (tipo, _), value in totals.items() if tipo == IN))
-	expense = sum((value for (tipo, _), value in totals.items() if tipo == OUT))
+	income = sum((value for (fin_type, _), value in totals.items() if fin_type == IN))
+	expense = sum((value for (fin_type, _), value in totals.items() if fin_type == OUT))
 	
 	balance["INCOME"] = format_currency(income)
 	balance["EXPENSE"] = format_currency(expense)
@@ -141,14 +141,14 @@ def get_monthly_statement():
 	
 	_, rows = run_select("""
 	SELECT
-	YEAR(data_pagamento) AS Ano,
-	MONTH(data_pagamento) AS [Mês],
-	SUM(CASE WHEN tipo = ? THEN valor ELSE 0 END) AS Entrada,
-	SUM(CASE WHEN tipo = ? THEN valor ELSE 0 END) AS [Saída]
-	FROM IGOR_CG_LANCAMENTOS_FIN
+	YEAR(payment_date) AS Ano,
+	MONTH(payment_date) AS [Mês],
+	SUM(CASE WHEN payment_type = ? THEN payment_value ELSE 0 END) AS Entrada,
+	SUM(CASE WHEN payment_type = ? THEN payment_value ELSE 0 END) AS [Saída]
+	FROM CELEBRAR_FINANCIAL_PAYMENTS
 	WHERE isDeleted = 0
-	AND data_pagamento IS NOT NULL
-	GROUP BY YEAR(data_pagamento), MONTH(data_pagamento)
+	AND payment_date IS NOT NULL
+	GROUP BY YEAR(payment_date), MONTH(payment_date)
 	ORDER BY Ano, [Mês]
 	""", (IN, OUT))
 

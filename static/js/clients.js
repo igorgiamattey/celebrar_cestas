@@ -7,7 +7,7 @@ function handleSearch() {
 	history.replaceState({}, '', `/clientes${query ? `?search=${encodeURIComponent(query)}` : ''}`)
 		
 	searchTimeout = setTimeout(() => {
-		fetchText(`/clientes/search?search=${encodeURIComponent(query)}`)
+		fetchText(`/search_client?search=${encodeURIComponent(query)}`)
 			.then(html => {
 				const tableBody = document.getElementById('clientsTableBody');
 

@@ -39,7 +39,7 @@ const newBasketItemSelector = new TomSelect('#newBasket-itemSelect', {
 
 	optgroups: [
 		{value: 'groups', label: 'Grupos'},
-		{value: 'items', label: 'Itens independentes'}
+		{value: 'items', label: 'Itens'}
 	],
 
 	create: false,
@@ -122,21 +122,20 @@ function openNewBasketModal() {
 
 function openViewBasketModal(id) {
 	id = parseInt(id, 10);
-	fetchJson(`/catalogo/${id}/data`)
+	fetchJson(`/basket_data/${id}`)
 		.then(data => {
-			document.getElementById('viewBasket-id').value = data.id_produto;
-			document.getElementById('viewBasket-name').value = data.nome_cesta;
-			document.getElementById('viewBasket-price').value = data.preco_venda;
+			document.getElementById('viewBasket-id').value = data.basket_id;
+			document.getElementById('viewBasket-name').value = data.basket_name;
+			document.getElementById('viewBasket-price').value = data.basket_price;
 
 			viewBasketItems = data.items || [];
 
 			originalBasketValues = {
-				nome_cesta: data.nome_cesta,
-				preco_venda: data.preco_venda,
+				basket_name: data.basket_name,
+				basket_price: data.basket_price,
 				items: structuredClone(viewBasketItems)
 			};
 			
-
 			resetViewBasketModalState();
 			renderBasketItems('view');
 
@@ -171,8 +170,8 @@ function enableEditBasket() {
 }
 
 function cancelEditBasket() {
-	document.getElementById('viewBasket-name').value = originalBasketValues.nome_cesta;
-	document.getElementById('viewBasket-price').value = originalBasketValues.preco_venda;
+	document.getElementById('viewBasket-name').value = originalBasketValues.basket_name;
+	document.getElementById('viewBasket-price').value = originalBasketValues.basket_price;
 
 	viewBasketItems = structuredClone(originalBasketValues.items);
 	renderBasketItems('view');
@@ -205,7 +204,7 @@ async function deleteBasket() {
 	
 	if (confirmed) {
 		const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-		fetch(`/catalogo/${id}/delete`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
+		fetch(`/delete_basket/${id}`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
 			.then(res => handleResponse(res, 'Cesta excluída com sucesso!'))
 			.catch(handleError);
 	}

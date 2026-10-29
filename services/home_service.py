@@ -3,7 +3,7 @@ from datetime import date
 from db import format_currency, run_select, run_transaction
 from enums.financial_status import financialStatus
 from enums.movement_types import financialMovementTypes
-from enums.order_status import orderStatus
+from enums.order_status import orderStatus, CLOSED_ORDER_STATUS
 from services.order_service import get_available_stock
 
 
@@ -13,8 +13,8 @@ def getMissingItems():
 
 		cursor.execute("""
 		SELECT
-		id_insumo, estoque_minimo
-		FROM IGOR_CG_ESTOQUE
+		item_id, item_min
+		FROM CELEBRAR_STORAGE
 		WHERE isDeleted = 0
 		""")
 
@@ -23,29 +23,33 @@ def getMissingItems():
 	return sum(1 for item_id, min_stock in rows if available_stock.get(item_id, 0) <= min_stock)
 
 def getCloseOrders():
+	placeholders = ",".join("?" * len(CLOSED_ORDER_STATUS))
+	
 	_, rows = run_select(f"""
 	SELECT COUNT(*)
-	FROM IGOR_CG_PEDIDOS p
-	JOIN IGOR_CG_CLIENTES c
-	ON p.id_cliente = c.id_cliente
-	WHERE p.isDeleted = 0
-	AND p.data_entrega BETWEEN CAST(GETDATE() AS DATE)
+	FROM CELEBRAR_ORDERS o
+	JOIN CELEBRAR_CLIENTS c
+	ON o.client_id = c.client_id
+	WHERE o.isDeleted = 0
+	AND o.delivery_date BETWEEN CAST(GETDATE() AS DATE)
 		AND DATEADD(DAY, 5, CAST(GETDATE() AS DATE))
-	AND p.status_pedido NOT IN ('DELIVERED', 'CANCELLED')
-	""",)
+	AND o.order_status NOT IN ({placeholders})
+	""", CLOSED_ORDER_STATUS)
 
 	return rows[0][0]
 
 def getLateOrders():
+	placeholders = ",".join("?" * len(CLOSED_ORDER_STATUS))
+
 	_, rows = run_select(f"""
 	SELECT COUNT(*)
-	FROM IGOR_CG_PEDIDOS p
-	JOIN IGOR_CG_CLIENTES c
-	ON p.id_cliente = c.id_cliente
-	WHERE p.isDeleted = 0
-	AND p.data_entrega < CAST(GETDATE() AS DATE)
-	AND p.status_pedido NOT IN ('DELIVERED', 'CANCELLED')
-	""",)
+	FROM CELEBRAR_ORDERS o
+	JOIN CELEBRAR_CLIENTS c
+	ON o.client_id = c.client_id
+	WHERE o.isDeleted = 0
+	AND o.delivery_date < CAST(GETDATE() AS DATE)
+	AND o.order_status NOT IN ({placeholders})
+	""", CLOSED_ORDER_STATUS)
 
 	return rows[0][0]
 
@@ -54,11 +58,11 @@ def getNoDeliveryOrders():
 
 	_, rows = run_select(f"""
 	SELECT COUNT(*)
-	FROM IGOR_CG_PEDIDOS
+	FROM CELEBRAR_ORDERS
 	WHERE isDeleted = 0
 	AND isDelivery = 1
-	AND id_entrega is NULL
-	AND status_pedido = ?
+	AND delivery_id is NULL
+	AND order_status = ?
 	""", (status))
 
 	return rows[0][0]
@@ -77,18 +81,18 @@ def getBalance():
 	)
 	
 	_, rows = run_select("""
-	SELECT tipo,
-		SUM(CASE WHEN status_pagamento = ? THEN valor ELSE 0 END) AS pending,
-		SUM(CASE WHEN status_pagamento = ?
-			AND data_pagamento >= ?
-			AND data_pagamento < ?
-			THEN valor ELSE 0 END) AS paid_month
-	FROM IGOR_CG_LANCAMENTOS_FIN
+	SELECT payment_type,
+		SUM(CASE WHEN payment_status = ? THEN payment_value ELSE 0 END) AS pending,
+		SUM(CASE WHEN payment_status = ?
+			AND payment_date >= ?
+			AND payment_date < ?
+			THEN payment_value ELSE 0 END) AS paid_month
+	FROM CELEBRAR_FINANCIAL_PAYMENTS
 	WHERE isDeleted = 0
-	GROUP BY tipo
+	GROUP BY payment_type
 	""", (PENDING, PAID, start, end))
 
-	totals = {tipo: ((pending or 0), (monthly or 0)) for tipo, pending, monthly in rows}
+	totals = {fin_type: ((pending or 0), (monthly or 0)) for fin_type, pending, monthly in rows}
 
 	pending_income, month_income = totals.get(IN, (0, 0))
 	pending_expense, month_expense = totals.get(OUT, (0, 0))

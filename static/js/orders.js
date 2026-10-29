@@ -18,7 +18,7 @@ function handleSearch() {
 	history.replaceState({}, '', `/pedidos${params.toString() ? `?${params.toString()}` : ''}`)
 
 	searchTimeout = setTimeout(() => {
-		fetchText(`/pedidos/search?search=${encodeURIComponent(query)}&openonly=${openOnly}`)
+		fetchText(`/search_order?search=${encodeURIComponent(query)}&openonly=${openOnly}`)
 			.then(html => {
 				const tableBody = document.getElementById('ordersTableBody');
 

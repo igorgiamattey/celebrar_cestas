@@ -37,7 +37,7 @@ if (mngCouriersForm) {
 			return;
 		}
 
-		fetchJson(`/entregas/entregadores/${courierId}/data`)
+		fetchJson(`/courier_data/${courierId}`)
 			.then(data => {
 				document.getElementById('mngCourier-name').value = data.name;
 				document.getElementById('mngCourier-phone').value = data.phone;
@@ -143,8 +143,8 @@ function refreshOrderOptions(dateId, mode) {
 	orderSelector.clearOptions();
 
 	orders_source
-		.filter(ord => ord.date === dateId && !taken.has(ord.id))
-		.forEach(ord => orderSelector.addOption(ord));
+		.filter(order => order.date === dateId && !taken.has(order.id))
+		.forEach(order => orderSelector.addOption(order));
 }
 
 let viewDeliveryCourierSelector = null;
@@ -252,10 +252,10 @@ function openNewDeliveryModal() {
 
 function openViewDeliveryModal(id) {
 	id = parseInt(id, 10);
-	fetchJson(`/entregas/${id}/data`)
+	fetchJson(`/delivery_data/${id}`)
 		.then(data => {
-			document.getElementById('viewDelivery-id').value = data.id_entrega;
-			viewDeliveryCourierSelector.setValue(data.id_entregador ?? '', true);
+			document.getElementById('viewDelivery-id').value = data.delivery_id;
+			viewDeliveryCourierSelector.setValue(data.courier_id ?? '', true);
 			
 			viewDeliveryStatusSelector.clear(true);
 			viewDeliveryStatusSelector.clearOptions();
@@ -263,28 +263,28 @@ function openViewDeliveryModal(id) {
 			availableDeliveryStatuses
 				.filter(status => allowedStatuses.includes(status.id))
 				.forEach(status => {viewDeliveryStatusSelector.addOption(status)});
-			viewDeliveryStatusSelector.setValue(data.status_entrega, true);
+			viewDeliveryStatusSelector.setValue(data.delivery_status, true);
 			
 			viewDeliveryDateSelector.clear(true);
 			viewDeliveryDateSelector.clearOptions()
 			data.available_dates.forEach(date_op => viewDeliveryDateSelector.addOption(date_op));
 			
-			if (data.data_entrega && !viewDeliveryDateSelector.options[data.data_entrega]) {
+			if (data.delivery_date && !viewDeliveryDateSelector.options[data.delivery_date]) {
 				viewDeliveryDateSelector.addOption({
-					id: data.data_entrega,
-					date: data.data_entrega.split('-').reverse().join('/')
+					id: data.delivery_date,
+					date: data.delivery_date.split('-').reverse().join('/')
 				});
 			}
-			viewDeliveryDateSelector.setValue(data.data_entrega ?? '', true);
+			viewDeliveryDateSelector.setValue(data.delivery_date ?? '', true);
 			
 			viewDeliveryOrders = data.orders || [];
 			viewAvailableOrders = data.available_orders;
-			refreshOrderOptions(data.data_entrega, 'view');
+			refreshOrderOptions(data.delivery_date, 'view');
 
 			originalDeliveryValues = {
-				id_entregador: data.id_entregador,
-				status_entrega: data.status_entrega,
-				data_entrega: data.data_entrega,
+				courier_id: data.courier_id,
+				delivery_status: data.delivery_status,
+				delivery_date: data.delivery_date,
 				orders: structuredClone(viewDeliveryOrders)
 			};
 
@@ -331,12 +331,12 @@ function enableEditDelivery() {
 }
 
 function cancelEditDelivery() {
-	viewDeliveryCourierSelector.setValue(originalDeliveryValues.id_entregador ?? '', true);
-	viewDeliveryStatusSelector.setValue(originalDeliveryValues.status_entrega, true);
-	viewDeliveryDateSelector.setValue(originalDeliveryValues.data_entrega ?? '', true);
+	viewDeliveryCourierSelector.setValue(originalDeliveryValues.courier_id ?? '', true);
+	viewDeliveryStatusSelector.setValue(originalDeliveryValues.delivery_status, true);
+	viewDeliveryDateSelector.setValue(originalDeliveryValues.delivery_date ?? '', true);
 
 	viewDeliveryOrders = structuredClone(originalDeliveryValues.orders);
-	refreshOrderOptions(originalDeliveryValues.data_entrega, 'view');
+	refreshOrderOptions(originalDeliveryValues.delivery_date, 'view');
 	
 	resetViewDeliveryModalState();
 }
@@ -557,7 +557,7 @@ function saveCourier() {
 	formData.append('courier_phone', phone);
 	
 	const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-	fetch('/entregas/entregadores/save', {
+	fetch('/save_courier', {
 		method: 'POST',
 		headers: {'X-CSRFToken': csrfToken},
 		body: formData
@@ -605,7 +605,7 @@ async function deleteCourier(courier, index) {
 	}
 	
 	const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-	fetch(`/entregas/entregadores/${courierId}/delete`, {method: 'POST', headers: {'X-CSRFToken': csrfToken}})
+	fetch(`/delete_courier/${courierId}`, {method: 'POST', headers: {'X-CSRFToken': csrfToken}})
 		.then(res => handleResponse(res, 'Entregador excluído com sucesso!'))
 		.then(() => {
 			couriers.splice(index, 1);

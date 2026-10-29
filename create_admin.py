@@ -20,9 +20,9 @@ def create_admin():
 	hash = generate_password_hash(password)
 
 	query = """
-	INSERT INTO IGOR_CG_USUARIOS
-	(nome_usuario, email, senha_hash)
-	OUTPUT INSERTED.id_usuario
+	INSERT INTO CELEBRAR_USERS
+	(username, user_email, hash_pwd)
+	OUTPUT INSERTED.user_id
 	VALUES (?, ?, ?)
 	"""
 

@@ -7,15 +7,15 @@ from services.routes_service import countRows
 def basket_exists(name, exclude_id=None):
 	query = """
 	SELECT 1
-	FROM IGOR_CG_PRODUTOS
-	WHERE nome_cesta = ?
+	FROM CELEBRAR_BASKETS
+	WHERE basket_name = ?
 	AND isDeleted = 0
 	"""
 
 	params = [name]
 
 	if exclude_id is not None:
-		query += " AND id_produto <> ?"
+		query += " AND basket_id <> ?"
 		params.append(exclude_id)
 
 	_, rows = run_select(query, tuple(params))
@@ -31,7 +31,7 @@ def get_catalogue():
 	where_clause = "WHERE isDeleted = 0"
 	params = []
 	if search:
-		where_clause += " AND nome_cesta LIKE ?"
+		where_clause += " AND basket_name LIKE ?"
 		params.append(f"%{search}%")
 
 	count = countRows(Table.Baskets, where_clause, tuple(params))
@@ -41,18 +41,22 @@ def get_catalogue():
 	
 	columns, rows = run_select(f"""
 	SELECT
-	id_produto AS ID,
-	nome_cesta AS Nome,
-	preco_venda AS [Preço]
-	FROM IGOR_CG_PRODUTOS
+	basket_id AS ID,
+	basket_name AS Nome,
+	basket_price AS [Preço]
+	FROM CELEBRAR_BASKETS
 	{where_clause}
-	ORDER BY nome_cesta
+	ORDER BY basket_name
 	OFFSET ? ROWS
 	FETCH NEXT ? ROWS ONLY
 	""", (*params, offset, per_page))
 
 	rows = [
-		(row[0], row[1].title(), format_currency(row[2]))
+		(
+			row[0],
+			row[1].title(),
+			format_currency(row[2])
+		)
 		for row in rows
 	]
 

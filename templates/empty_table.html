@@ -1,0 +1,9 @@
+{% if not search %}
+{% set fem = (gender == 'f') %}
+{% set span = colspan if colspan is defined else columns|length + actions|default(2) %}
+	<tr class="empty-search-row">
+		<td colspan="{{ span }}" class="text-center py-4">
+			Nenhum{{'a' if fem else ''}} {{ref_page}} cadastrad{{'a' if fem else 'o'}}.
+		</td>
+	</tr>
+{% endif %}

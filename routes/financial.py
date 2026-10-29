@@ -54,15 +54,16 @@ def financial():
 						statement_rows=statement_rows,
 						today=get_today())
 
-@financial_bp.route("/financeiro/search")
+@financial_bp.route("/search_financial")
 def financial_search():
-	columns, rows, _, _, _ = get_financial()
+	columns, rows, _, _, search = get_financial()
 
 	return render_template("financial/_financial_table_rows.html",
 							columns=columns,
-							rows=rows)
+							rows=rows,
+							search=search)
 
-@financial_bp.route("/nova_movimentacao_financeira", methods=["POST"])
+@financial_bp.route("/new_financial", methods=["POST"])
 def new_financial():
 	try:
 		fin_type = validate_financial_type(request.form["type"])
@@ -96,9 +97,9 @@ def new_financial():
 
 		with run_transaction() as cursor:
 			cursor.execute("""
-			INSERT INTO IGOR_CG_LANCAMENTOS_FIN
-			(id_pedido, tipo, descricao, valor, data_pagamento,
-			status_pagamento, fornecedor, categoria)
+			INSERT INTO CELEBRAR_FINANCIAL_PAYMENTS
+			(order_id, payment_type, payment_description, payment_value, payment_date,
+			payment_status, supplier, payment_category)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 			""", (
 				order_id, fin_type, description,
@@ -112,14 +113,14 @@ def new_financial():
 	
 	return redirect(request.referrer or url_for("financial_bp.financial"))
 
-@financial_bp.route("/financeiro/<int:id>/data")
+@financial_bp.route("/financial_data/<int:id>")
 def financial_data(id):
 	columns, rows = run_select("""
 	SELECT
-	id_lancamento, id_pedido, tipo, descricao, valor, data_pagamento,
-	status_pagamento, fornecedor, categoria
-	FROM IGOR_CG_LANCAMENTOS_FIN
-	WHERE id_lancamento = ? AND isDeleted = 0
+	payment_id, order_id, payment_type, payment_description, payment_value, payment_date,
+	payment_status, supplier, payment_category
+	FROM CELEBRAR_FINANCIAL_PAYMENTS
+	WHERE payment_id = ? AND isDeleted = 0
 	""", (id,))
 
 	if not rows:
@@ -128,35 +129,35 @@ def financial_data(id):
 	row = rows[0]
 	financial = dict(zip(columns, row))
 
-	pay_date = financial["data_pagamento"]
-	financial["data_pagamento"] = pay_date.strftime("%Y-%m-%d") if pay_date else ""
-	financial["valor"] = str(financial["valor"])
+	pay_date = financial["payment_date"]
+	financial["payment_date"] = pay_date.strftime("%Y-%m-%d") if pay_date else ""
+	financial["payment_value"] = str(financial["payment_value"])
 
-	financial["allowed_status"] = sorted(get_allowed_status(financial["status_pagamento"], financial_mode))
+	financial["allowed_status"] = sorted(get_allowed_status(financial["payment_status"], financial_mode))
 
 	_, refund_rows = run_select("""
 	SELECT 1
-	FROM IGOR_CG_LANCAMENTOS_FIN
-	WHERE id_lancamento_origem = ?
+	FROM CELEBRAR_FINANCIAL_PAYMENTS
+	WHERE origin_payment_id = ?
 	AND isDeleted = 0
 	""", (id,))
 	financial["refunded"] = bool(refund_rows)
 	
 	return jsonify(financial)
 
-@financial_bp.route("/financeiro/update", methods=["POST"])
+@financial_bp.route("/update_financial", methods=["POST"])
 def update_financial():
 	try:
 		id = request.form.get("id", type=int)
-		if not validate_id(Table.Financial, "id_lancamento", id):
+		if not validate_id(Table.Financial, "payment_id", id):
 			raise ValueError("Lançamento inválido")
 		
 		_, data_rows = run_select("""
 		SELECT
-		id_pedido, tipo, valor, data_pagamento,
-		status_pagamento, fornecedor, categoria
-		FROM IGOR_CG_LANCAMENTOS_FIN
-		WHERE id_lancamento = ? AND isDeleted = 0
+		order_id, payment_type, payment_value, payment_date,
+		payment_status, supplier, payment_category
+		FROM CELEBRAR_FINANCIAL_PAYMENTS
+		WHERE payment_id = ? AND isDeleted = 0
 		""", (id,))
 	
 		if not data_rows:
@@ -216,19 +217,19 @@ def update_financial():
 
 		with run_transaction() as cursor:
 			cursor.execute("""
-			UPDATE IGOR_CG_LANCAMENTOS_FIN
+			UPDATE CELEBRAR_FINANCIAL_PAYMENTS
 			SET
-			id_pedido = ?,
-			tipo = ?,
-			descricao = ?,
-			valor = ?,
-			data_pagamento = ?,
-			status_pagamento = ?,
-			fornecedor = ?,
-			categoria = ?
-			WHERE id_lancamento = ?
+			order_id = ?,
+			payment_type = ?,
+			payment_description = ?,
+			payment_value = ?,
+			payment_date = ?,
+			payment_status = ?,
+			supplier = ?,
+			payment_category = ?
+			WHERE payment_id = ?
 			AND isDeleted = 0
-			AND status_pagamento = ?
+			AND payment_status = ?
 			""", (
 				order_id, fin_type, description,
 				value, pay_date, status, supplier, category, id, current_status
@@ -246,19 +247,19 @@ def update_financial():
 
 	return redirect(request.referrer or url_for("financial_bp.financial"))
 
-@financial_bp.route("/financeiro/<int:id>/estornar", methods=["POST"])
+@financial_bp.route("/refund/<int:id>", methods=["POST"])
 def refund_financial(id):
 	try:
 		with run_transaction() as cursor:
 			cursor.execute("""
 			SELECT
-			id_pedido, tipo, valor, categoria, fornecedor
-			FROM IGOR_CG_LANCAMENTOS_FIN
-			WHERE id_lancamento = ?
+			order_id, payment_type, payment_value, payment_category, supplier
+			FROM CELEBRAR_FINANCIAL_PAYMENTS
+			WHERE payment_id = ?
 			and isDeleted = 0
-			AND status_pagamento = ?
-			AND categoria <> ?
-			AND id_lancamento_origem IS NULL
+			AND payment_status = ?
+			AND payment_category <> ?
+			AND origin_payment_id IS NULL
 			""", (id, financialStatus.PAID.name, financialMovementCategories.REFUND.name))
 			
 			original = cursor.fetchone()
@@ -268,8 +269,8 @@ def refund_financial(id):
 
 			cursor.execute("""
 			SELECT 1
-			FROM IGOR_CG_LANCAMENTOS_FIN
-			WHERE id_lancamento_origem = ?
+			FROM CELEBRAR_FINANCIAL_PAYMENTS
+			WHERE origin_payment_id = ?
 			AND isDeleted = 0
 			""", (id,))
 
@@ -288,9 +289,9 @@ def refund_financial(id):
 				desc += f" - {supplier}"
 			
 			cursor.execute("""
-			INSERT INTO IGOR_CG_LANCAMENTOS_FIN
-			(id_pedido, tipo, descricao, valor, data_pagamento,
-			status_pagamento, fornecedor, categoria, id_lancamento_origem)
+			INSERT INTO CELEBRAR_FINANCIAL_PAYMENTS
+			(order_id, payment_type, payment_description, payment_value, payment_date,
+			payment_status, supplier, payment_category, origin_payment_id)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 			""", (order_id, opposite, desc, value,
 			      get_today(), financialStatus.PAID.name, supplier, financialMovementCategories.REFUND.name, id))

@@ -79,8 +79,11 @@ def validate_date(value, min_date=None, required=True):
 	try:
 		parsed_date = datetime.strptime(value, "%Y-%m-%d").date()
 	except (TypeError, ValueError):
-		if required: raise ValueError(f"Data do pedido inválida")
-		else: raise ValueError(f"Data de entrega inválida")
+		if required:
+			raise ValueError(f"Data do pedido inválida")
+		
+		else:
+			raise ValueError(f"Data de entrega inválida")
 
 	if min_date is not None and parsed_date < min_date:
 		raise ValueError("Data de entrega não pode ser anterior à data do pedido")
@@ -112,12 +115,12 @@ def validate_date_id(value, delivery_id=None):
 
 	_, rows = run_select(f"""
 	SELECT 1
-	FROM IGOR_CG_PEDIDOS
+	FROM CELEBRAR_ORDERS
 	WHERE isDeleted = 0
 	AND isDelivery = 1
-	AND (id_entrega IS NULL OR id_entrega = ?)
-	AND status_pedido = ?
-	AND data_entrega = ?
+	AND (delivery_id IS NULL OR delivery_id = ?)
+	AND order_status = ?
+	AND delivery_date = ?
 	""", (delivery_id, orderStatus.READY.name, value))
 
 	return bool(rows)
@@ -241,7 +244,7 @@ def validate_delivery(delivery_details):
 	address_txt = validate_address(address_txt)
 
 	if address_id is not None:
-		if not validate_id(Table.Addresses, "id_endereco", address_id):
+		if not validate_id(Table.Addresses, "address_id", address_id):
 			raise ValueError("Endereço inválido")
 
 	delivery_details["address_id"] = address_id
@@ -252,10 +255,10 @@ def validate_delivery(delivery_details):
 
 def validate_address_belonging(client, address):
 	_, rows = run_select("""
-	SELECT id_endereco
-	FROM IGOR_CG_ENDERECOS_CLIENTES
-	WHERE id_endereco = ?
-	AND id_cliente = ?
+	SELECT address_id
+	FROM CELEBRAR_ADDRESSES
+	WHERE address_id = ?
+	AND client_id = ?
 	AND isDeleted = 0
 	""", (address, client))
 
@@ -351,7 +354,7 @@ def validate_order_items(items_payload):
 
 		in_order.add(basket_id)
 
-		if not validate_id(Table.Baskets, "id_produto", basket_id):
+		if not validate_id(Table.Baskets, "basket_id", basket_id):
 			raise ValueError("Cesta inválida")
 
 		validate_basket_choices(basket_id, item["quantity"], item.get("choices", []))
@@ -388,12 +391,12 @@ def validate_basket_items(items):
 			if unit.lower() == 'un':
 				item["quantity"] = validate_qty(item["quantity"], integer=True)	
 
-			if not validate_id(Table.Items, "id_insumo", item_id):
+			if not validate_id(Table.Items, "item_id", item_id):
 				raise ValueError("Item inválido")
 
 		elif category == "groups":
 			item["quantity"] = validate_qty(item["quantity"], integer=True)
-			if not validate_id(Table.Groups, "id_grupo", item_id):
+			if not validate_id(Table.Groups, "group_id", item_id):
 				raise ValueError("Grupo inválido")
 
 		else:
@@ -421,13 +424,13 @@ def validate_group_items(items):
 
 		in_group.add(item_id)
 
-		if not validate_id(Table.Items, "id_insumo", item_id):
+		if not validate_id(Table.Items, "item_id", item_id):
 			raise ValueError("Item inválido")
 
 		_, rows = run_select("""
-		SELECT unidade_medida
-		FROM IGOR_CG_ESTOQUE
-		WHERE id_insumo = ?
+		SELECT item_unit
+		FROM CELEBRAR_STORAGE
+		WHERE item_id = ?
 		AND isDeleted = 0
 		""", (item_id,))
 
@@ -463,9 +466,9 @@ def validate_order_stock(cursor, items_payload, exclude_order_id=None):
 		if required_qty > available_qty:
 			cursor.execute("""
 			SELECT
-			nome_insumo
-			FROM IGOR_CG_ESTOQUE
-			WHERE id_insumo = ?
+			item_name
+			FROM CELEBRAR_STORAGE
+			WHERE item_id = ?
 			AND isDeleted = 0
 			""", (item_id,))
 
@@ -488,14 +491,14 @@ def validate_delivery_orders(orders, delivery_date, delivery_id=None):
 	placeholders = ", ".join("?" * len(orders))
 
 	_, rows = run_select(f"""
-	SELECT id_pedido
-	FROM IGOR_CG_PEDIDOS
+	SELECT order_id
+	FROM CELEBRAR_ORDERS
 	WHERE isDeleted = 0
 	AND isDelivery = 1
-	AND (id_entrega IS NULL OR id_entrega = ?)
-	AND status_pedido = ?
-	AND data_entrega = ?
-	AND id_pedido IN ({placeholders})
+	AND (delivery_id IS NULL OR delivery_id = ?)
+	AND order_status = ?
+	AND delivery_date = ?
+	AND order_id IN ({placeholders})
 	""", (delivery_id, orderStatus.READY.name, delivery_date, *orders))
 
 	valid_ids = {row[0] for row in rows}
@@ -512,12 +515,12 @@ OPEN_DELIVERIES_PLACEHOLDERS = ",".join("?" for _ in OPEN_DELIVERY_STATUS)
 def basket_has_open_orders(id):
 	_, rows = run_select(f"""
 	SELECT 1
-	FROM IGOR_CG_CESTAS_PEDIDO cp
-	JOIN IGOR_CG_PEDIDOS p
-	ON p.id_pedido = cp.id_pedido
-	WHERE cp.id_produto = ?
-	AND p.isDeleted = 0
-	AND p.status_pedido IN ({OPEN_ORDERS_PLACEHOLDERS}) 
+	FROM CELEBRAR_ORDER_ITEMS oi
+	JOIN CELEBRAR_ORDERS o
+	ON o.order_id = oi.order_id
+	WHERE oi.basket_id = ?
+	AND o.isDeleted = 0
+	AND o.order_status IN ({OPEN_ORDERS_PLACEHOLDERS}) 
 	""", (id, *OPEN_ORDER_STATUS))
 
 	return bool(rows)
@@ -525,10 +528,10 @@ def basket_has_open_orders(id):
 def client_has_open_orders(id):
 	_, rows = run_select(f"""
 	SELECT 1
-	FROM IGOR_CG_PEDIDOS
-	WHERE id_cliente = ?
+	FROM CELEBRAR_ORDERS
+	WHERE client_id = ?
 	AND isDeleted = 0
-	AND status_pedido IN ({OPEN_ORDERS_PLACEHOLDERS}) 
+	AND order_status IN ({OPEN_ORDERS_PLACEHOLDERS}) 
 	""", (id, *OPEN_ORDER_STATUS))
 
 	return bool(rows)
@@ -536,22 +539,22 @@ def client_has_open_orders(id):
 def item_has_open_orders(id):
 	_, rows = run_select(f"""
 	SELECT 1
-	FROM IGOR_CG_CESTAS_PEDIDO cp
-	JOIN IGOR_CG_PEDIDOS p
-	ON p.id_pedido = cp.id_pedido
-	JOIN IGOR_CG_CESTA_ESTOQUE ce
-	ON ce.id_produto = cp.id_produto
-	AND ce.isDeleted = 0
-	WHERE p.isDeleted = 0
-	AND p.status_pedido IN ({OPEN_ORDERS_PLACEHOLDERS})
+	FROM CELEBRAR_ORDER_ITEMS oi
+	JOIN CELEBRAR_ORDERS o
+	ON o.order_id = oi.order_id
+	JOIN CELEBRAR_BASKET_ITEMS bi
+	ON bi.basket_id = oi.basket_id
+	AND bi.isDeleted = 0
+	WHERE o.isDeleted = 0
+	AND o.order_status IN ({OPEN_ORDERS_PLACEHOLDERS})
 	AND (
-		ce.id_insumo = ?
+		bi.item_id = ?
 		OR EXISTS (
 			SELECT 1
-			FROM IGOR_CG_MEMBROS_GRUPO mg
-			WHERE mg.id_grupo = ce.id_grupo
-			AND mg.id_insumo = ?
-			AND mg.isDeleted = 0
+			FROM CELEBRAR_GROUP_MEMBERS m
+			WHERE m.group_id = bi.group_id
+			AND m.item_id = ?
+			AND m.isDeleted = 0
 		)
 	)
 	""", (*OPEN_ORDER_STATUS, id, id))
@@ -561,15 +564,15 @@ def item_has_open_orders(id):
 def group_has_open_orders(id):
 	_, rows = run_select(f"""
 	SELECT 1
-	FROM IGOR_CG_CESTAS_PEDIDO cp
-	JOIN IGOR_CG_PEDIDOS p
-	ON p.id_pedido = cp.id_pedido
-	JOIN IGOR_CG_CESTA_ESTOQUE ce
-	ON ce.id_produto = cp.id_produto
-	WHERE ce.id_grupo = ?
-	AND ce.isDeleted = 0
-	AND p.isDeleted = 0
-	AND p.status_pedido IN ({OPEN_ORDERS_PLACEHOLDERS})
+	FROM CELEBRAR_ORDER_ITEMS oi
+	JOIN CELEBRAR_ORDERS o
+	ON o.order_id = oi.order_id
+	JOIN CELEBRAR_BASKET_ITEMS bi
+	ON bi.basket_id = oi.basket_id
+	WHERE bi.group_id = ?
+	AND bi.isDeleted = 0
+	AND o.isDeleted = 0
+	AND o.order_status IN ({OPEN_ORDERS_PLACEHOLDERS})
 	""", (id, *OPEN_ORDER_STATUS))
 
 	return bool(rows)
@@ -577,13 +580,13 @@ def group_has_open_orders(id):
 def courier_has_open_deliveries(id):
 	_, rows = run_select(f"""
 	SELECT 1
-	FROM IGOR_CG_ENTREGADORES c
-	JOIN IGOR_CG_ENTREGAS d
-	ON d.id_entregador = c.id_entregador
-	WHERE d.id_entregador = ?
+	FROM CELEBRAR_COURIERS c
+	JOIN CELEBRAR_DELIVERIES d
+	ON d.courier_id = c.courier_id
+	WHERE d.courier_id = ?
 	AND d.isDeleted = 0
 	AND c.isDeleted = 0
-	AND d.status_entrega IN ({OPEN_DELIVERIES_PLACEHOLDERS})
+	AND d.delivery_status IN ({OPEN_DELIVERIES_PLACEHOLDERS})
 	""", (id, *OPEN_DELIVERY_STATUS))
 
 	return bool(rows)

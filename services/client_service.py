@@ -6,16 +6,16 @@ from enums.table_names import Table
 def client_exists(name, phone, exclude_id=None):
 	query = """
 	SELECT 1
-	FROM IGOR_CG_CLIENTES
-	WHERE nome_razao = ?
-	AND telefone = ?
+	FROM CELEBRAR_CLIENTS
+	WHERE client_name = ?
+	AND client_phone = ?
 	AND isDeleted = 0
 	"""
 
 	params = [name, phone]
 
 	if exclude_id is not None:
-		query += " AND id_cliente <> ?"
+		query += " AND client_id <> ?"
 		params.append(exclude_id)
 
 	_, rows = run_select(query, tuple(params))
@@ -32,7 +32,7 @@ def get_clients():
 	params = []
 	if search:
 		search_param = f"%{search}%"
-		where_clause += " AND (nome_razao LIKE ? OR telefone LIKE ?)"
+		where_clause += " AND (client_name LIKE ? OR client_phone LIKE ?)"
 		params.extend([search_param, search_param])
 
 
@@ -43,18 +43,22 @@ def get_clients():
 
 	columns, rows = run_select(f"""
 	SELECT
-	id_cliente AS ID,
-	nome_razao AS Nome,
-	telefone AS Telefone
-	FROM IGOR_CG_CLIENTES
+	client_id AS ID,
+	client_name AS Nome,
+	client_phone AS Telefone
+	FROM CELEBRAR_CLIENTS
 	{where_clause}
-	ORDER BY nome_razao
+	ORDER BY client_name
 	OFFSET ? ROWS
 	FETCH NEXT ? ROWS ONLY
 	""", (*params, offset, per_page))
 
 	rows = [
-		(row[0], row[1].title(), row[2])
+		(
+			row[0],
+			row[1].title(),
+			row[2]
+		)
 		for row in rows
 	]
 

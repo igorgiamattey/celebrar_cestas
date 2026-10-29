@@ -35,4 +35,8 @@
 		</span>
 	</td>
 </tr>
+{% else %}
+	{% with ref_page="pedido", gender="m", colspan=order_columns|length + 1 %}
+		{% include 'empty_table.html' %}
+	{% endwith %}
 {% endfor %}

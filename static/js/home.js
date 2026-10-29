@@ -14,7 +14,7 @@ async function openOrderItemsModal(orderId) {
 
 	try {
 		[data] = await Promise.all([
-			fetchJson(`/home/${orderId}/items`),
+			fetchJson(`/home_order_items/${orderId}`),
 			new Promise(resolve => setTimeout(resolve, 500))
 		]);
 	}
@@ -39,7 +39,7 @@ async function openOrderItemsModal(orderId) {
 }
 
 function openMissingItemModal() {
-	fetchJson('/estoque/falta')
+	fetchJson('/missing_items')
 		.then(data => {
 			document.getElementById('missItems-desc').value = data.missing_items || "";
 			document.getElementById('missItem-modal').style.display = "flex";

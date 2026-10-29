@@ -5,60 +5,61 @@ from flask import request
 
 from db import format_currency, format_date_year, run_select
 from enums.movement_types import storageMovementTypes
-from enums.order_status import orderStatus
+from enums.order_status import OPEN_ORDER_STATUS, orderStatus
+
 
 def get_basket_composition(id):
 	_, rows = run_select(f"""
 	SELECT
-	ce.id_insumo, e.nome_insumo, e.unidade_medida,
-	ce.quantidade_utilizada, ce.id_grupo, g.nome_grupo
-	FROM IGOR_CG_CESTA_ESTOQUE ce
-	LEFT JOIN IGOR_CG_ESTOQUE e
-		ON e.id_insumo = ce.id_insumo
-		AND e.isDeleted = 0
-	LEFT JOIN IGOR_CG_GRUPOS_ITEM g
-		ON g.id_grupo = ce.id_grupo
+	bi.item_id, s.item_name, s.item_unit,
+	bi.item_amount, bi.group_id, g.group_name
+	FROM CELEBRAR_BASKET_ITEMS bi
+	LEFT JOIN CELEBRAR_STORAGE s
+		ON s.item_id = bi.item_id
+		AND s.isDeleted = 0
+	LEFT JOIN CELEBRAR_GROUPS g
+		ON g.group_id = bi.group_id
 		AND g.isDeleted = 0
-	WHERE ce.id_produto = ?
-	AND ce.isDeleted = 0
+	WHERE bi.basket_id = ?
+	AND bi.isDeleted = 0
 	""", (id,))
 
 	fixed_items, group_ids, groups_data = [], [], {}
 
-	for id_insumo, nome_insumo, unidade, qtd, id_grupo, nome_grupo in rows:
-		if id_grupo is not None:
-			group_ids.append(id_grupo)
-			groups_data[id_grupo] = {
-				"group_id": id_grupo,
-				"group_name": nome_grupo,
-				"quantity": qtd,
+	for item_id, item_name, item_unit, item_qty, group_id, group_name in rows:
+		if group_id is not None:
+			group_ids.append(group_id)
+			groups_data[group_id] = {
+				"group_id": group_id,
+				"group_name": group_name,
+				"quantity": item_qty,
 				"options": []
 			}
 		else:
 			fixed_items.append({
-				"item_id": id_insumo,
-				"item_name": nome_insumo,
-				"unit": unidade,
-				"quantity": qtd
+				"item_id": item_id,
+				"item_name": item_name,
+				"unit": item_unit,
+				"quantity": item_qty
 			})
 
 	if group_ids:
 		placeholders = ','.join(['?'] * len(group_ids))
 		_, members_rows = run_select(f"""
 			SELECT
-			mg.id_grupo, e.id_insumo, e.nome_insumo, mg.qtd_item_grupo, e.unidade_medida
-			FROM IGOR_CG_MEMBROS_GRUPO mg
-			JOIN IGOR_CG_ESTOQUE e
-			ON e.id_insumo = mg.id_insumo
-			WHERE mg.id_grupo IN ({placeholders}) AND mg.isDeleted = 0
+			m.group_id, s.item_id, s.item_name, m.group_item_qty, s.item_unit
+			FROM CELEBRAR_GROUP_MEMBERS m
+			JOIN CELEBRAR_STORAGE s
+			ON s.item_id = m.item_id
+			WHERE m.group_id IN ({placeholders}) AND m.isDeleted = 0
 		""", tuple(group_ids))
 
-		for id_grupo, id_insumo, nome_insumo, qtd, unidade in members_rows:
-			groups_data[id_grupo]["options"].append({
-				"item_id": id_insumo,
-				"item_name": nome_insumo,
-				"item_quantity": qtd,
-				"unit": unidade
+		for group_id, item_id, item_name, item_qty, item_unit in members_rows:
+			groups_data[group_id]["options"].append({
+				"item_id": item_id,
+				"item_name": item_name,
+				"item_quantity": item_qty,
+				"unit": item_unit
 			})
 
 	return {
@@ -72,20 +73,20 @@ def update_stock(cursor, item_id, qty, order_id, operation, move_type, obs=""):
 	
 	if operation == "increase":
 		cursor.execute("""
-		UPDATE IGOR_CG_ESTOQUE
+		UPDATE CELEBRAR_STORAGE
 		SET
-		qtd_estoque = qtd_estoque + ?
-		WHERE id_insumo = ?
+		item_qty = item_qty + ?
+		WHERE item_id = ?
 		AND isDeleted = 0
 		""", (qty, item_id))
 
 	elif operation == "deduct":
 		cursor.execute("""
-			UPDATE IGOR_CG_ESTOQUE
+			UPDATE CELEBRAR_STORAGE
 			SET
-			qtd_estoque = qtd_estoque - ?
-			WHERE id_insumo = ?
-			AND qtd_estoque - ? >= 0
+			item_qty = item_qty - ?
+			WHERE item_id = ?
+			AND item_qty - ? >= 0
 			AND isDeleted = 0
 			""", (qty, item_id, qty))
 		
@@ -96,8 +97,8 @@ def update_stock(cursor, item_id, qty, order_id, operation, move_type, obs=""):
 		raise ValueError("Invalid Operation")
 
 	cursor.execute("""
-	INSERT INTO IGOR_CG_MOVIMENTACOES_ESTOQUE
-	(id_insumo, tipo_movimentacao, quantidade, observacao)
+	INSERT INTO CELEBRAR_STORAGE_MOVES
+	(item_id, move_type, amount, obs)
 	VALUES (?, ?, ?, ?)
 	""", (item_id, move_type, qty, obs))
 
@@ -124,15 +125,15 @@ def get_today():
 def get_pending_orders(cursor, exclude_order_id=None):
 	query = """
 	SELECT
-	id_pedido, itens_pedido
-	FROM IGOR_CG_PEDIDOS
-	WHERE status_pedido = ?
+	order_id, order_items
+	FROM CELEBRAR_ORDERS
+	WHERE order_status = ?
 	AND isDeleted = 0
 	"""
 	params = [orderStatus.PENDING.name]
 
 	if exclude_order_id is not None:
-		query += " AND id_pedido <> ?"
+		query += " AND order_id <> ?"
 		params.append(exclude_order_id)
 
 	cursor.execute(query, params)
@@ -151,24 +152,21 @@ def get_stock_requirements(cursor, item):
 
 	cursor.execute("""
 	SELECT
-	id_insumo, quantidade_utilizada, id_grupo
-	FROM IGOR_CG_CESTA_ESTOQUE
-	WHERE id_produto = ?
+	item_id, item_amount, group_id
+	FROM CELEBRAR_BASKET_ITEMS
+	WHERE basket_id = ?
 	AND isDeleted = 0
 	""", (basket_id,))
 
 	recipe_rows = cursor.fetchall()
 
 	for item_id, used_qty, group_id in recipe_rows:
-
 		if group_id is None:
 			required_qty = used_qty * basket_qty
-
 			requirements[item_id] = (requirements.get(item_id, 0) + required_qty)
 
 		else:
 			chosen_ids = choices_by_group.get(group_id, [])
-
 			if not chosen_ids:
 				raise ValueError(
 					f"Nenhuma escolha feita para o grupo "
@@ -178,10 +176,10 @@ def get_stock_requirements(cursor, item):
 			for chosen_item in chosen_ids:
 				cursor.execute("""
 				SELECT
-				qtd_item_grupo
-				FROM IGOR_CG_MEMBROS_GRUPO
-				WHERE id_grupo = ?
-				AND id_insumo = ?
+				group_item_qty
+				FROM CELEBRAR_GROUP_MEMBERS
+				WHERE group_id = ?
+				AND item_id = ?
 				AND isDeleted = 0
 				""", (group_id, chosen_item))
 
@@ -194,7 +192,6 @@ def get_stock_requirements(cursor, item):
 					)
 
 				item_qty = row[0]
-
 				requirements[chosen_item] = (
 					requirements.get(chosen_item, 0) + item_qty
 				)
@@ -224,8 +221,8 @@ def get_available_stock(cursor, exclude_order_id=None):
 
 	cursor.execute("""
 	SELECT
-	id_insumo, qtd_estoque
-	FROM IGOR_CG_ESTOQUE
+	item_id, item_qty
+	FROM CELEBRAR_STORAGE
 	WHERE isDeleted = 0
 	""")
 
@@ -238,7 +235,6 @@ def get_available_stock(cursor, exclude_order_id=None):
 
 	return available_stock
 
-
 def get_orders():
 	page = request.args.get("page", 1, type=int)
 	page = max(page, 1)
@@ -246,51 +242,52 @@ def get_orders():
 	open_only = request.args.get("openonly", "false").lower() == "true"
 	per_page = 1000
 
-	where_clause = "WHERE p.isDeleted = 0"
+	where_clause = "WHERE o.isDeleted = 0"
 	params = []
 	if search:
 		if search.startswith("#"):
 			id_part = search[1:].strip()
 			if id_part.isdigit():
-				where_clause += " AND p.id_pedido = ?"
+				where_clause += " AND o.order_id = ?"
 				params.append(int(id_part))
+		
 		else:
 			search_param = f"%{search}%"
 			conditions = [
-				"c.nome_razao LIKE ?",
+				"c.client_name LIKE ?",
 				"""EXISTS (
 					SELECT 1
-					FROM IGOR_CG_CESTAS_PEDIDO cp
-					JOIN IGOR_CG_PRODUTOS pr
-					ON pr.id_produto = cp.id_produto
-					WHERE cp.id_pedido = p.id_pedido
-					AND pr.nome_cesta LIKE ?
+					FROM CELEBRAR_ORDER_ITEMS oi
+					JOIN CELEBRAR_BASKETS b
+					ON b.basket_id = oi.basket_id
+					WHERE oi.order_id = o.order_id
+					AND b.basket_name LIKE ?
 				)""",
-				"CONVERT(VARCHAR(10), p.data_entrega, 103) LIKE ?"
+				"CONVERT(VARCHAR(10), o.delivery_date, 103) LIKE ?"
 			]
 			params.extend([search_param, search_param, search_param])
 
 			if search.isdigit():
-				conditions.append("p.id_pedido = ?")
+				conditions.append("o.order_id = ?")
 				params.append(int(search))
 
 			matching_status = [s.name for s in orderStatus if search.lower() in s.value.lower()]
 			if matching_status:
-				conditions.append(f"p.status_pedido IN ({','.join('?' * len(matching_status))})")
+				conditions.append(f"o.order_status IN ({','.join('?' * len(matching_status))})")
 				params.extend(matching_status)
 			
 			where_clause += " AND (" + " OR ".join(conditions) + ")"
 
 	if open_only:
-		open_status = [orderStatus.PENDING.name, orderStatus.CONFIRMED.name, orderStatus.PREPARING.name, orderStatus.READY.name]
-		where_clause += f" AND p.status_pedido IN ({','.join('?' * len(open_status))})"
+		open_status = OPEN_ORDER_STATUS
+		where_clause += f" AND o.order_status IN ({','.join('?' * len(open_status))})"
 		params.extend(open_status)
 
 	_, count_rows = run_select(f"""
 	SELECT COUNT(*)
-	FROM IGOR_CG_PEDIDOS p
-	JOIN IGOR_CG_CLIENTES c
-	ON p.id_cliente = c.id_cliente
+	FROM CELEBRAR_ORDERS o
+	JOIN CELEBRAR_CLIENTS c
+	ON o.client_id = c.client_id
 	{where_clause}
 	""", tuple(params))
 
@@ -302,31 +299,31 @@ def get_orders():
 
 	columns, rows = run_select(f"""
 	SELECT
-	p.id_pedido AS ID,
-	c.nome_razao AS Cliente,
+	o.order_id AS ID,
+	c.client_name AS Cliente,
 	COALESCE(items.summary, '') AS Itens,
-	p.data_entrega AS Entrega,
-	p.valor_total AS Valor,
-	p.status_pedido AS Status,
-	p.isDelivery AS Tipo
-	FROM IGOR_CG_PEDIDOS p
-	JOIN IGOR_CG_CLIENTES c
-	ON p.id_cliente = c.id_cliente
+	o.delivery_date AS Entrega,
+	o.order_total AS Valor,
+	o.order_status AS Status,
+	o.isDelivery AS Tipo
+	FROM CELEBRAR_ORDERS o
+	JOIN CELEBRAR_CLIENTS c
+	ON o.client_id = c.client_id
 	OUTER APPLY (
 		SELECT
 		STUFF ((
 			SELECT
-			CHAR (10) + CAST(cp.quantidade AS VARCHAR) + ' ' + CHAR(215) + ' ' + pr.nome_cesta
-			FROM IGOR_CG_CESTAS_PEDIDO cp
-			JOIN IGOR_CG_PRODUTOS pr
-			ON pr.id_produto = cp.id_produto
-			WHERE cp.id_pedido = p.id_pedido
+			CHAR (10) + CAST(oi.amount AS VARCHAR) + ' ' + CHAR(215) + ' ' + b.basket_name
+			FROM CELEBRAR_ORDER_ITEMS oi
+			JOIN CELEBRAR_BASKETS b
+			ON b.basket_id = oi.basket_id
+			WHERE oi.order_id = o.order_id
 			FOR XML PATH(''), TYPE
 		).value('.', 'NVARCHAR(MAX)'), 1, 1, '')
 		AS summary
 	) items
 	{where_clause}
-	ORDER BY p.data_entrega, p.id_pedido
+	ORDER BY o.delivery_date, o.order_id
 	OFFSET ? ROWS
 	FETCH NEXT ? ROWS ONLY
 	""", (*params, offset, per_page))
@@ -363,19 +360,19 @@ def save_delivery_address(cursor, client_id, address_id, address_txt):
 
 	if address_id is None:
 		cursor.execute("""
-		INSERT INTO IGOR_CG_ENDERECOS_CLIENTES
-		(id_cliente, endereco)
-		OUTPUT INSERTED.id_endereco
+		INSERT INTO CELEBRAR_ADDRESSES
+		(client_id, address_txt)
+		OUTPUT INSERTED.address_id
 		VALUES (?, ?)
 		""", (client_id, address_txt))
 
 		return cursor.fetchone()[0]
 
 	cursor.execute("""
-	UPDATE IGOR_CG_ENDERECOS_CLIENTES
-	SET endereco = ?
-	WHERE id_endereco = ?
-	AND id_cliente = ?
+	UPDATE CELEBRAR_ADDRESSES
+	SET address_txt = ?
+	WHERE address_id = ?
+	AND client_id = ?
 	""", (address_txt, address_id, client_id))
 
 	if cursor.rowcount != 1:

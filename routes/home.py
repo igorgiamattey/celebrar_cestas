@@ -4,8 +4,8 @@ from flask import Blueprint, jsonify, render_template, request, session
 
 from db import format_date, run_select
 from enums.order_status import orderStatus
-from services.home_service import (getCloseOrders, getLateOrders,
-                                   getMissingItems, getNoDeliveryOrders, getBalance)
+from services.home_service import (getBalance, getCloseOrders, getLateOrders,
+                                   getMissingItems, getNoDeliveryOrders)
 from services.routes_service import (getAvailableAddresses,
                                      getAvailableBaskets, getAvailableClients,
                                      getAvailableCouriers, getAvailableDates,
@@ -23,15 +23,15 @@ def home():
 	per_page = 3
 	
 	where_clause = """
-		WHERE p.isDeleted = 0
-		AND p.status_pedido NOT IN ('DELIVERED', 'CANCELLED')
+		WHERE o.isDeleted = 0
+		AND o.order_status NOT IN ('DELIVERED', 'CANCELLED')
 	"""
 
 	_, count_rows = run_select(f"""
 	SELECT COUNT(*)
-	FROM IGOR_CG_PEDIDOS p
-	JOIN IGOR_CG_CLIENTES c
-	ON p.id_cliente = c.id_cliente
+	FROM CELEBRAR_ORDERS o
+	JOIN CELEBRAR_CLIENTS c
+	ON o.client_id = c.client_id
 	{where_clause}
 	""",)
 
@@ -42,30 +42,30 @@ def home():
 
 	order_columns, order_rows = run_select(f"""
 	SELECT
-	p.id_pedido AS ID,
-	c.nome_razao AS Cliente,
+	o.order_id AS ID,
+	c.client_name AS Cliente,
 	COALESCE(items.summary, '') AS Itens,
-	p.data_entrega AS Entrega,
-	p.valor_pedido AS Valor,
-	p.status_pedido AS Status
-	FROM IGOR_CG_PEDIDOS p
-	JOIN IGOR_CG_CLIENTES c
-	ON p.id_cliente = c.id_cliente
+	o.delivery_date AS Entrega,
+	o.order_total AS Valor,
+	o.order_status AS Status
+	FROM CELEBRAR_ORDERS o
+	JOIN CELEBRAR_CLIENTS c
+	ON o.client_id = c.client_id
 	OUTER APPLY (
 		SELECT
 		STUFF ((
 			SELECT
-			CHAR (10) + CAST(cp.quantidade AS VARCHAR) + ' ' + CHAR(215) + ' ' + pr.nome_cesta
-			FROM IGOR_CG_CESTAS_PEDIDO cp
-			JOIN IGOR_CG_PRODUTOS pr
-			ON pr.id_produto = cp.id_produto
-			WHERE cp.id_pedido = p.id_pedido
+			CHAR (10) + CAST(oi.amount AS VARCHAR) + ' ' + CHAR(215) + ' ' + b.basket_name
+			FROM CELEBRAR_ORDER_ITEMS oi
+			JOIN CELEBRAR_BASKETS b
+			ON b.basket_id = oi.basket_id
+			WHERE oi.order_id = o.order_id
 			FOR XML PATH(''), TYPE
 		).value('.', 'NVARCHAR(MAX)'), 1, 1, '')
 		AS summary
 	) items
 	{where_clause}
-	ORDER BY p.data_entrega, p.id_pedido
+	ORDER BY o.delivery_date, o.order_id
 	OFFSET ? ROWS
 	FETCH NEXT ? ROWS ONLY
 	""", (offset, per_page))
@@ -109,7 +109,6 @@ def home():
 	available_dates = getAvailableDates()
 	available_orders = getAvailableOrders()
 	delivery_statuses = getAvailableDeliveryStatus()
-	available_addresses = getAvailableAddresses()
 
 	return render_template("home/home.html",
 						order_rows=order_rows,
@@ -133,17 +132,17 @@ def home():
 						close_orders=close_orders,
 						late_orders=late_orders)
 
-@home_bp.route("/home/<int:id>/items")
+@home_bp.route("/home_order_items/<int:id>")
 def order_items(id):
 	_, rows = run_select(f"""
 	SELECT
-	cp.quantidade, pr.nome_cesta
-	FROM IGOR_CG_CESTAS_PEDIDO cp
-	JOIN IGOR_CG_PRODUTOS pr
-	ON pr.id_produto = cp.id_produto
-	WHERE cp.id_pedido = ?
-	AND pr.isDeleted = 0
-	ORDER BY pr.nome_cesta
+	oi.amount, b.basket_name
+	FROM CELEBRAR_ORDER_ITEMS oi
+	JOIN CELEBRAR_BASKETS b
+	ON b.basket_id = oi.basket_id
+	WHERE oi.order_id = ?
+	AND b.isDeleted = 0
+	ORDER BY b.basket_name
 	""", (id,))
 
 	items = [

@@ -7,7 +7,7 @@ function handleSearch() {
 	history.replaceState({}, '', `/estoque${query ? `?search=${encodeURIComponent(query)}` : ''}`)
 		
 	searchTimeout = setTimeout(() => {
-		fetchText(`/estoque/search?search=${encodeURIComponent(query)}`)
+		fetchText(`/search_item?search=${encodeURIComponent(query)}`)
 			.then(html => {
 				const tableBody = document.getElementById('storageTableBody');
 

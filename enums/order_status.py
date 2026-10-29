@@ -14,3 +14,8 @@ OPEN_ORDER_STATUS = (
 	orderStatus.PREPARING.name,
 	orderStatus.READY.name,
 )
+
+CLOSED_ORDER_STATUS = (
+	orderStatus.CANCELLED.name,
+	orderStatus.DELIVERED.name
+)

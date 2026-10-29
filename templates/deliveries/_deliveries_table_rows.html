@@ -29,6 +29,9 @@
 			</svg>
 		</button>
 	</td>
-	
 </tr>
+{% else %}
+	{% with ref_page="entrega", gender="f" %}
+		{% include 'empty_table.html' %}
+	{% endwith %}
 {% endfor %}

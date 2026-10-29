@@ -1,7 +1,7 @@
 import json
 
 from flask import (Blueprint, jsonify, redirect, render_template, request,
-                   url_for, session)
+                   session, url_for)
 
 from db import run_select, run_transaction
 from enums.table_names import Table
@@ -30,15 +30,16 @@ def catalogue():
 						available_items = available_items,
 						available_groups = available_groups)
 
-@catalogue_bp.route("/catalogo/search")
+@catalogue_bp.route("/search_basket")
 def catalogue_search():
-	columns, rows, _, _, _ = get_catalogue()
+	columns, rows, _, _, search = get_catalogue()
 
 	return render_template("catalogue/_catalogue_table_rows.html",
 							columns=columns,
-							rows=rows)
+							rows=rows,
+							search=search)
 
-@catalogue_bp.route("/nova_cesta", methods=["POST"])
+@catalogue_bp.route("/new_basket", methods=["POST"])
 def new_basket():
 	try:
 		items = json.loads(request.form["items"])
@@ -57,9 +58,9 @@ def new_basket():
 
 	with run_transaction() as cursor:
 		cursor.execute("""
-		INSERT INTO IGOR_CG_PRODUTOS
-		(nome_cesta, preco_venda)
-		OUTPUT INSERTED.id_produto
+		INSERT INTO CELEBRAR_BASKETS
+		(basket_name, basket_price)
+		OUTPUT INSERTED.basket_id
 		VALUES (?, ?)
 		""", (name, price))
 
@@ -69,27 +70,27 @@ def new_basket():
 			item_cat = item["category"]
 			if item_cat == "items":
 				cursor.execute("""
-				INSERT INTO IGOR_CG_CESTA_ESTOQUE
-				(id_produto, id_insumo, quantidade_utilizada)
+				INSERT INTO CELEBRAR_BASKET_ITEMS
+				(basket_id, item_id, item_amount)
 				VALUES (?, ?, ?)
 				""", (basket_id, item["item_id"], item["quantity"]))
 
 			elif item_cat == "groups":
 				cursor.execute("""
-				INSERT INTO IGOR_CG_CESTA_ESTOQUE
-				(id_produto, id_grupo, quantidade_utilizada)
+				INSERT INTO CELEBRAR_BASKET_ITEMS
+				(basket_id, group_id, item_amount)
 				VALUES (?, ?, ?)
 				""", (basket_id, item["item_id"], item["quantity"]))
 
 	return redirect(request.referrer or url_for("catalogue_bp.catalogue"))
 
-@catalogue_bp.route("/catalogo/<int:id>/data")
+@catalogue_bp.route("/basket_data/<int:id>")
 def basket_data(id):
 	columns, rows = run_select("""
 	SELECT
-	id_produto, nome_cesta, preco_venda
-	FROM IGOR_CG_PRODUTOS
-	WHERE id_produto = ?
+	basket_id, basket_name, basket_price
+	FROM CELEBRAR_BASKETS
+	WHERE basket_id = ?
 	AND isDeleted = 0
 	""", (id,))
 
@@ -101,19 +102,19 @@ def basket_data(id):
 
 	_, items_rows = run_select("""
 		SELECT
-		c_e.id_insumo,
-		e.nome_insumo,
-		e.unidade_medida,
-		c_e.quantidade_utilizada,
-		c_e.id_grupo,
-		g.nome_grupo
-		FROM IGOR_CG_CESTA_ESTOQUE c_e
-		LEFT JOIN IGOR_CG_ESTOQUE e
-		ON c_e.id_insumo = e.id_insumo
-		LEFT JOIN IGOR_CG_GRUPOS_ITEM g
-		ON c_e.id_grupo = g.id_grupo
-		WHERE c_e.id_produto = ?
-		ORDER BY COALESCE(e.nome_insumo, g.nome_grupo)
+		bi.item_id,
+		s.item_name,
+		s.item_unit,
+		bi.item_amount,
+		bi.group_id,
+		g.group_name
+		FROM CELEBRAR_BASKET_ITEMS bi
+		LEFT JOIN CELEBRAR_STORAGE s
+		ON bi.item_id = s.item_id
+		LEFT JOIN CELEBRAR_GROUPS g
+		ON bi.group_id = g.group_id
+		WHERE bi.basket_id = ?
+		ORDER BY COALESCE(s.item_name, g.group_name)
 	""", (id,))
 
 	basket["items"] = [
@@ -129,7 +130,7 @@ def basket_data(id):
 	
 	return jsonify(basket)
 
-@catalogue_bp.route("/catalogo/update", methods=["POST"])
+@catalogue_bp.route("/update_basket", methods=["POST"])
 def update_basket():
 	try:
 		items = json.loads(request.form["items"])
@@ -138,7 +139,7 @@ def update_basket():
 
 	try:
 		id = request.form["id"]
-		if not validate_id(Table.Baskets, "id_produto", id):
+		if not validate_id(Table.Baskets, "basket_id", id):
 			raise ValueError("Cesta inválida")
 		name = validate_name(request.form["name"])
 		price = validate_price(request.form["price"])
@@ -153,40 +154,40 @@ def update_basket():
 	
 	with run_transaction() as cursor:
 		cursor.execute("""
-		UPDATE IGOR_CG_PRODUTOS
+		UPDATE CELEBRAR_BASKETS
 		SET
-		nome_cesta = ?,
-		preco_venda = ?
-		WHERE id_produto = ?
+		basket_name = ?,
+		basket_price = ?
+		WHERE basket_id = ?
 		""", (name, price, id))
 
 		cursor.execute("""
-		DELETE FROM IGOR_CG_CESTA_ESTOQUE
-		WHERE id_produto = ?
+		DELETE FROM CELEBRAR_BASKET_ITEMS
+		WHERE basket_id = ?
 		""", (id,))
 
 		for item in items:
 			item_cat = item["category"]
 			if item_cat == "items":
 				cursor.execute("""
-				INSERT INTO IGOR_CG_CESTA_ESTOQUE
-				(id_produto, id_insumo, quantidade_utilizada)
+				INSERT INTO CELEBRAR_BASKET_ITEMS
+				(basket_id, item_id, item_amount)
 				VALUES (?, ?, ?)
 				""", (id, item["item_id"], item["quantity"]))
 
 			elif item_cat == "groups":
 				cursor.execute("""
-				INSERT INTO IGOR_CG_CESTA_ESTOQUE
-				(id_produto, id_grupo, quantidade_utilizada)
+				INSERT INTO CELEBRAR_BASKET_ITEMS
+				(basket_id, group_id, item_amount)
 				VALUES (?, ?, ?)
 				""", (id, item["item_id"], item["quantity"]))
 
 	return redirect(url_for("catalogue_bp.catalogue"))
 
-@catalogue_bp.route("/catalogo/<int:id>/delete", methods=["POST"])
+@catalogue_bp.route("/delete_basket/<int:id>", methods=["POST"])
 def delete_basket(id):
 	try:
-		if not validate_id(Table.Baskets, "id_produto", id):
+		if not validate_id(Table.Baskets, "basket_id", id):
 			raise ValueError("Cesta inválida")
 		if basket_has_open_orders(id):
 			raise ValueError("Essa cesta está sendo utilizada por um pedido em aberto")
@@ -195,16 +196,16 @@ def delete_basket(id):
 	
 	with run_transaction() as cursor:
 		cursor.execute("""
-		UPDATE IGOR_CG_PRODUTOS
+		UPDATE CELEBRAR_BASKETS
 		SET
 		isDeleted = 1
-		WHERE id_produto = ?
+		WHERE basket_id = ?
 		""", (id,))
 
 		cursor.execute("""
-		UPDATE IGOR_CG_CESTA_ESTOQUE
+		UPDATE CELEBRAR_BASKET_ITEMS
 		SET isDeleted = 1
-		WHERE id_produto = ?
+		WHERE basket_id = ?
 		""", (id,))
 
 	return "", 204

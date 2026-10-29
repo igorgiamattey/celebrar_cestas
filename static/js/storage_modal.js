@@ -23,7 +23,12 @@ const groupItemSelector = new TomSelect('#mngGroup-itemSelect', {
 	create: false,
 	maxItems: 1,
 	maxOptions: null,
-	sortField: {field: 'title', direction: 'asc'}
+	sortField: [
+		{
+			field: 'title',
+			direction: 'asc'
+		}
+	]
 });
 
 function openNewItemModal() {
@@ -58,7 +63,7 @@ document.getElementById('mngGroup-groupSelect').addEventListener('change', funct
 		return;
 	}
 
-	fetchJson(`/estoque/grupos/${groupId}/data`)
+	fetchJson(`/group_data/${groupId}`)
 		.then(data => {
 			document.getElementById('mngGroup-name').value = data.group_name;
 			document.getElementById('mngGroup-deleteBtn').style.display = 'inline-block';
@@ -73,7 +78,7 @@ document.getElementById('mngGroup-groupSelect').addEventListener('change', funct
 });
 
 function openMissingItemModal() {
-	fetchJson('/estoque/falta')
+	fetchJson('/missing_items')
 		.then(data => {
 			document.getElementById('missItems-desc').value = data.missing_items || "";
 			document.getElementById('missItem-modal').style.display = "flex";
@@ -86,21 +91,21 @@ function openMissingItemModal() {
 
 function openViewItemModal(id) {
 	id = parseInt(id, 10);
-	fetchJson(`/estoque/${id}/data`)
+	fetchJson(`/item_data/${id}`)
 		.then(data => {
-			document.getElementById('viewItem-id').value = data.id_insumo;
-			document.getElementById('viewItem-name').value = data.nome_insumo;
-			document.getElementById('viewItem-amount').value = data.qtd_estoque;
-			document.getElementById('viewItem-unit').value = data.unidade_medida;
-			document.getElementById('viewItem-minimal').value = data.estoque_minimo;
-			document.getElementById('viewItem-cost').value = data.custo_unitario;
+			document.getElementById('viewItem-id').value = data.item_id;
+			document.getElementById('viewItem-name').value = data.item_name;
+			document.getElementById('viewItem-amount').value = data.item_qty;
+			document.getElementById('viewItem-unit').value = data.item_unit;
+			document.getElementById('viewItem-minimal').value = data.item_min;
+			document.getElementById('viewItem-cost').value = data.item_cost;
 
 			originalItemsValues = {
-				nome_insumo: data.nome_insumo,
-				qtd_estoque: data.qtd_estoque,
-				unidade_medida: data.unidade_medida,
-				estoque_minimo: data.estoque_minimo,
-				custo_unitario: data.custo_unitario,
+				item_name: data.item_name,
+				item_qty: data.item_qty,
+				item_unit: data.item_unit,
+				item_min: data.item_min,
+				item_cost: data.item_cost,
 			}
 
 			resetViewItemModalState();
@@ -128,7 +133,7 @@ async function openMoveModal(id) {
 	
 	let movements;
 	try {
-		movements = await fetchJson(`/estoque/${id}/movimentacoes`);
+		movements = await fetchJson(`/item_movements/${id}`);
 	}
 	catch (err) {
 		content.innerHTML = '';
@@ -193,11 +198,11 @@ function enableEditItem() {
 }
 
 function cancelEditItem() {
-	document.getElementById('viewItem-name').value = originalItemsValues.nome_insumo;
-	document.getElementById('viewItem-amount').value = originalItemsValues.qtd_estoque;
-	document.getElementById('viewItem-unit').value = originalItemsValues.unidade_medida;
-	document.getElementById('viewItem-minimal').value = originalItemsValues.estoque_minimo;
-	document.getElementById('viewItem-cost').value = originalItemsValues.custo_unitario;
+	document.getElementById('viewItem-name').value = originalItemsValues.item_name;
+	document.getElementById('viewItem-amount').value = originalItemsValues.item_qty;
+	document.getElementById('viewItem-unit').value = originalItemsValues.item_unit;
+	document.getElementById('viewItem-minimal').value = originalItemsValues.item_min;
+	document.getElementById('viewItem-cost').value = originalItemsValues.item_cost;
 
 	resetViewItemModalState();
 }
@@ -221,7 +226,7 @@ async function saveMove() {
 	const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 	
 	try {
-		await fetchJson(`/estoque/${id}/nova_movimentacao`, {
+		await fetchJson(`/new_movement/${id}`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -250,7 +255,7 @@ async function deleteItem() {
 	
 	if (confirmed) {
 		const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-		fetch(`/estoque/${id}/delete`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
+		fetch(`/delete_item/${id}`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
 			.then(res => handleResponse(res, 'Item excluído com sucesso!'))
 			.catch(handleError);
 	}
@@ -278,7 +283,7 @@ function resetNewMoveModalState() {
 }
 
 function toggleMissingButton() {
-	fetchJson('/estoque/falta')
+	fetchJson('/missing_items')
 		.then(data => {
 			list = data.missing_items;
 			button = document.getElementById('missItem-btn');
@@ -374,7 +379,7 @@ function saveGroup() {
 	formData.append('items', JSON.stringify(groupItems.map(i => [i.item_id, i.item_qty])));
 
 	const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-	fetch('/estoque/grupos/save', {
+	fetch('/save_group', {
 		method: 'POST',
 		headers: {'X-CSRFToken': csrfToken},
 		body: formData
@@ -391,7 +396,7 @@ async function deleteGroup() {
 	
 	if (confirmed) {
 		const csrfToken = document.querySelector('input[name="csrf_token"]').value;	
-		fetch(`/estoque/grupos/${groupId}/delete`, {method: 'POST', headers: {'X-CSRFToken': csrfToken}})
+		fetch(`/delete_group/${groupId}`, {method: 'POST', headers: {'X-CSRFToken': csrfToken}})
 			.then(res => handleResponse(res, 'Grupo excluído com sucesso!'))
 			.catch(handleError);
 	}

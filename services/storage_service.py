@@ -1,22 +1,23 @@
 from flask import request
 
-from db import run_select, format_currency, run_transaction
+from db import format_currency, run_select, run_transaction
 from enums.table_names import Table
-from services.routes_service import countRows
 from services.order_service import get_available_stock
+from services.routes_service import countRows
+
 
 def item_exists(name, exclude_id=None):
 	query = """
 	SELECT 1
-	FROM IGOR_CG_ESTOQUE
-	WHERE nome_insumo = ?
+	FROM CELEBRAR_STORAGE
+	WHERE item_name = ?
 	AND isDeleted = 0
 	"""
 
 	params = [name]
 
 	if exclude_id is not None:
-		query += " AND id_insumo <> ?"
+		query += " AND item_id <> ?"
 		params.append(exclude_id)
 
 	_, rows = run_select(query, tuple(params))
@@ -26,15 +27,15 @@ def item_exists(name, exclude_id=None):
 def group_exists(name, exclude_id=None):
 	query = """
 	SELECT 1
-	FROM IGOR_CG_GRUPOS_ITEM
-	WHERE nome_grupo = ?
+	FROM CELEBRAR_GROUPS
+	WHERE group_name = ?
 	AND isDeleted = 0
 	"""
 
 	params = [name]
 
 	if exclude_id is not None:
-		query += " AND id_grupo <> ?"
+		query += " AND group_id <> ?"
 		params.append(exclude_id)
 
 	_, rows = run_select(query, tuple(params))
@@ -50,7 +51,7 @@ def get_storage():
 	where_clause = "WHERE isDeleted = 0"
 	params = []
 	if search:
-		where_clause += " AND nome_insumo LIKE ?"
+		where_clause += " AND item_name LIKE ?"
 		params.append(f"%{search}%")
 
 	count = countRows(Table.Items, where_clause, tuple(params))
@@ -63,14 +64,14 @@ def get_storage():
 
 	columns, rows = run_select(f"""
 	SELECT
-	id_insumo AS ID,
-	nome_insumo AS Nome,
-	unidade_medida AS Unidade,
-	qtd_estoque AS Estoque,
-	custo_unitario AS Custo
-	FROM IGOR_CG_ESTOQUE
+	item_id AS ID,
+	item_name AS Nome,
+	item_unit AS Unidade,
+	item_qty AS Estoque,
+	item_cost AS Custo
+	FROM CELEBRAR_STORAGE
 	{where_clause}
-	ORDER BY nome_insumo
+	ORDER BY item_name
 	OFFSET ? ROWS
 	FETCH NEXT ? ROWS ONLY
 	""", (*params, offset, per_page))

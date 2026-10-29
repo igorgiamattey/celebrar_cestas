@@ -93,8 +93,8 @@ const newOrderStatusSelector = new TomSelect('#newOrder-status', {
 const newOrderAddressSelector = new TomSelect('#newOrder-address', {
 	options: [],
 	valueField: 'id',
-	labelField: 'endereco',
-	searchField: 'endereco',
+	labelField: 'address_txt',
+	searchField: 'address_txt',
 	create: false,
 	maxItems: 1,
 	maxOptions: null,
@@ -108,7 +108,7 @@ const newOrderAddressSelector = new TomSelect('#newOrder-address', {
 			const address = availableAddresses.find(
 				addr => String(addr.id) === String(value)
 			);
-			addressTxt.value = address ? address.endereco : '';
+			addressTxt.value = address ? address.address_txt : '';
 		}
 	}
 });
@@ -121,10 +121,10 @@ function refreshAddressOptions(clientId, mode) {
 	addrSelector.clear(true);
 	addrSelector.clearOptions();
 
-	addrSelector.addOption({id: NEW_ADDRESS_ID, endereco: 'Novo Endereço'});
+	addrSelector.addOption({id: NEW_ADDRESS_ID, address_txt: 'Novo Endereço'});
 
 	availableAddresses
-		.filter(addr => addr.id_cliente === parseInt(clientId, 10))
+		.filter(addr => addr.client_id === parseInt(clientId, 10))
 		.forEach(addr => addrSelector.addOption(addr));
 }
 
@@ -192,8 +192,8 @@ if (viewOrderForm) {
 	viewOrderAddressSelector = new TomSelect('#viewOrder-address', {
 		options: [],
 		valueField: 'id',
-		labelField: 'endereco',
-		searchField: 'endereco',
+		labelField: 'address_txt',
+		searchField: 'address_txt',
 		create: false,
 		maxItems: 1,
 		maxOptions: null,
@@ -207,7 +207,7 @@ if (viewOrderForm) {
 				const address = availableAddresses.find(
 					addr => String(addr.id) === String(value)
 				);
-				addressTxt.value = address ? address.endereco : '';
+				addressTxt.value = address ? address.address_txt : '';
 			}
 		}
 	});
@@ -275,10 +275,10 @@ function openNewOrderModal() {
 
 function openViewOrderModal(id) {
 	id = parseInt(id, 10);
-	fetchJson(`/pedidos/${id}/data`)
+	fetchJson(`/order_data/${id}`)
 		.then(data => {
-			document.getElementById('viewOrder-id').value = data.id_pedido;
-			viewOrderClientSelector.setValue(data.id_cliente);
+			document.getElementById('viewOrder-id').value = data.order_id;
+			viewOrderClientSelector.setValue(data.client_id);
 			
 			const allowedStatuses = [...data.allowed_status];
 			viewOrderStatusSelector.clear(true);
@@ -286,14 +286,14 @@ function openViewOrderModal(id) {
 			availableOrderStatuses
 				.filter(status => allowedStatuses.includes(status.id))
 				.forEach(status => {viewOrderStatusSelector.addOption(status)});
-			viewOrderStatusSelector.setValue(data.status_pedido);
+			viewOrderStatusSelector.setValue(data.order_status);
 			
-			document.getElementById('viewOrder-date').value = data.data_pedido;
-			document.getElementById('viewOrder-deliveryDate').value = data.data_entrega;
-			document.getElementById('viewOrder-obs').value = data.observacao;
-			document.getElementById('viewOrder-orderPrice').value = data.valor_pedido;
+			document.getElementById('viewOrder-date').value = data.order_date;
+			document.getElementById('viewOrder-deliveryDate').value = data.delivery_date;
+			document.getElementById('viewOrder-obs').value = data.obs;
+			document.getElementById('viewOrder-orderPrice').value = data.order_subtotal;
 
-			document.getElementById('viewOrder-deliveryFee').value = data.taxa_entrega;
+			document.getElementById('viewOrder-deliveryFee').value = data.delivery_fee;
 
 			const isDeliveryElement = document.getElementById('viewOrder-isDelivery');
 			isDeliveryElement.checked = Boolean(data.isDelivery);
@@ -301,35 +301,35 @@ function openViewOrderModal(id) {
 			updateOrderTotal('view');
 
 			const savedAddr = availableAddresses.find(
-				addr => String(addr.id) === String(data.id_endereco)
+				addr => String(addr.id) === String(data.address_id)
 			);
 			
-			if (data.isDelivery && data.id_endereco != null){
-				viewOrderAddressSelector.setValue(data.id_endereco);
-				document.getElementById('viewOrder-newAddressText').value = savedAddr ? savedAddr.endereco : '';
+			if (data.isDelivery && data.address_id != null){
+				viewOrderAddressSelector.setValue(data.address_id);
+				document.getElementById('viewOrder-newAddressText').value = savedAddr ? savedAddr.address_txt : '';
 			}
 
 			viewOrderDeliveryDetails = {
-				address_id: data.id_endereco,
-				address_txt: savedAddr ? savedAddr.endereco : null,
-				delivery_fee: data.taxa_entrega
+				address_id: data.address_id,
+				address_txt: savedAddr ? savedAddr.address_txt : null,
+				delivery_fee: data.delivery_fee
 			};
 
-			viewOrderBaskets = data.itens_pedido || [];
+			viewOrderBaskets = data.order_items || [];
 			viewOrderPriceManuallySet = false;
 
 			originalOrderValues = {
-				id_cliente: data.id_cliente,
-				status_pedido: data.status_pedido,
-				data_pedido: data.data_pedido,
-				data_entrega: data.data_entrega,
-				observacao: data.observacao,
-				valor_pedido: data.valor_pedido,
+				client_id: data.client_id,
+				order_status: data.order_status,
+				order_date: data.order_date,
+				delivery_date: data.delivery_date,
+				obs: data.obs,
+				order_subtotal: data.order_subtotal,
 				isDelivery: Boolean(data.isDelivery),
-				id_endereco: data.id_endereco,
-				id_entrega: data.id_entrega,
-				taxa_entrega: data.taxa_entrega,
-				itens_pedido: structuredClone(viewOrderBaskets)
+				address_id: data.address_id,
+				delivery_id: data.delivery_id,
+				delivery_fee: data.delivery_fee,
+				order_items: structuredClone(order_itemsiewOrderBaskets)
 			};
 
 			resetViewOrderModalState();
@@ -349,13 +349,13 @@ function saveNewOrder() {
 }
 
 async function updateOrder() {
-	if (originalOrderValues.id_entrega != null) {
+	if (originalOrderValues.delivery_id != null) {
 		const newDate = document.getElementById('viewOrder-deliveryDate').value;
-		const dateChanged = newDate !== (originalOrderValues.data_entrega ?? '');
+		const dateChanged = newDate !== (originalOrderValues.delivery_date ?? '');
 		const noLongerDelivery = !document.getElementById('viewOrder-isDelivery').checked;
 
 		const confirmed = await openConfirm('Alterar pedido?',
-			`Este pedido faz parte da entrega #${originalOrderValues.id_entrega}. ` +
+			`Este pedido faz parte da entrega #${originalOrderValues.delivery_id}. ` +
 			`Alterar a data ou mudar a forma de entrega vai removê-lo. Continuar?`);
 
 		if ((dateChanged || noLongerDelivery) && !confirmed)
@@ -432,35 +432,35 @@ function enableEditOrder() {
 }
 
 function cancelEditOrder() {
-	viewOrderClientSelector.setValue(originalOrderValues.id_cliente);
-	viewOrderStatusSelector.setValue(originalOrderValues.status_pedido);
-	document.getElementById('viewOrder-date').value = originalOrderValues.data_pedido;
-	document.getElementById('viewOrder-deliveryDate').value = originalOrderValues.data_entrega;
-	document.getElementById('viewOrder-obs').value = originalOrderValues.observacao;
-	document.getElementById('viewOrder-orderPrice').value = originalOrderValues.valor_pedido;
+	viewOrderClientSelector.setValue(originalOrderValues.client_id);
+	viewOrderStatusSelector.setValue(originalOrderValues.order_status);
+	document.getElementById('viewOrder-date').value = originalOrderValues.order_date;
+	document.getElementById('viewOrder-deliveryDate').value = originalOrderValues.delivery_date;
+	document.getElementById('viewOrder-obs').value = originalOrderValues.obs;
+	document.getElementById('viewOrder-orderPrice').value = originalOrderValues.order_subtotal;
 
-	viewOrderBaskets = structuredClone(originalOrderValues.itens_pedido);
+	viewOrderBaskets = structuredClone(originalOrderValues.order_items);
 	renderOrderBaskets('view');
 	viewOrderBasketSelector.clear();
 	document.getElementById('viewOrder-basketQty').value = '';
 
 	const isDeliveryElement = document.getElementById('viewOrder-isDelivery');
 	isDeliveryElement.checked = originalOrderValues.isDelivery;
-	document.getElementById('viewOrder-deliveryFee').value = originalOrderValues.taxa_entrega;
+	document.getElementById('viewOrder-deliveryFee').value = originalOrderValues.delivery_fee;
 	document.getElementById('viewOrder-newAddressText').value = '';
 	getDeliveryState(isDeliveryElement, 'view');
 
-	if (originalOrderValues.isDelivery && originalOrderValues.id_endereco !== null)
-		viewOrderAddressSelector.setValue(originalOrderValues.id_endereco, true);
+	if (originalOrderValues.isDelivery && originalOrderValues.address_id !== null)
+		viewOrderAddressSelector.setValue(originalOrderValues.address_id, true);
 
 	const savedAddr = availableAddresses.find(
-		addr => String(addr.id) === String(originalOrderValues.id_endereco)
+		addr => String(addr.id) === String(originalOrderValues.address_id)
 	);
 
 	viewOrderDeliveryDetails = {
-		address_id: originalOrderValues.id_endereco,
-		address_txt: savedAddr ? savedAddr.endereco : null,
-		delivery_fee: originalOrderValues.taxa_entrega
+		address_id: originalOrderValues.address_id,
+		address_txt: savedAddr ? savedAddr.address_txt : null,
+		delivery_fee: originalOrderValues.delivery_fee
 	};
 
 	viewOrderPriceManuallySet = false;
@@ -550,7 +550,7 @@ async function addBasketToOrder(mode) {
 
 	let composition;
 	try {
-		composition = await fetchJson(`/pedidos/basket_comp/${selectedBasket.id}`)
+		composition = await fetchJson(`/basket_composition/${selectedBasket.id}`)
 	}
 	catch (err) {
 		handleError(err);

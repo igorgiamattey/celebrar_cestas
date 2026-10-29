@@ -21,4 +21,8 @@
 		</button>
 	</td>
 </tr>
+{% else %}
+	{% with ref_page="item", gender="m", actions=2 %}
+		{% include 'empty_table.html' %}
+	{% endwith %}
 {% endfor %}

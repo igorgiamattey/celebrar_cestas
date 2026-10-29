@@ -1,5 +1,5 @@
 from flask import (Blueprint, jsonify, redirect, render_template, request,
-                   url_for, session)
+                   session, url_for)
 
 from db import run_select, run_update
 from enums.table_names import Table
@@ -21,15 +21,16 @@ def clients():
 						search=search,
 						user=session.get("username"))
 
-@clients_bp.route("/clientes/search")
+@clients_bp.route("/search_client")
 def clients_search():
-	columns, rows, _, _, _ = get_clients()
+	columns, rows, _, _, search = get_clients()
 
 	return render_template("clients/_clients_table_rows.html",
 							columns=columns,
-							rows=rows)
+							rows=rows,
+							search=search)
 
-@clients_bp.route("/novo_cliente", methods=["POST"])
+@clients_bp.route("/new_client", methods=["POST"])
 def new_client():
 	try:
 		name = validate_name(request.form["name"])
@@ -41,30 +42,30 @@ def new_client():
 		return "Cliente já cadastrado", 400
 
 	run_update("""
-	INSERT INTO IGOR_CG_CLIENTES
-	(nome_razao, telefone)
+	INSERT INTO CELEBRAR_CLIENTS
+	(client_name, client_phone)
 	VALUES (?, ?)
 	""", (name, phone))
 
 	return redirect(request.referrer or url_for("clients_bp.clients"))
 
-@clients_bp.route("/clientes/<int:id>/data")
+@clients_bp.route("/client_data/<int:id>")
 def client_data(id):
 	columns, rows = run_select("""
 	SELECT
-	id_cliente, nome_razao, telefone
-	FROM IGOR_CG_CLIENTES WHERE id_cliente = ? AND isDeleted = 0""", (id,)
+	client_id, client_name, client_phone
+	FROM CELEBRAR_CLIENTS WHERE client_id = ? AND isDeleted = 0""", (id,)
 	)
 	if not rows:
 		return jsonify({"error": "Client not found"}), 404
 	row = rows[0]
 	return jsonify(dict(zip(columns, row)))
 
-@clients_bp.route("/clientes/update", methods=["POST"])
+@clients_bp.route("/update_client", methods=["POST"])
 def update_client():
 	try:
 		id = request.form["id"]
-		if not validate_id(Table.Clients, "id_cliente", id):
+		if not validate_id(Table.Clients, "client_id", id):
 			raise ValueError("Cliente inválido")
 		if client_has_open_orders(id):
 			raise ValueError("Esse cliente possui pedido em aberto")
@@ -77,19 +78,19 @@ def update_client():
 		return "Cliente já cadastrado", 400
 
 	run_update("""
-	UPDATE IGOR_CG_CLIENTES
+	UPDATE CELEBRAR_CLIENTS
 	SET
-	nome_razao = ?,
-	telefone = ?
-	WHERE id_cliente = ?
+	client_name = ?,
+	client_phone = ?
+	WHERE client_id = ?
 	""", (name, phone, id))
 
 	return redirect(url_for("clients_bp.clients"))
 
-@clients_bp.route("/clientes/<int:id>/delete", methods=["POST"])
+@clients_bp.route("/delete_client/<int:id>", methods=["POST"])
 def delete_client(id):
 	try:
-		if not validate_id(Table.Clients, "id_cliente", id):
+		if not validate_id(Table.Clients, "client_id", id):
 			raise ValueError("Cliente inválido")
 		if client_has_open_orders(id):
 			raise ValueError("Esse cliente possui pedido em aberto")
@@ -97,10 +98,10 @@ def delete_client(id):
 		return str(e), 400
 	
 	run_update("""
-	UPDATE IGOR_CG_CLIENTES
+	UPDATE CELEBRAR_CLIENTS
 	SET
 	isDeleted = 1
-	WHERE id_cliente = ?
+	WHERE client_id = ?
 	""", (id,))
 
 	return "", 204

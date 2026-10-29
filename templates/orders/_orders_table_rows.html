@@ -47,4 +47,8 @@
 	</td>
 	
 </tr>
+{% else %}
+	{% with ref_page="pedido", gender="m" %}
+		{% include 'empty_table.html' %}
+	{% endwith %}
 {% endfor %}

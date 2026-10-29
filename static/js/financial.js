@@ -19,7 +19,7 @@ function handleSearch() {
 	history.replaceState({}, '', `/financeiro${params.toString() ? `?${params.toString()}` : ''}`)
 
 	searchTimeout = setTimeout(() => {
-		fetchText(`/financeiro/search?search=${encodeURIComponent(query)}&month=${chosenMonth}`)
+		fetchText(`/search_financial?search=${encodeURIComponent(query)}&month=${chosenMonth}`)
 			.then(html => {
 				const tableBody = document.getElementById('financialTableBody');
 

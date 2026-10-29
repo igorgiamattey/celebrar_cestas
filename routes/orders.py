@@ -48,19 +48,20 @@ def orders():
 						available_addresses=available_addresses,
 						today=get_today())
 
-@orders_bp.route('/pedidos/basket_comp/<int:id>')
+@orders_bp.route('/basket_composition/<int:id>')
 def basket_composition(id):
 	return jsonify(get_basket_composition(id))
 
-@orders_bp.route("/pedidos/search")
+@orders_bp.route("/search_order")
 def orders_search():
-	columns, rows, _, _, _ = get_orders()
+	columns, rows, _, _, search = get_orders()
 
 	return render_template("orders/_orders_table_rows.html",
 							columns=columns,
-							rows=rows)
+							rows=rows,
+							search=search)
 
-@orders_bp.route("/novo_pedido", methods=["POST"])
+@orders_bp.route("/new_order", methods=["POST"])
 def new_order():
 	try:
 		items_payload = json.loads(request.form["items"])
@@ -74,7 +75,7 @@ def new_order():
 
 	try:
 		client = request.form["client"]
-		if not validate_id(Table.Clients, "id_cliente", client):
+		if not validate_id(Table.Clients, "client_id", client):
 			return "Cliente inválido", 400
 		date = validate_date(request.form["date"])
 		deliveryDate = validate_date(request.form["deliveryDate"], date, False)
@@ -107,11 +108,11 @@ def new_order():
 				address_id = save_delivery_address(cursor, client, address_id, address_txt)
 			
 			cursor.execute("""
-			INSERT INTO IGOR_CG_PEDIDOS
-			(id_cliente, data_pedido, data_entrega,
-			status_pedido, valor_pedido, observacao,
-			itens_pedido, isDelivery, id_endereco, taxa_entrega)
-			OUTPUT INSERTED.id_pedido
+			INSERT INTO CELEBRAR_ORDERS
+			(client_id, order_date, delivery_date,
+			order_status, order_subtotal, obs,
+			order_items, isDelivery, address_id, delivery_fee)
+			OUTPUT INSERTED.order_id
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			""", (client, date, deliveryDate, status, orderPrice, obs, items, is_delivery, address_id, delivery_fee))
 
@@ -119,8 +120,8 @@ def new_order():
 		
 			for item in items_payload:
 				cursor.execute("""
-				INSERT INTO IGOR_CG_CESTAS_PEDIDO
-				(id_produto, id_pedido, quantidade)
+				INSERT INTO CELEBRAR_ORDER_ITEMS
+				(basket_id, order_id, amount)
 				VALUES (?, ?, ?)
 				""", (item['basket_id'], order_id, item['quantity']))
 		
@@ -131,18 +132,18 @@ def new_order():
 
 	return redirect(request.referrer or url_for("orders_bp.orders"))
 
-@orders_bp.route("/pedidos/<int:id>/data")
+@orders_bp.route("/order_data/<int:id>")
 def order_data(id):
 	columns, rows = run_select("""
 	SELECT
-	p.id_pedido, p.id_cliente, c.nome_razao,
-	p.data_pedido, p.data_entrega, p.status_pedido,
-	p.valor_pedido, p.observacao, p.itens_pedido, p.id_entrega,
-	p.isDelivery, p.id_endereco, p.taxa_entrega, p.valor_total
-	FROM IGOR_CG_PEDIDOS p
-	JOIN IGOR_CG_CLIENTES c
-	ON p.id_cliente = c.id_cliente
-	WHERE p.id_pedido = ? AND p.isDeleted = 0
+	o.order_id, o.client_id, c.client_name,
+	o.order_date, o.delivery_date, o.order_status,
+	o.order_subtotal, o.obs, o.order_items, o.delivery_id,
+	o.isDelivery, o.address_id, o.delivery_fee, o.order_total
+	FROM CELEBRAR_ORDERS o
+	JOIN CELEBRAR_CLIENTS c
+	ON o.client_id = c.client_id
+	WHERE o.order_id = ? AND o.isDeleted = 0
 	""", (id,))
 
 	if not rows:
@@ -151,23 +152,23 @@ def order_data(id):
 	row = rows[0]
 	order = dict(zip(columns, row))
 
-	if order["data_pedido"]:
-		order["data_pedido"] = order["data_pedido"].strftime("%Y-%m-%d")
-	if order["data_entrega"]:
-		order["data_entrega"] = order["data_entrega"].strftime("%Y-%m-%d")
+	if order["order_date"]:
+		order["order_date"] = order["order_date"].strftime("%Y-%m-%d")
+	if order["delivery_date"]:
+		order["delivery_date"] = order["delivery_date"].strftime("%Y-%m-%d")
 
-	order["itens_pedido"] = json.loads(order["itens_pedido"])
+	order["order_items"] = json.loads(order["order_items"])
 
-	baskets_ids = list({item["basket_id"] for item in order["itens_pedido"]})
+	baskets_ids = list({item["basket_id"] for item in order["order_items"]})
 
 	if baskets_ids:
 		placeholders = ",".join("?" * len(baskets_ids))
 		_, basket_rows = run_select(f"""
 		SELECT
-		id_produto, nome_cesta, preco_venda
-		FROM IGOR_CG_PRODUTOS
+		basket_id, basket_name, basket_price
+		FROM CELEBRAR_BASKETS
 		WHERE isDeleted = 0
-		AND id_produto IN ({placeholders})
+		AND basket_id IN ({placeholders})
 		""", tuple(baskets_ids))
 	else:
 		basket_rows = []
@@ -181,7 +182,7 @@ def order_data(id):
 		for b_row in basket_rows
 	}
 
-	for item in order["itens_pedido"]:
+	for item in order["order_items"]:
 		comp = get_basket_composition(item["basket_id"])
 		meta = basket_lookup.get(item["basket_id"], {})
 
@@ -200,18 +201,18 @@ def order_data(id):
 			]
 
 
-	allowed = get_allowed_status(order["status_pedido"], order_mode)
-	if order["id_entrega"] is not None:
+	allowed = get_allowed_status(order["order_status"], order_mode)
+	if order["delivery_id"] is not None:
 		allowed = allowed - {orderStatus.CANCELLED.name, orderStatus.DELIVERED.name}
 	order["allowed_status"] = sorted(allowed)
 
 	return jsonify(order)
 
-@orders_bp.route("/pedidos/update", methods=["POST"])
+@orders_bp.route("/update_order", methods=["POST"])
 def update_order():
 	try:
 		id = request.form["id"]
-		if not validate_id(Table.Orders, "id_pedido", id):
+		if not validate_id(Table.Orders, "order_id", id):
 			raise ValueError("Pedido inválido")
 		status = validate_order_status(request.form["status"])
 	except KeyError:
@@ -221,10 +222,10 @@ def update_order():
 
 	_, data_rows = run_select("""
 	SELECT
-	id_cliente, data_pedido, data_entrega, status_pedido,
-	valor_pedido, observacao, itens_pedido, id_entrega
-	FROM IGOR_CG_PEDIDOS
-	WHERE id_pedido = ?
+	client_id, order_date, delivery_date, order_status,
+	order_subtotal, obs, order_items, delivery_id
+	FROM CELEBRAR_ORDERS
+	WHERE order_id = ?
 	AND isDeleted = 0
 	""", (id,))
 
@@ -248,7 +249,7 @@ def update_order():
 
 		if current_status == orderStatus.PENDING.name:
 			client = request.form["client"]
-			if not validate_id(Table.Clients, "id_cliente", client):
+			if not validate_id(Table.Clients, "client_id", client):
 				raise ValueError("Cliente inválido")
 			date = validate_date(request.form["date"])
 			orderPrice = validate_price(request.form["orderPrice"])
@@ -300,20 +301,20 @@ def update_order():
 				address_id = save_delivery_address(cursor, client, address_id, address_txt)
 
 			cursor.execute("""
-			UPDATE IGOR_CG_PEDIDOS
+			UPDATE CELEBRAR_ORDERS
 			SET
-			id_cliente = ?,
-			data_pedido = ?,
-			data_entrega = ?,
-			status_pedido = ?,
-			valor_pedido = ?,
-			observacao = ?,
-			itens_pedido = ?,
+			client_id = ?,
+			order_date = ?,
+			delivery_date = ?,
+			order_status = ?,
+			order_subtotal = ?,
+			obs = ?,
+			order_items = ?,
 			isDelivery = ?,
-			id_endereco = ?,
-			taxa_entrega = ?
-			WHERE id_pedido = ?
-			AND status_pedido = ?
+			address_id = ?,
+			delivery_fee = ?
+			WHERE order_id = ?
+			AND order_status = ?
 			AND isDeleted = 0
 			""", (client, date, deliveryDate, status, orderPrice, obs, items, is_delivery, address_id, delivery_fee, id, current_status))
 
@@ -323,10 +324,10 @@ def update_order():
 			if release:
 				cursor.execute("""
 				SELECT
-				id_entrega
-				FROM IGOR_CG_PEDIDOS
-				WHERE id_pedido = ?
-				AND id_entrega IS NOT NULL
+				delivery_id
+				FROM CELEBRAR_ORDERS
+				WHERE order_id = ?
+				AND delivery_id IS NOT NULL
 				AND isDeleted = 0
 				""", (id,))
 
@@ -336,10 +337,10 @@ def update_order():
 					released_delivery_id = row[0]
 
 					cursor.execute("""
-					UPDATE IGOR_CG_PEDIDOS
-					SET id_entrega = NULL
-					WHERE id_pedido = ?
-					AND id_entrega = ?
+					UPDATE CELEBRAR_ORDERS
+					SET delivery_id = NULL
+					WHERE order_id = ?
+					AND delivery_id = ?
 					AND isDeleted = 0
 					""", (id,released_delivery_id))
 
@@ -347,8 +348,8 @@ def update_order():
 
 					cursor.execute("""
 					SELECT COUNT(*)
-					FROM IGOR_CG_PEDIDOS
-					WHERE id_entrega = ?
+					FROM CELEBRAR_ORDERS
+					WHERE delivery_id = ?
 					AND isDeleted = 0
 					""", (released_delivery_id,))
 
@@ -356,9 +357,9 @@ def update_order():
 
 					if delivery_orders == 0:
 						cursor.execute("""
-						UPDATE IGOR_CG_ENTREGAS
-						SET status_entrega = ?
-						WHERE id_entrega = ?
+						UPDATE CELEBRAR_DELIVERIES
+						SET delivery_status = ?
+						WHERE delivery_id = ?
 						AND isDeleted = 0
 						""", (deliveryStatus.CANCELLED.name, released_delivery_id))
 
@@ -379,14 +380,14 @@ def update_order():
 				notices.append("Estoque atualizado: itens do pedido devolvidos.")
 			
 			cursor.execute("""
-			DELETE FROM IGOR_CG_CESTAS_PEDIDO
-			WHERE id_pedido = ?
+			DELETE FROM CELEBRAR_ORDER_ITEMS
+			WHERE order_id = ?
 			""", (id,))
 
 			for item in items_payload:
 				cursor.execute("""
-				INSERT INTO IGOR_CG_CESTAS_PEDIDO
-				(id_produto, id_pedido, quantidade)
+				INSERT INTO CELEBRAR_ORDER_ITEMS
+				(basket_id, order_id, amount)
 				VALUES (?, ?, ?)
 				""", (item['basket_id'], id, item['quantity']))
 

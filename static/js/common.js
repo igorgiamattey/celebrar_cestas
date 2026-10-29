@@ -110,10 +110,10 @@ function submitModal(id, successMessage) {
 const formName = form => new FormData(form).get('name')?.toString().trim();
 
 const INTERCEPTED_FORMS = {
-	'/novo_cliente': 'Cliente cadastrado com sucesso.',
-	'/clientes/update': form => `Cliente "${formName(form)}" atualizado com sucesso.`,
-	'/novo_item': 'Item cadastrado com sucesso.',
-	'/estoque/update': form => `Item "${formName(form)}" atualizado com sucesso.`,
+	'/new_client': 'Cliente cadastrado com sucesso.',
+	'/update_client': form => `Cliente "${formName(form)}" atualizado com sucesso.`,
+	'/new_item': 'Item cadastrado com sucesso.',
+	'/update_item': form => `Item "${formName(form)}" atualizado com sucesso.`,
 }
 
 function getFormMessage(form) {

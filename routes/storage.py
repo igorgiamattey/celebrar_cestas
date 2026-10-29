@@ -20,21 +20,23 @@ storage_bp = Blueprint("storage_bp", __name__)
 def storage():
 	columns, rows, page, total_pages, search = get_storage()
 
+	#TODO: CHECK THIS LATER: IF WE CAN USE THE EXISTING FUNCTIONS
+
 	_, groups_rows = run_select("""
-	SELECT id_grupo, nome_grupo
-	FROM IGOR_CG_GRUPOS_ITEM
+	SELECT group_id, group_name
+	FROM CELEBRAR_GROUPS
 	WHERE isDeleted = 0
-	ORDER BY nome_grupo
+	ORDER BY group_name
 	""")
 
 	_, items_row = run_select(f"""
 	SELECT
-	id_insumo,
-	nome_insumo,
-	unidade_medida
-	FROM IGOR_CG_ESTOQUE
+	item_id,
+	item_name,
+	item_unit
+	FROM CELEBRAR_STORAGE
 	WHERE isDeleted = 0
-	ORDER BY nome_insumo
+	ORDER BY item_name
 	""")
 
 	available_items = [
@@ -63,17 +65,17 @@ def storage():
 						available_movements=available_movements,
 						units=getAvailableUnits())
 
-@storage_bp.route("/estoque/search")
+@storage_bp.route("/search_item")
 def storage_search():
-	columns, rows, _, _, _ = get_storage()
+	columns, rows, _, _, search = get_storage()
 	
 	return render_template("storage/_storage_table_rows.html",
 							columns=columns,
-							rows=rows)
+							rows=rows,
+							serch=search)
 
-@storage_bp.route("/novo_item", methods=["POST"])
+@storage_bp.route("/new_item", methods=["POST"])
 def new_item():
-
 	try:
 		name = validate_name(request.form["name"])
 		unit = validate_unit(request.form["unit"])
@@ -87,22 +89,22 @@ def new_item():
 		return "Já existe um item com esse nome", 400
 
 	run_update("""
-	INSERT INTO IGOR_CG_ESTOQUE
-	(nome_insumo, unidade_medida, qtd_estoque, estoque_minimo, custo_unitario)
+	INSERT INTO CELEBRAR_STORAGE
+	(item_name, item_unit, item_qty, item_min, item_cost)
 	VALUES (?, ?, ?, ?, ?)
 	""", (name, unit, amount, minimal, cost))
 
 	return redirect(request.referrer or url_for("storage_bp.storage"))
 
-@storage_bp.route("/estoque/<int:id>/data")
+@storage_bp.route("/item_data/<int:id>")
 def item_data(id):
 	columns, rows = run_select("""
 	SELECT
-	id_insumo, nome_insumo,
-	unidade_medida, qtd_estoque,
-	estoque_minimo, custo_unitario
-	FROM IGOR_CG_ESTOQUE
-	WHERE id_insumo = ?
+	item_id, item_name,
+	item_unit, item_qty,
+	item_min, item_cost
+	FROM CELEBRAR_STORAGE
+	WHERE item_id = ?
 	AND isDeleted = 0
 	""", (id,))
 	if not rows:
@@ -110,19 +112,19 @@ def item_data(id):
 	row = rows[0]
 	return jsonify(dict(zip(columns, row)))
 
-@storage_bp.route("/estoque/falta")
+@storage_bp.route("/missing_items")
 def storage_miss():
 	with run_transaction() as cursor:
 		available_stock = get_available_stock(cursor)
 
 	_, rows = run_select(f"""
 	SELECT
-	id_insumo,
-	nome_insumo,
-	unidade_medida,
-	qtd_estoque,
-	estoque_minimo
-	FROM IGOR_CG_ESTOQUE
+	item_id,
+	item_name,
+	item_unit,
+	item_qty,
+	item_min
+	FROM CELEBRAR_STORAGE
 	WHERE isDeleted = 0
 	""")
 
@@ -141,25 +143,25 @@ def storage_miss():
 			reserved = physical_stock - available
 
 			lines.append(
-				f"{name}: disponível {available} {unit}; "
-				f"físico {physical_stock} {unit}; "
-				f"reservado {reserved} {unit}; "
-				f"mínimo {minimun_stock} {unit}"
+				f"• {name} - disponível: {available} {unit}; "
+				f"total: {physical_stock} {unit}; "
+				f"reservado: {reserved} {unit}; "
+				f"mínimo: {minimun_stock} {unit}"
 			)
 
 	text = "\n".join(lines)
 
 	return jsonify({"missing_items": text})
 
-@storage_bp.route("/estoque/<int:id>/movimentacoes")
+@storage_bp.route("/item_movements/<int:id>")
 def storage_moves(id):
 	_, moves_row = run_select(f"""
 	SELECT TOP 10
-	tipo_movimentacao, quantidade, data_movimentacao, observacao
-	FROM IGOR_CG_MOVIMENTACOES_ESTOQUE
-	WHERE id_insumo = ?
+	move_type, amount, move_date, obs
+	FROM CELEBRAR_STORAGE_MOVES
+	WHERE item_id = ?
 	AND isDeleted = 0
-	ORDER BY data_movimentacao DESC, id_movimentacao DESC
+	ORDER BY move_date DESC, move_id DESC
 	""", (id,))
 
 	movements = [
@@ -175,7 +177,7 @@ def storage_moves(id):
 
 	return jsonify(movements)
 
-@storage_bp.route("/estoque/<int:id>/nova_movimentacao", methods=["POST"])
+@storage_bp.route("/new_movement/<int:id>", methods=["POST"])
 def save_move(id):
 	data = request.get_json()
 
@@ -205,11 +207,11 @@ def save_move(id):
 	except ValueError as e:
 		return jsonify({"error": str(e)}), 400
 
-@storage_bp.route("/estoque/update", methods=["POST"])
+@storage_bp.route("/update_item", methods=["POST"])
 def update_item():
 	try:
 		id = request.form["id"]
-		if not validate_id(Table.Items, "id_insumo", id):
+		if not validate_id(Table.Items, "item_id", id):
 			raise ValueError("Item inválido")
 		if item_has_open_orders(id):
 			raise ValueError("Esse item faz parte de um pedido em aberto")
@@ -224,21 +226,21 @@ def update_item():
 		return "Já existe um item com esse nome", 400
 
 	run_update("""
-	UPDATE IGOR_CG_ESTOQUE
+	UPDATE CELEBRAR_STORAGE
 	SET
-	nome_insumo = ?,
-	unidade_medida = ?,
-	estoque_minimo = ?,
-	custo_unitario = ?
-	WHERE id_insumo = ?
+	item_name = ?,
+	item_unit = ?,
+	item_min = ?,
+	item_cost = ?
+	WHERE item_id = ?
 	""", (name, unit, minimal, cost, id))
 
 	return redirect(url_for("storage_bp.storage"))
 
-@storage_bp.route("/estoque/<int:id>/delete", methods=["POST"])
+@storage_bp.route("/delete_item/<int:id>", methods=["POST"])
 def delete_item(id):
 	try:
-		if not validate_id(Table.Items, "id_insumo", id):
+		if not validate_id(Table.Items, "item_id", id):
 			raise ValueError("Item inválido")
 		if item_has_open_orders(id):
 			raise ValueError("Esse item faz parte de um pedido em aberto")
@@ -246,20 +248,20 @@ def delete_item(id):
 		return str(e), 400
 	
 	run_update("""
-	UPDATE IGOR_CG_ESTOQUE
+	UPDATE CELEBRAR_STORAGE
 	SET
 	isDeleted = 1
-	WHERE id_insumo = ?
+	WHERE item_id = ?
 	""", (id,))
 
 	return "", 204
 
-@storage_bp.route("/estoque/grupos/<int:id>/data")
+@storage_bp.route("/group_data/<int:id>")
 def group_data(id):
 	_, rows = run_select("""
-	SELECT nome_grupo
-	FROM IGOR_CG_GRUPOS_ITEM
-	WHERE id_grupo = ?
+	SELECT group_name
+	FROM CELEBRAR_GROUPS
+	WHERE group_id = ?
 	AND isDeleted = 0
 	""", (id,))
 
@@ -269,34 +271,38 @@ def group_data(id):
 	group_name = rows[0][0]
 
 	_, items_rows = run_select("""
-	SELECT e.id_insumo, e.nome_insumo, m.qtd_item_grupo, e.unidade_medida
-	FROM IGOR_CG_MEMBROS_GRUPO m
-	JOIN IGOR_CG_ESTOQUE e
-	ON m.id_insumo = e.id_insumo
-	WHERE m.id_grupo = ?
+	SELECT s.item_id, s.item_name, m.group_item_qty, s.item_unit
+	FROM CELEBRAR_GROUP_MEMBERS m
+	JOIN CELEBRAR_STORAGE s
+	ON m.item_id = s.item_id
+	WHERE m.group_id = ?
 	AND m.isDeleted = 0
-	AND e.isDeleted = 0
+	AND s.isDeleted = 0
 	""", (id,))
 
 	items = [
-		{"item_id": row[0], "item_name": row[1], "item_qty": row[2], "unit": row[3]}
+		{
+			"item_id": row[0],
+			"item_name": row[1],
+			"item_qty": row[2],
+			"unit": row[3]
+		}
 		for row in items_rows
 	]
 
 	return jsonify({"group_name": group_name, "items": items})
 
-@storage_bp.route("/estoque/grupos/save", methods=["POST"])
+@storage_bp.route("/save_group", methods=["POST"])
 def save_group():
 	try:
 		items = json.loads(request.form["items"])
 	except (KeyError, json.JSONDecodeError):
 		return "Itens inválidos", 400
 
-	
 	try:
 		group_id = request.form.get("group_id")
 		if group_id:
-			if not validate_id(Table.Groups, "id_grupo", group_id):
+			if not validate_id(Table.Groups, "group_id", group_id):
 				raise ValueError("Grupo inválido")
 
 			if group_has_open_orders(group_id):
@@ -317,21 +323,21 @@ def save_group():
 	with run_transaction() as cursor:
 		if group_id:
 			cursor.execute("""
-			UPDATE IGOR_CG_GRUPOS_ITEM
+			UPDATE CELEBRAR_GROUPS
 			SET
-			nome_grupo = ?
-			WHERE id_grupo = ?
+			group_name = ?
+			WHERE group_id = ?
 			""", (group_name,group_id))
 
 			cursor.execute("""
-			DELETE FROM IGOR_CG_MEMBROS_GRUPO
-			WHERE id_grupo = ?
+			DELETE FROM CELEBRAR_GROUP_MEMBERS
+			WHERE group_id = ?
 			""", (group_id,))
 
 		else:
 			cursor.execute("""
-			INSERT INTO IGOR_CG_GRUPOS_ITEM
-			(nome_grupo)
+			INSERT INTO CELEBRAR_GROUPS
+			(group_name)
 			VALUES (?)
 			""", (group_name,))
 
@@ -342,17 +348,17 @@ def save_group():
 
 		for item_id, item_qty in items:
 			cursor.execute("""
-			INSERT INTO IGOR_CG_MEMBROS_GRUPO
-			(id_grupo, id_insumo, qtd_item_grupo)
+			INSERT INTO CELEBRAR_GROUP_MEMBERS
+			(group_id, item_id, group_item_qty)
 			VALUES (?, ?, ?)
 			""", (group_id, item_id, item_qty))
 
 	return redirect(url_for("storage_bp.storage"))
 
-@storage_bp.route("/estoque/grupos/<int:id>/delete", methods=["POST"])
+@storage_bp.route("/delete_group/<int:id>", methods=["POST"])
 def delete_group(id):
 	try:
-		if not validate_id(Table.Groups, "id_grupo", id):
+		if not validate_id(Table.Groups, "group_id", id):
 			raise ValueError("Item inválido")
 		if group_has_open_orders(id):
 			raise ValueError("Esse grupo faz parte de um pedido em aberto")
@@ -361,17 +367,17 @@ def delete_group(id):
 	
 	with run_transaction() as cursor:
 		cursor.execute("""
-		UPDATE IGOR_CG_MEMBROS_GRUPO
+		UPDATE CELEBRAR_GROUP_MEMBERS
 		SET
 		isDeleted = 1
-		WHERE id_grupo = ?
+		WHERE group_id = ?
 		""", (id,))
 
 		cursor.execute("""
-		UPDATE IGOR_CG_GRUPOS_ITEM
+		UPDATE CELEBRAR_GROUPS
 		SET
 		isDeleted = 1
-		WHERE id_grupo = ?
+		WHERE group_id = ?
 		""", (id,))
 
 	return "", 204

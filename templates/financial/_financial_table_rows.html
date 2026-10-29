@@ -18,4 +18,8 @@
 		</svg>
 	</button></td>
 </tr>
+{% else %}
+	{% with ref_page="lançamento", gender="m" %}
+		{% include 'empty_table.html' %}
+	{% endwith %}
 {% endfor %}
