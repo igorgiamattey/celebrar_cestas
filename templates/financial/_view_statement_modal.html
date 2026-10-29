@@ -5,6 +5,9 @@
 			<button type="button" class="btn-close" onclick="closeModal('viewStatement-modal')">&times;</button>
 		</div>
 		<div class="statements-list">
+			{% if statement_rows|length == 0 %}
+				<p class="no-movements">Nenhum lançamento registrado.</p>
+			{% else %}
 			<div class="table-scroll">
 				<table class="statement-table">
 					<tbody>
@@ -23,7 +26,8 @@
 						{% endfor %}
 					</tbody>
 				</table>
-			</div>
+			</div>	
+			{% endif %}
 		</div>
 	</div>
 </div>
