@@ -19,7 +19,7 @@ from services.status_transitions import is_valid_transition
 MAX_DECIMAL = 100_000_000
 
 # === FIELDS VALIDATION === #
-def validate_qty(qty, allow_zero=False, integer=False):
+def validate_qty(qty, allow_zero=False, integer=False, minimal=False):
 	try:
 		qty = float(qty)
 	except (TypeError, ValueError):
@@ -40,7 +40,10 @@ def validate_qty(qty, allow_zero=False, integer=False):
 		raise ValueError("A quantidade não pode ser negativa")
 	
 	if qty == 0 and not allow_zero:
-		raise ValueError("A quantidade deve ser maior que zero")
+		if minimal:
+			raise ValueError("A quantidade mínima deve ser maior que zero")
+		else:
+			raise ValueError("A quantidade deve ser maior que zero")
 
 	return qty
 

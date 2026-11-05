@@ -58,7 +58,7 @@ def new_item():
 		name = validate_name(request.form["name"])
 		unit = validate_unit(request.form["unit"])
 		amount = validate_qty(request.form["amount"], allow_zero=True, integer=unit=='UN')
-		minimal = validate_qty(request.form["minimal"], integer=unit=='UN')
+		minimal = validate_qty(request.form["minimal"], integer=unit=='UN', minimal=True)
 		cost = validate_price(request.form["cost"])
 	except ValueError as e:
 		return str(e), 400
@@ -194,7 +194,7 @@ def update_item():
 			raise ValueError("Esse item faz parte de um pedido em aberto")
 		name = validate_name(request.form["name"])
 		unit = validate_unit(request.form["unit"])
-		minimal = validate_qty(request.form["minimal"], integer=unit=='UN')
+		minimal = validate_qty(request.form["minimal"], integer=unit=='UN', minimal=True)
 		cost = validate_price(request.form["cost"])
 	except ValueError as e:
 		return str(e), 400
