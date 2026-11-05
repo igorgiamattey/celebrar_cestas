@@ -4,12 +4,12 @@ from datetime import date, datetime
 from flask import request
 
 from db import format_currency, format_date_year, run_select
-from enums.movement_types import storageMovementTypes
-from enums.order_status import OPEN_ORDER_STATUS, orderStatus
+from enums.movement_types import StorageMovementTypes
+from enums.order_status import OPEN_ORDER_STATUS, OrderStatus
 
 
 def get_basket_composition(id):
-	_, rows = run_select(f"""
+	_, rows = run_select("""
 	SELECT
 	bi.item_id, s.item_name, s.item_unit,
 	bi.item_amount, bi.group_id, g.group_name
@@ -91,7 +91,17 @@ def update_stock(cursor, item_id, qty, order_id, operation, move_type, obs=""):
 			""", (qty, item_id, qty))
 		
 		if cursor.rowcount == 0:
-			raise ValueError(f"Estoque insuficiente para o item {item_id}")
+			cursor.execute("""
+			SELECT item_name
+			FROM CELEBRAR_STORAGE
+			WHERE item_id = ?
+			AND isDeleted = 0
+			""", (item_id,))
+
+			row = cursor.fetchone()
+			item_name = row[0] if row else f"ID {item_id}"
+		
+		raise ValueError(f"Estoque insuficiente para o item {item_name}")
 
 	else:
 		raise ValueError("Invalid Operation")
@@ -104,8 +114,8 @@ def update_stock(cursor, item_id, qty, order_id, operation, move_type, obs=""):
 
 def update_order_stock(cursor, items_payload, operation, order_id=None):
 	move = {
-		"deduct": storageMovementTypes.DECREASE_ORDER,
-		"increase": storageMovementTypes.INCREASE_ORDER
+		"deduct": StorageMovementTypes.DECREASE_ORDER,
+		"increase": StorageMovementTypes.INCREASE_ORDER
 	}.get(operation)
 
 	if move is None:
@@ -119,9 +129,6 @@ def update_order_stock(cursor, items_payload, operation, order_id=None):
 	for item_id, qty in needed.items():
 		update_stock(cursor, item_id, qty, order_id, operation, move_type=move.name)
 
-def get_today():
-	return date.today().isoformat()
-
 def get_pending_orders(cursor, exclude_order_id=None):
 	query = """
 	SELECT
@@ -130,7 +137,7 @@ def get_pending_orders(cursor, exclude_order_id=None):
 	WHERE order_status = ?
 	AND isDeleted = 0
 	"""
-	params = [orderStatus.PENDING.name]
+	params = [OrderStatus.PENDING.name]
 
 	if exclude_order_id is not None:
 		query += " AND order_id <> ?"
@@ -271,7 +278,7 @@ def get_orders():
 				conditions.append("o.order_id = ?")
 				params.append(int(search))
 
-			matching_status = [s.name for s in orderStatus if search.lower() in s.value.lower()]
+			matching_status = [s.name for s in OrderStatus if search.lower() in s.value.lower()]
 			if matching_status:
 				conditions.append(f"o.order_status IN ({','.join('?' * len(matching_status))})")
 				params.extend(matching_status)
@@ -280,7 +287,7 @@ def get_orders():
 
 	if open_only:
 		open_status = OPEN_ORDER_STATUS
-		where_clause += f" AND o.order_status IN ({','.join('?' * len(open_status))})"
+		where_clause += " AND o.order_status IN ({','.join('?' * len(open_status))})"
 		params.extend(open_status)
 
 	_, count_rows = run_select(f"""
@@ -335,7 +342,7 @@ def get_orders():
 			row[2],
 			format_date_year(row[3]),
 			format_currency(row[4]),
-			orderStatus[row[5]].value,
+			OrderStatus[row[5]].value,
 			row[6]
 		)
 		for row in rows

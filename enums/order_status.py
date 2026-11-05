@@ -1,6 +1,6 @@
 from enum import Enum
 
-class orderStatus(Enum):
+class OrderStatus(Enum):
 	CANCELLED = "Cancelado"
 	CONFIRMED = "Confirmado"
 	DELIVERED = "Entregue"
@@ -9,13 +9,13 @@ class orderStatus(Enum):
 	READY = "Pronto"
 
 OPEN_ORDER_STATUS = (
-	orderStatus.PENDING.name,
-	orderStatus.CONFIRMED.name,
-	orderStatus.PREPARING.name,
-	orderStatus.READY.name,
+	OrderStatus.PENDING.name,
+	OrderStatus.CONFIRMED.name,
+	OrderStatus.PREPARING.name,
+	OrderStatus.READY.name,
 )
 
 CLOSED_ORDER_STATUS = (
-	orderStatus.CANCELLED.name,
-	orderStatus.DELIVERED.name
+	OrderStatus.CANCELLED.name,
+	OrderStatus.DELIVERED.name
 )

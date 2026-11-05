@@ -1,15 +1,37 @@
 <div id="newDelivery-modal" class="modal-overlay" style="display: none;">
 	<div class="modal-box">
 		<div class="modal-header">
-			<h3>Registrar Entrega</h3>
-			<button type="button" class="btn-close" onclick="closeModal('newDelivery-modal')">&times;</button>
+			<h3>
+				Registrar Entrega
+			</h3>
+			<button
+				type="button"
+				class="btn-close"
+				onclick="closeModal('newDelivery-modal');"
+			>
+				&times;
+			</button>
 		</div>
-		<form id="newDelivery-form" method="post" action="{{url_for('deliveries_bp.new_delivery')}}">
-			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-			<input type="hidden" id="newDelivery-items" name="items">
+		<form
+			id="newDelivery-form"
+			method="post"
+			action="{{url_for('deliveries_bp.new_delivery')}}"
+		>
+			<input
+				type="hidden"
+				name="csrf_token"
+				value="{{ csrf_token() }}"
+			>
+			<input
+				type="hidden"
+				id="newDelivery-items"
+				name="items"
+			>
 			<div class="status-row">
 				<div class="form-group">
-					<label>Entregador:</label>
+					<label>
+						Entregador:
+					</label>
 					<input
 						id="newDelivery-courier"
 						name="courier"
@@ -19,7 +41,9 @@
 				</div>
 
 				<div class="form-group">
-				<label>Status:</label>
+				<label>
+					Status:
+				</label>
 					<input
 						id="newDelivery-status"
 						name="status"
@@ -30,7 +54,9 @@
 
 			<div class="order-row">
 				<div class="form-group">
-					<label>Data de Entrega*:</label>
+					<label>
+						Data de Entrega*:
+					</label>
 					<input
 						id="newDelivery-date"
 						name="date"
@@ -40,22 +66,35 @@
 				</div>
 
 				<div class="form-group">
-					<label>Pedido*:</label>
+					<label>
+						Pedido*:
+					</label>
 					<input
 						id="newDelivery-orders"
 						data-orders='{{available_orders|tojson}}'
-						placeholder="Selecione o pedido">
+						placeholder="Selecione o pedido"
+					>
 				</div>
 
 				<div class="form-group form-group--btn">
-					<label>&nbsp;</label>
-					<button type="button" class="btn-modal btn-edit" onclick="addOrderToDelivery('new')">
+					<label>
+						&nbsp;
+					</label>
+					<button
+						type="button"
+						class="btn-modal btn-edit"
+						onclick="addOrderToDelivery('new');"
+					>
 						+ Adicionar
 					</button>
 				</div>
 			</div>
 
-			<div id="newDelivery-orderList" class="delivery-orders-list"></div>
+			<div
+				id="newDelivery-orderList"
+				class="delivery-orders-list"
+			>
+			</div>
 			
 			<div class="modal-actions">
 				<button
@@ -63,12 +102,11 @@
 					id="newDelivery-saveBtn"
 					class="btn-modal btn-save push-right"
 					disabled
-					onclick="saveNewDelivery()"
+					onclick="saveNewDelivery();"
 				>
 					Salvar
 				</button>
 			</div>
-
 		</form>
 	</div>
 </div>

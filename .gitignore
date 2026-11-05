@@ -1,9 +1,6 @@
-.env
+.env*
 .celebrar-venv/
 node_modules/
 __pycache__/
 *.pyc
-*.zip
 .vscode/
-web.config
-data/

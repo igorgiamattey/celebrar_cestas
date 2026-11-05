@@ -25,6 +25,10 @@ function toggleSaveButton(fieldIds, buttonId, arrayIds = []) {
 					: "Preencha os campos obrigatórios!";
 }
 
+function normaliseComma(value) {
+	return parseFloat(value.replace(',','.'));
+}
+
 document.addEventListener('keydown', (e) => {
 	if (e.key !== 'Escape')
 		return;
@@ -40,7 +44,7 @@ document.addEventListener('keydown', (e) => {
 	const topId = visibleIds[visibleIds.length - 1];
 	closeModal(topId);
 
-	if (topId === 'deliveryOrder-modal') {
+	if (topId === 'new-deliveryOrder-modal' || topId === 'view-deliveryOrder-modal') {
 		cancelDeliveryDetails('new');
 		cancelDeliveryDetails('view');
 	}

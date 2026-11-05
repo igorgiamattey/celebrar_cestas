@@ -3,7 +3,7 @@ from flask import request
 from db import format_currency, run_select, run_transaction
 from enums.table_names import Table
 from services.order_service import get_available_stock
-from services.routes_service import countRows
+from services.routes_service import count_rows
 
 
 def item_exists(name, exclude_id=None):
@@ -54,7 +54,7 @@ def get_storage():
 		where_clause += " AND item_name LIKE ?"
 		params.append(f"%{search}%")
 
-	count = countRows(Table.Items, where_clause, tuple(params))
+	count = count_rows(Table.Items, where_clause, tuple(params))
 	total_pages = max((count + per_page - 1)//per_page, 1)
 	page = min(page, total_pages)
 	offset = (page - 1) * per_page

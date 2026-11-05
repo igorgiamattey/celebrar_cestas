@@ -1,18 +1,45 @@
-{% extends "errors/_error_base.html" %}
+<!DOCTYPE html>
+<html lang="pt-br">
+	<head>
+		<meta charset="UTF-8">
+		<meta
+			name="viewport" content="width=device-width, initial-scale=1.0"
+		>
+		<meta
+			name="robots"
+			content="noindex"
+		>
+		<title>
+			Página não encontrada | Celebrar Cestas Gourmet
+		</title>
+		<link rel="stylesheet" href="{{url_for('static', filename='css/base_styles.css')}}">
+		<link rel="stylesheet" href="{{url_for('static', filename='css/error_404_styles.css')}}">
+		<link rel="icon" href="{{url_for('static', filename='img/favicon.png')}}" type="image/png">
+	</head>
+	<body class="error-404" style="--art-img: url('{{url_for('static', filename='img/404.png')}}')">
+		<main class="error-404-main" role="alert">
+			<div class="error-art" aria-hidden="true">
+			</div>
 
-{% block title %}Página não encontrada{% endblock %}
-{% block header %}PÁGINA NÃO ENCONTRADA{% endblock %}
-{% block code %}404{% endblock %}
+			<h1 class="error-title">
+				<span class="visually-hidden">
+					Erro 404. 
+				</span>
+				Essa cesta está vazia
+			</h1>
 
-{% block icon %}
-<svg class="error-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-	<path d="M20 26c0-10 5-17 12-17s12 7 12 17"/>
-	<path d="M6 26h52l-5 26a4 4 0 0 1-4 3H15a4 4 0 0 1-4-3z"/>
-	<path d="M24 32v16M32 32v16M40 32v16"/>
-</svg>
-{% endblock %}
+			<p class="error-message">
+				O endereço que você acessou não existe ou foi movido.
+			</p>
 
-{% block heading %}Essa cesta está vazia{% endblock %}
-{% block message %}O endereço que você acessou não existe ou foi movido.{% endblock %}
-
-{% block actions %}<a class="error-btn" href="{{url_for('home_bp.home')}}">Voltar ao início</a>{% endblock %}
+			<div class="error-actions">
+				<a
+					class="error-btn"
+					href="{{url_for('home_bp.home')}}"
+				>
+					Voltar ao início
+				</a>
+			</div>
+		</main>
+	</body>
+</html>

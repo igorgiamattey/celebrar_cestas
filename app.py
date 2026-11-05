@@ -36,11 +36,6 @@ app.register_blueprint(home_bp)
 app.register_blueprint(orders_bp)
 app.register_blueprint(storage_bp)
 
-PUBLIC_ENDPOINTS = {
-	"auth_bp.login",
-	"static"
-}
-
 app.config.update(
 	SESSION_COOKIE_HTTPONLY=True,
 	SESSION_COOKIE_SAMESITE="Lax",
@@ -52,6 +47,12 @@ def health_check():
 	return jsonify(status="ok"), 200
 
 register_error_handlers(app)
+
+PUBLIC_ENDPOINTS = {
+	"auth_bp.login",
+	"static",
+	"app.health"
+}
 
 def is_navigation():
 	mode = request.headers.get("Sec-Fetch-Mode")

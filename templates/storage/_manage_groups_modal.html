@@ -11,7 +11,7 @@
 			<select id="mngGroup-groupSelect">
 				<option value="">Novo Grupo</option>
 				{% for group in available_groups %}
-				<option value="{{group[0]}}">{{group[1]}}</option>
+					<option value="{{group.id}}">{{group.name}}</option>
 				{% endfor %}
 			</select>
 		</div>

@@ -1,13 +1,19 @@
-from flask import (Blueprint, json, jsonify, redirect, render_template,
-                   request, session, url_for)
+import json
+
+from flask import (Blueprint, jsonify, redirect, render_template, request,
+                   session, url_for)
 
 from db import format_date, run_select, run_transaction, run_update
-from enums.movement_types import storageMovementTypes
+from enums.movement_types import StorageMovementTypes
 from enums.table_names import Table
 from services.order_service import get_available_stock, update_stock
-from services.routes_service import getAvailableUnits
+from services.routes_service import (get_available_groups, get_available_items,
+                                     get_available_storage_moves,
+                                     get_available_units)
 from services.storage_service import get_storage, group_exists, item_exists
-from services.validate_service import (group_has_open_orders,
+from services.validate_service import (group_belongs_to_basket,
+                                       group_has_open_orders,
+                                       item_belongs_to_basket,
                                        item_has_open_orders,
                                        validate_group_items, validate_id,
                                        validate_move, validate_name,
@@ -20,38 +26,10 @@ storage_bp = Blueprint("storage_bp", __name__)
 def storage():
 	columns, rows, page, total_pages, search = get_storage()
 
-	#TODO: CHECK THIS LATER: IF WE CAN USE THE EXISTING FUNCTIONS
-
-	_, groups_rows = run_select("""
-	SELECT group_id, group_name
-	FROM CELEBRAR_GROUPS
-	WHERE isDeleted = 0
-	ORDER BY group_name
-	""")
-
-	_, items_row = run_select(f"""
-	SELECT
-	item_id,
-	item_name,
-	item_unit
-	FROM CELEBRAR_STORAGE
-	WHERE isDeleted = 0
-	ORDER BY item_name
-	""")
-
-	available_items = [
-		{
-			"id": row[0],
-			"title": row[1],
-			"unit": row[2]
-		}
-		for row in items_row
-	]
-
-	available_movements = [
-		storageMovementTypes.INCREASE,
-		storageMovementTypes.DECREASE
-	]
+	available_groups = get_available_groups()
+	available_items = get_available_items()
+	available_units = get_available_units()
+	available_movements = get_available_storage_moves()
 
 	return render_template("storage/storage.html",
 						columns=columns,
@@ -60,10 +38,10 @@ def storage():
 						total_pages=total_pages,
 						search=search,
 						user=session.get("username"),
-						available_groups=groups_rows,
+						available_groups=available_groups,
 						available_items=available_items,
 						available_movements=available_movements,
-						units=getAvailableUnits())
+						units=available_units)
 
 @storage_bp.route("/search_item")
 def storage_search():
@@ -72,15 +50,15 @@ def storage_search():
 	return render_template("storage/_storage_table_rows.html",
 							columns=columns,
 							rows=rows,
-							serch=search)
+							search=search)
 
 @storage_bp.route("/new_item", methods=["POST"])
 def new_item():
 	try:
 		name = validate_name(request.form["name"])
 		unit = validate_unit(request.form["unit"])
-		amount = validate_qty(request.form["amount"], True)
-		minimal = validate_qty(request.form["minimal"])
+		amount = validate_qty(request.form["amount"], allow_zero=True, integer=unit=='UN')
+		minimal = validate_qty(request.form["minimal"], integer=unit=='UN')
 		cost = validate_price(request.form["cost"])
 	except ValueError as e:
 		return str(e), 400
@@ -117,7 +95,7 @@ def storage_miss():
 	with run_transaction() as cursor:
 		available_stock = get_available_stock(cursor)
 
-	_, rows = run_select(f"""
+	_, rows = run_select("""
 	SELECT
 	item_id,
 	item_name,
@@ -135,18 +113,13 @@ def storage_miss():
 		name = row[1]
 		unit = row[2].lower()
 		physical_stock = row[3]
-		minimun_stock = row[4]
+		minimum_stock = row[4]
 
 		available = available_stock.get(item_id, physical_stock)
 
-		if available <= minimun_stock:
-			reserved = physical_stock - available
-
+		if available <= minimum_stock:
 			lines.append(
-				f"• {name} - disponível: {available} {unit}; "
-				f"total: {physical_stock} {unit}; "
-				f"reservado: {reserved} {unit}; "
-				f"mínimo: {minimun_stock} {unit}"
+				f"• {name} - {available} {unit}/{minimum_stock} {unit};"
 			)
 
 	text = "\n".join(lines)
@@ -155,7 +128,7 @@ def storage_miss():
 
 @storage_bp.route("/item_movements/<int:id>")
 def storage_moves(id):
-	_, moves_row = run_select(f"""
+	_, moves_row = run_select("""
 	SELECT TOP 10
 	move_type, amount, move_date, obs
 	FROM CELEBRAR_STORAGE_MOVES
@@ -167,7 +140,7 @@ def storage_moves(id):
 	movements = [
 		{
 		"type": row[0],
-		"type_value": storageMovementTypes[row[0]].value,
+		"type_value": StorageMovementTypes[row[0]].value,
 		"quantity": row[1],
 		"date": format_date(row[2]),
 		"observation": row[3]
@@ -186,14 +159,18 @@ def save_move(id):
 
 	try:
 		movement_type = validate_move(data["type"])
-		quantity = validate_qty(data["quantity"])
+		_, rows = run_select("SELECT item_unit FROM CELEBRAR_STORAGE WHERE item_id = ?", (id,))
+		if not rows:
+			raise ValueError("Item não encontrado")
+		item_unit = validate_unit(rows[0][0])
+		quantity = validate_qty(data["quantity"], integer=item_unit=='UN')
 		obs = validate_opt_text(data.get("obs", ""), "Observação", 255)
 
 		with run_transaction() as cursor:
-			if movement_type == storageMovementTypes.DECREASE.name:
+			if movement_type == StorageMovementTypes.DECREASE.name:
 				update_stock(cursor, id, quantity, None, "deduct", movement_type, obs)
 
-			elif movement_type == storageMovementTypes.INCREASE.name:
+			elif movement_type == StorageMovementTypes.INCREASE.name:
 				update_stock(cursor, id, quantity, None, "increase", movement_type, obs)
 
 			else:
@@ -217,7 +194,7 @@ def update_item():
 			raise ValueError("Esse item faz parte de um pedido em aberto")
 		name = validate_name(request.form["name"])
 		unit = validate_unit(request.form["unit"])
-		minimal = validate_qty(request.form["minimal"])
+		minimal = validate_qty(request.form["minimal"], integer=unit=='UN')
 		cost = validate_price(request.form["cost"])
 	except ValueError as e:
 		return str(e), 400
@@ -244,6 +221,8 @@ def delete_item(id):
 			raise ValueError("Item inválido")
 		if item_has_open_orders(id):
 			raise ValueError("Esse item faz parte de um pedido em aberto")
+		if item_belongs_to_basket(id):
+			raise ValueError("Esse item faz parte de uma cesta")
 	except ValueError as e:
 		return str(e), 400
 	
@@ -311,11 +290,20 @@ def save_group():
 					"porque ele está sendo utilizado por um pedido em aberto.",
 					400
 				)
+
+			if group_belongs_to_basket(group_id):
+				return (
+					"Não é possível alterar este grupo "
+					"porque ele faz parte de uma cesta.",
+					400
+				)
 				
 		group_name = validate_name(request.form["group_name"])
 		items = validate_group_items(items)
 	except ValueError as e:
 		return str(e), 400
+
+	group_id = group_id or None
 
 	if group_exists(group_name, group_id):
 		return "Já existe um grupo com esse nome", 400
@@ -338,12 +326,10 @@ def save_group():
 			cursor.execute("""
 			INSERT INTO CELEBRAR_GROUPS
 			(group_name)
+			OUTPUT INSERTED.group_id
 			VALUES (?)
 			""", (group_name,))
 
-			cursor.execute("""
-			SELECT SCOPE_IDENTITY()
-			""")
 			group_id = int(cursor.fetchone()[0])
 
 		for item_id, item_qty in items:
@@ -362,6 +348,8 @@ def delete_group(id):
 			raise ValueError("Item inválido")
 		if group_has_open_orders(id):
 			raise ValueError("Esse grupo faz parte de um pedido em aberto")
+		if group_belongs_to_basket(id):
+			raise ValueError("Esse grupo faz parte de uma cesta")
 	except ValueError as e:
 		return str(e), 400
 	

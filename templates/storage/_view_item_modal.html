@@ -9,29 +9,29 @@
 			<input type="hidden" id="viewItem-id" name="id">
 
 			<label>Item*:</label>
-			<input type="text" id="viewItem-name" name="name" placeholder="---" disabled oninput="toggleSaveButton(['viewItem-name','viewItem-amount','viewItem-unit','viewItem-minimal','viewItem-cost'], 'viewItem-saveBtn')">
+			<input type="text" id="viewItem-name" name="name" placeholder="---" disabled oninput="toggleSaveStorageButton('view');">
 			
 			<div class="quantity-row">
 				<div class="form-group">
 					<label>Quantidade*:</label>
-					<input type="text" id="viewItem-amount" name="amount" placeholder="---" readonly oninput="inputNumber(this);toggleSaveButton(['viewItem-name','viewItem-amount','viewItem-unit','viewItem-minimal','viewItem-cost'], 'viewItem-saveBtn')">
+					<input type="text" id="viewItem-amount" name="amount" placeholder="---" readonly oninput="inputNumber(this);toggleSaveStorageButton('view');">
 				</div>
 				
 				<div class="form-group">
 					<label>Quantidade para Alerta*:</label>
-					<input type="text" id="viewItem-minimal" name="minimal" placeholder="---" disabled oninput="inputNumber(this);toggleSaveButton(['viewItem-name','viewItem-amount','viewItem-unit','viewItem-minimal','viewItem-cost'], 'viewItem-saveBtn')">
+					<input type="text" id="viewItem-minimal" name="minimal" placeholder="---" disabled oninput="inputNumber(this);toggleSaveStorageButton('view');">
 				</div>
 			</div>
 			
 			<div class="quantity-row">
 				<div class="form-group">
 					<label>Custo unitário*:</label>
-					<input type="text" id="viewItem-cost" name="cost" placeholder="---" disabled oninput="inputPrice(this);toggleSaveButton(['viewItem-name','viewItem-amount','viewItem-unit','viewItem-minimal','viewItem-cost'], 'viewItem-saveBtn')">
+					<input type="text" id="viewItem-cost" name="cost" placeholder="---" disabled oninput="inputPrice(this);toggleSaveStorageButton('view');">
 				</div>
 
 				<div class="form-group">
 					<label>Unidade de Medida*:</label>
-					<select id="viewItem-unit" name="unit" placeholder="---" disabled onchange="toggleSaveButton(['viewItem-name','viewItem-amount','viewItem-unit','viewItem-minimal','viewItem-cost'], 'viewItem-saveBtn')">
+					<select id="viewItem-unit" name="unit" placeholder="---" disabled onchange="toggleSaveStorageButton('view');">
 						<option value="">Selecione a unidade</option>
 						{% for unit in units %}
 						<option value="{{unit.id}}">{{unit.title}}</option>
@@ -46,7 +46,7 @@
 				</div>
 				<div>
 					<button type="button" class="btn-modal btn-edit" id="viewItem-editBtn" onclick="enableEditItem()">Editar</button>
-					<button type="button" class="btn-modal btn-save" id="viewItem-saveBtn" style="display: none;" disabled onclick="submitModal('viewItem-form')">Salvar</button>
+					<button type="button" class="btn-modal btn-save" id="viewItem-saveBtn" style="display: none;" disabled onclick="updateItem()">Salvar</button>
 					<button type="button" class="btn-modal btn-cancel" id="viewItem-cancelBtn" style="display: none;" onclick="cancelEditItem()">Cancelar</button>
 				</div>
 			</div>

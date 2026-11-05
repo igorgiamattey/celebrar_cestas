@@ -1,10 +1,10 @@
 from flask import request
 
 from db import format_currency, format_date_year, run_select
-from enums.financial_status import financialStatus
-from enums.movement_types import (financialMovementCategories,
-                                  financialMovementTypes)
-from enums.order_status import orderStatus
+from enums.financial_status import FinancialStatus
+from enums.movement_types import (FinancialMovementCategories,
+                                  FinancialMovementTypes)
+from enums.order_status import OrderStatus
 
 
 def get_financial():
@@ -19,9 +19,9 @@ def get_financial():
 	if search:
 		conditions = []
 		
-		matching_status = [s.name for s in financialStatus if search.lower() in s.value.lower()]
-		matching_types = [t.name for t in financialMovementTypes if search.lower() in t.value.lower()]
-		matching_categories = [c.name for c in financialMovementCategories if search.lower() in c.value.lower()]
+		matching_status = [s.name for s in FinancialStatus if search.lower() in s.value.lower()]
+		matching_types = [t.name for t in FinancialMovementTypes if search.lower() in t.value.lower()]
+		matching_categories = [c.name for c in FinancialMovementCategories if search.lower() in c.value.lower()]
 		if matching_status:
 			conditions.append(f"payment_status IN ({','.join('?' * len(matching_status))})")
 			params.extend(matching_status)
@@ -32,12 +32,13 @@ def get_financial():
 			conditions.append(f"payment_category IN ({','.join('?' * len(matching_categories))})")
 			params.extend(matching_categories)
 
-		where_clause += " AND (" + " OR ".join(conditions) + ")"
+		if conditions:
+			where_clause += " AND (" + " OR ".join(conditions) + ")"
 
 	if month_filter:
 		year = month_filter//100
 		month = month_filter%100
-		where_clause += f" AND YEAR(payment_date) = ? AND MONTH(payment_date) = ?"
+		where_clause += " AND YEAR(payment_date) = ? AND MONTH(payment_date) = ?"
 		params.extend([year, month])
 
 	_, count_rows = run_select(f"""
@@ -70,11 +71,11 @@ def get_financial():
 	rows = [
 		(
 			row[0],
-			financialMovementTypes[row[1]].value,
+			FinancialMovementTypes[row[1]].value,
 			format_date_year(row[2]),
 			(format_currency(row[3])),
-			financialStatus[row[4]].value,
-			financialMovementCategories[row[5]].value
+			FinancialStatus[row[4]].value,
+			FinancialMovementCategories[row[5]].value
 		)
 		for row in rows
 	]
@@ -88,7 +89,7 @@ def get_order_total(order_id):
 	WHERE order_id = ?
 	AND isDeleted = 0
 	AND order_status <> ?
-	""", (order_id, orderStatus.CANCELLED.name))
+	""", (order_id, OrderStatus.CANCELLED.name))
 
 	if not rows:
 		raise ValueError("Pedido inválido")
@@ -97,9 +98,9 @@ def get_order_total(order_id):
 
 def get_balance():
 	balance = {}
-	IN = financialMovementTypes.INCOME.name
-	OUT = financialMovementTypes.EXPENSE.name
-	CAT = financialMovementCategories
+	IN = FinancialMovementTypes.INCOME.name
+	OUT = FinancialMovementTypes.EXPENSE.name
+	CAT = FinancialMovementCategories
 
 	_, rows = run_select("""
 	SELECT
@@ -108,7 +109,7 @@ def get_balance():
 	WHERE payment_status = ?
 	AND isDeleted = 0
 	GROUP BY payment_type, payment_category
-	""", (financialStatus.PAID.name,))
+	""", (FinancialStatus.PAID.name,))
 
 	totals = {(fin_type, fin_cat): total for fin_type, fin_cat, total in rows}
 
@@ -129,15 +130,15 @@ def get_balance():
 	return balance
 
 def get_monthly_statement():
-	monthName = {
+	month_name_short = {
 		1: "Jan", 2: "Fev", 3: "Mar",
 		4: "Abr", 5: "Mai", 6: "Jun",
 		7: "Jul", 8: "Ago", 9: "Set",
 		10: "Out", 11: "Nov", 12: "Dez"
 	}
 
-	IN = financialMovementTypes.INCOME.name
-	OUT = financialMovementTypes.EXPENSE.name
+	IN = FinancialMovementTypes.INCOME.name
+	OUT = FinancialMovementTypes.EXPENSE.name
 	
 	_, rows = run_select("""
 	SELECT
@@ -154,7 +155,7 @@ def get_monthly_statement():
 
 	rows = [
 		(
-			f"{monthName[row[1]]}/{row[0]}",
+			f"{month_name_short[row[1]]}/{row[0]}",
 			format_currency(row[2]),
 			format_currency(row[3]),
 			format_currency(row[2] - row[3])

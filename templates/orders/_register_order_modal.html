@@ -16,13 +16,10 @@
 					data-clients='{{available_clients|tojson}}'
 					placeholder="Selecione um cliente..."
 					oninput="
-						onClientChange('new')
-						toggleSwitch('newOrder-client', 'newOrder-isDelivery')
-						refreshAddressOptions(this.value, 'new')
-						toggleSaveButton(
-							['newOrder-client', 'newOrder-orderPrice', 'newOrder-date'],
-							'newOrder-saveBtn',
-							[newOrderBaskets])"
+						onClientChange('new');
+						toggleSwitch('newOrder-client', 'newOrder-isDelivery');
+						refreshAddressOptions(this.value, 'new');
+						toggleSaveOrderButton('new');"
 				>
 			</div>
 
@@ -36,11 +33,8 @@
 						onkeydown="return false"
 						max="{{ today }}"
 						oninput="
-						updateOrderDeliveryDate('new')
-						toggleSaveButton(
-							['newOrder-client', 'newOrder-orderPrice', 'newOrder-date'],
-							'newOrder-saveBtn',
-							[newOrderBaskets])"
+						updateOrderDeliveryDate('new');
+						toggleSaveOrderButton('new');"
 					>
 				</div>
 				<div class="form-group">
@@ -81,12 +75,9 @@
 						name="orderPrice"
 						type="text"
 						oninput="
-							inputPrice(this)
-							updateOrderTotal('new')
-							toggleSaveButton(
-							['newOrder-client', 'newOrder-orderPrice', 'newOrder-date'],
-							'newOrder-saveBtn',
-							[newOrderBaskets])"
+							inputPrice(this);
+							updateOrderTotal('new');
+							toggleSaveOrderButton('new');"
 					>
 				</div>
 

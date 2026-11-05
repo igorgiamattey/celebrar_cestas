@@ -2,29 +2,32 @@ from datetime import date, timedelta
 
 from flask import Blueprint, jsonify, render_template, request, session
 
-from db import format_date, run_select
-from enums.order_status import orderStatus
-from services.home_service import (getBalance, getCloseOrders, getLateOrders,
-                                   getMissingItems, getNoDeliveryOrders)
-from services.routes_service import (getAvailableAddresses,
-                                     getAvailableBaskets, getAvailableClients,
-                                     getAvailableCouriers, getAvailableDates,
-                                     getAvailableDeliveryStatus,
-                                     getAvailableGroups, getAvailableItems,
-                                     getAvailableOrders,
-                                     getAvailableOrderStatus)
+from db import format_date, get_today, run_select
+from enums.order_status import OrderStatus, CLOSED_ORDER_STATUS
+from services.home_service import (get_close_orders, get_home_balance,
+                                   get_late_orders, get_missing_items,
+                                   get_no_delivery_orders)
+from services.routes_service import (get_available_addresses,
+                                     get_available_baskets,
+                                     get_available_clients,
+                                     get_available_couriers,
+                                     get_available_dates, get_available_groups,
+                                     get_available_items, get_available_orders,
+                                     get_available_status_delivery,
+                                     get_available_status_order)
 
 home_bp = Blueprint("home_bp", __name__)
 
 @home_bp.route("/home")
 def home(): 
+	placeholders = ",".join("?" * len(CLOSED_ORDER_STATUS))
 	page = request.args.get("page", 1, type=int)
 	page = max(page, 1)
 	per_page = 3
 	
-	where_clause = """
+	where_clause = f"""
 		WHERE o.isDeleted = 0
-		AND o.order_status NOT IN ('DELIVERED', 'CANCELLED')
+		AND o.order_status NOT IN ({placeholders})
 	"""
 
 	_, count_rows = run_select(f"""
@@ -33,7 +36,7 @@ def home():
 	JOIN CELEBRAR_CLIENTS c
 	ON o.client_id = c.client_id
 	{where_clause}
-	""",)
+	""", CLOSED_ORDER_STATUS)
 
 	total_items = count_rows[0][0]
 	total_pages = max((total_items + per_page - 1)//per_page, 1)
@@ -68,7 +71,7 @@ def home():
 	ORDER BY o.delivery_date, o.order_id
 	OFFSET ? ROWS
 	FETCH NEXT ? ROWS ONLY
-	""", (offset, per_page))
+	""", (*CLOSED_ORDER_STATUS, offset, per_page))
 
 	order_columns = [
 		order_columns[3],
@@ -84,31 +87,31 @@ def home():
 			"id": row[0],
 			"delivery": format_date(row[3]),
 			"items": row[2],
-			"status": orderStatus[row[5]].value,
-			"warning": row[3] is not None and today <= row[3] <= limit_date and orderStatus[row[5]].name not in ("DELIVERED", "CANCELLED"),
-			"late": row[3] is not None and today > row[3] and orderStatus[row[5]].name not in ("DELIVERED", "CANCELLED")
+			"status": OrderStatus[row[5]].value,
+			"warning": row[3] is not None and today <= row[3] <= limit_date and OrderStatus[row[5]].name not in ("DELIVERED", "CANCELLED"),
+			"late": row[3] is not None and today > row[3] and OrderStatus[row[5]].name not in ("DELIVERED", "CANCELLED")
 		}
 		for row in order_rows
 	]
 
-	finances = getBalance()
+	finances = get_home_balance()
 
-	available_items = getAvailableItems()
-	available_groups = getAvailableGroups()
-	available_clients = getAvailableClients()
-	available_baskets = getAvailableBaskets()
-	order_statuses = getAvailableOrderStatus()
+	available_items = get_available_items()
+	available_groups = get_available_groups()
+	available_clients = get_available_clients()
+	available_baskets = get_available_baskets()
+	order_statuses = get_available_status_order()
 
-	missing_items = getMissingItems()
-	close_orders = getCloseOrders()
-	late_orders = getLateOrders()
-	no_delivery_orders = getNoDeliveryOrders()
-	available_addresses = getAvailableAddresses()
-	available_couriers = getAvailableCouriers()
+	missing_items = get_missing_items()
+	close_orders = get_close_orders()
+	late_orders = get_late_orders()
+	no_delivery_orders = get_no_delivery_orders()
+	available_addresses = get_available_addresses()
+	available_couriers = get_available_couriers()
 
-	available_dates = getAvailableDates()
-	available_orders = getAvailableOrders()
-	delivery_statuses = getAvailableDeliveryStatus()
+	available_dates = get_available_dates()
+	available_orders = get_available_orders()
+	delivery_statuses = get_available_status_delivery()
 
 	return render_template("home/home.html",
 						order_rows=order_rows,
@@ -130,18 +133,18 @@ def home():
 						delivery_statuses=delivery_statuses,
 						missing_items=missing_items,
 						close_orders=close_orders,
-						late_orders=late_orders)
+						late_orders=late_orders,
+						today=get_today())
 
 @home_bp.route("/home_order_items/<int:id>")
 def order_items(id):
-	_, rows = run_select(f"""
+	_, rows = run_select("""
 	SELECT
 	oi.amount, b.basket_name
 	FROM CELEBRAR_ORDER_ITEMS oi
 	JOIN CELEBRAR_BASKETS b
 	ON b.basket_id = oi.basket_id
 	WHERE oi.order_id = ?
-	AND b.isDeleted = 0
 	ORDER BY b.basket_name
 	""", (id,))
 

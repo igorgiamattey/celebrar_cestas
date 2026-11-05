@@ -1,43 +1,43 @@
-from enums.delivery_status import deliveryStatus
-from enums.order_status import orderStatus
-from enums.financial_status import financialStatus
+from enums.delivery_status import DeliveryStatus
+from enums.order_status import OrderStatus
+from enums.financial_status import FinancialStatus
 
-d_transit = deliveryStatus.TRANSIT.name
-d_cancelled = deliveryStatus.CANCELLED.name
-d_delivered = deliveryStatus.DELIVERED.name
-d_pending = deliveryStatus.PENDING.name
+D_TRANSIT = DeliveryStatus.TRANSIT.name
+D_CANCELLED = DeliveryStatus.CANCELLED.name
+D_DELIVERED = DeliveryStatus.DELIVERED.name
+D_PENDING = DeliveryStatus.PENDING.name
 
-o_pending = orderStatus.PENDING.name
-o_confirmed = orderStatus.CONFIRMED.name
-o_cancelled = orderStatus.CANCELLED.name
-o_delivered = orderStatus.DELIVERED.name
-o_preparing = orderStatus.PREPARING.name
-o_ready = orderStatus.READY.name
+O_PENDING = OrderStatus.PENDING.name
+O_CONFIRMED = OrderStatus.CONFIRMED.name
+O_CANCELLED = OrderStatus.CANCELLED.name
+O_DELIVERED = OrderStatus.DELIVERED.name
+O_PREPARING = OrderStatus.PREPARING.name
+O_READY = OrderStatus.READY.name
 
-f_pending = financialStatus.PENDING.name
-f_paid = financialStatus.PAID.name
-f_cancelled = financialStatus.CANCELLED.name
+F_PENDING = FinancialStatus.PENDING.name
+F_PAID = FinancialStatus.PAID.name
+F_CANCELLED = FinancialStatus.CANCELLED.name
 
 STATUS_TRANSITIONS_ORDERS = {
-	o_pending: {o_pending, o_confirmed, o_cancelled},
-	o_confirmed: {o_confirmed, o_preparing, o_cancelled},
-	o_preparing: {o_preparing, o_ready, o_cancelled},
-	o_ready: {o_ready, o_delivered, o_cancelled},
-	o_delivered: {o_delivered},
-	o_cancelled: {o_cancelled},
+	O_PENDING: {O_PENDING, O_CONFIRMED, O_CANCELLED},
+	O_CONFIRMED: {O_CONFIRMED, O_PREPARING, O_CANCELLED},
+	O_PREPARING: {O_PREPARING, O_READY, O_CANCELLED},
+	O_READY: {O_READY, O_DELIVERED, O_CANCELLED},
+	O_DELIVERED: {O_DELIVERED},
+	O_CANCELLED: {O_CANCELLED},
 }
 
 STATUS_TRANSITIONS_DELIVERIES = {
-	d_pending: {d_pending, d_transit, d_cancelled},
-	d_transit: {d_transit, d_delivered, d_cancelled},
-	d_delivered: {d_delivered},
-	d_cancelled: {d_cancelled},
+	D_PENDING: {D_PENDING, D_TRANSIT, D_CANCELLED},
+	D_TRANSIT: {D_TRANSIT, D_DELIVERED, D_CANCELLED},
+	D_DELIVERED: {D_DELIVERED},
+	D_CANCELLED: {D_CANCELLED},
 }
 
 STATUS_TRANSITIONS_FINANCIALS = {
-	f_pending: {f_pending, f_paid, f_cancelled},
-	f_paid: {f_paid},
-	f_cancelled: {f_cancelled}
+	F_PENDING: {F_PENDING, F_PAID, F_CANCELLED},
+	F_PAID: {F_PAID},
+	F_CANCELLED: {F_CANCELLED}
 }
 
 TRANSITIONS = {

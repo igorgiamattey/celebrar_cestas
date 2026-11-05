@@ -1,7 +1,7 @@
 import os
 import re
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import date, datetime
 
 import pyodbc
 from dotenv import load_dotenv
@@ -81,6 +81,9 @@ def format_date_year(value):
 	if value.year == datetime.now().year:
 		return value.strftime("%d/%m")
 	return value.strftime("%d/%m/%Y")
+
+def get_today():
+	return date.today().isoformat()
 
 @contextmanager
 def run_transaction():

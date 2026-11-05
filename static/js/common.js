@@ -92,51 +92,86 @@ function handleError(error) {
 	showSnackbar(isNetworkError ? NETWORK_ERROR : GENERIC_ERROR, 'error');
 }
 
-function submitForm(form, successMessage) {
-	const message = successMessage ?? getFormMessage(form);
-
-	return fetch(form.action, {
-		method: 'POST',
-		body: new FormData(form)
-	})
-		.then(response => handleResponse(response, message))
-		.catch(handleError);
-}
-
-function submitModal(id, successMessage) {
-	return submitForm(document.getElementById(id), successMessage);
-}
-
-const formName = form => new FormData(form).get('name')?.toString().trim();
-
-const INTERCEPTED_FORMS = {
-	'/new_client': 'Cliente cadastrado com sucesso.',
-	'/update_client': form => `Cliente "${formName(form)}" atualizado com sucesso.`,
-	'/new_item': 'Item cadastrado com sucesso.',
-	'/update_item': form => `Item "${formName(form)}" atualizado com sucesso.`,
-}
-
-function getFormMessage(form) {
-	if (!(form instanceof HTMLFormElement) || !form.action)
-		return null;
-
-	const entry = INTERCEPTED_FORMS[new URL(form.action, location.href).pathname];
-
-	if (entry === undefined)
-		return null;
-
-	return typeof entry === 'function' ? entry(form) : entry;
-}
-
-document.addEventListener('submit', (event) => {
-	const form = event.target;
-
-	if (getFormMessage(form) === null)
+function renderEmptySearchRow(tableBody, query, label) {
+	if (!query.trim())
 		return;
 
-	event.preventDefault();
-	submitForm(form);
-})
+	const row = document.createElement('tr');
+	row.classList.add('empty-search-row');
+
+	const cell = document.createElement('td');
+	cell.colSpan = tableBody.closest('table').querySelectorAll('thead th').length;
+	cell.classList.add('text-center', 'py-4');
+
+	const queryStyle = document.createElement('span');
+	queryStyle.textContent = query;
+	queryStyle.classList.add('search-query');
+
+	cell.append(label, queryStyle);
+	row.appendChild(cell);
+	tableBody.appendChild(row);
+}
+
+function createSearch({
+	input, url, body, pageUrl, label, getFilters = () => new URLSearchParams()
+}) {
+	let searchTimeout;
+
+	const searchInput = typeof input === 'string'
+		? document.querySelector(input)
+		: input;
+
+	const tableBody = typeof body === 'string'
+		? document.querySelector(body)
+		: body;
+
+	function handleSearch() {
+		clearTimeout(searchTimeout);
+
+		const query = searchInput.value;
+		const filters = getFilters();
+
+		const requestParams = new URLSearchParams(filters);
+		requestParams.set('search', query);
+
+		const urlParams = new URLSearchParams(filters);
+
+		if (query)
+			urlParams.set('search', query);
+
+		history.replaceState({}, '', `${pageUrl}${urlParams.toString() ? `?${urlParams}` : ''}`);
+
+		searchTimeout = setTimeout(() => {
+			fetchText(`${url}?${requestParams}`)
+				.then(html => {
+					tableBody.innerHTML = html;
+
+					if (!html.trim() && query.trim()) {
+						renderEmptySearchRow(tableBody, query, label);
+					}
+				})
+				.catch(handleError);
+		}, 300);
+	}
+
+	return handleSearch;
+}
+
+async function submitModal(id, successMessage) {
+	const form = document.getElementById(id);
+	
+	try {
+		const response = await fetch(form.action, {
+			method: 'POST',
+			body: new FormData(form)
+		});
+
+		return await handleResponse(response, successMessage);
+	}
+	catch (error) {
+		return handleError(error);
+	}
+}
 
 document.addEventListener("DOMContentLoaded", () => {
 	const toggle = document.querySelector(".user-menu-toggle");
@@ -170,9 +205,9 @@ document.addEventListener("DOMContentLoaded", () => {
 	});
 });
 
-const search_icon = document.getElementById('search-icon')
-if (search_icon)
-	search_icon.innerHTML = ICON_SEARCH;
+const searchIcon = document.getElementById('search-icon')
+if (searchIcon)
+	searchIcon.innerHTML = ICON_SEARCH;
 
 const searchClear = document.getElementById('search-clear');
 const searchInput = document.querySelector('.search-bar');
@@ -272,5 +307,5 @@ function inputUserMail(input) {
 }
 
 const noResults = text => ({
-	no_results: () => `<div class="no-results">${text}</div>`
+	zeroResults: () => `<div class="no-results">${text}</div>`
 });

@@ -2,7 +2,7 @@ from flask import request
 
 from db import format_currency, run_select
 from enums.table_names import Table
-from services.routes_service import countRows
+from services.routes_service import count_rows
 
 def basket_exists(name, exclude_id=None):
 	query = """
@@ -34,7 +34,7 @@ def get_catalogue():
 		where_clause += " AND basket_name LIKE ?"
 		params.append(f"%{search}%")
 
-	count = countRows(Table.Baskets, where_clause, tuple(params))
+	count = count_rows(Table.Baskets, where_clause, tuple(params))
 	total_pages = max((count + per_page - 1)//per_page, 1)
 	page = min(page, total_pages)
 	offset = (page - 1) * per_page

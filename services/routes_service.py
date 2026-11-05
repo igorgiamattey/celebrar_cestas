@@ -1,13 +1,13 @@
 from db import format_date, run_select
-from enums.delivery_status import deliveryStatus
-from enums.financial_status import financialStatus
-from enums.movement_types import (CAT_BY_TYPE, financialMovementCategories,
-                                  financialMovementTypes)
-from enums.order_status import orderStatus
+from enums.delivery_status import DeliveryStatus
+from enums.financial_status import FinancialStatus
+from enums.movement_types import (CAT_BY_TYPE, FinancialMovementCategories,
+                                  FinancialMovementTypes, StorageMovementTypes)
+from enums.order_status import OrderStatus
 from enums.unit_measurement import Unit
 
 
-def getAvailableGroups():
+def get_available_groups():
 	_, rows = run_select("""
 	SELECT
 	group_id,
@@ -28,7 +28,7 @@ def getAvailableGroups():
 
 	return available_groups
 
-def getAvailableItems():
+def get_available_items():
 	_, rows = run_select("""
 	SELECT
 	item_id,
@@ -51,7 +51,7 @@ def getAvailableItems():
 
 	return available_items
 
-def getAvailableClients():
+def get_available_clients():
 	_, rows = run_select("""
 	SELECT
 	client_id, client_name
@@ -70,7 +70,7 @@ def getAvailableClients():
 
 	return available_clients
 
-def getAvailableCouriers():
+def get_available_couriers():
 	_, rows = run_select("""
 	SELECT
 	courier_id, courier_name, courier_phone
@@ -90,7 +90,7 @@ def getAvailableCouriers():
 
 	return available_couriers
 
-def getAvailableBaskets():
+def get_available_baskets():
 	_, rows = run_select("""
 	SELECT
 	basket_id, basket_name, basket_price
@@ -110,29 +110,29 @@ def getAvailableBaskets():
 
 	return available_baskets
 
-def getAvailableOrderStatus():
+def get_available_status_order():
 	statuses = [
 		{
 			"id": status.name,
 			"title": status.value.replace("_", " ").title()
 		}
-		for status in orderStatus
+		for status in OrderStatus
 	]
 
 	return statuses
 
-def getAvailableDeliveryStatus():
+def get_available_status_delivery():
 	statuses = [
 		{
 			"id": status.name,
 			"title": status.value.replace("_", " ").title()
 		}
-		for status in deliveryStatus
+		for status in DeliveryStatus
 	]
 
 	return statuses
 
-def getAvailableUnits():
+def get_available_units():
 	units = [
 		{
 			"id": units.name,
@@ -143,7 +143,18 @@ def getAvailableUnits():
 
 	return units
 
-def getAvailableAddresses():
+def get_available_storage_moves():
+	moves = [
+		{
+			"id": move.name,
+			"title": move.value.replace("_", " ")
+		}
+		for move in StorageMovementTypes
+	]
+
+	return moves
+
+def get_available_addresses():
 	_, rows = run_select("""
 	SELECT
 	address_id, client_id, address_txt
@@ -163,8 +174,8 @@ def getAvailableAddresses():
 
 	return available_addresses
 
-def getAvailableDates(delivery_id=None):
-	status = orderStatus.READY.name
+def get_available_dates(delivery_id=None):
+	status = OrderStatus.READY.name
 
 	_, rows = run_select("""
 	SELECT DISTINCT
@@ -188,8 +199,8 @@ def getAvailableDates(delivery_id=None):
 
 	return available_dates
 
-def getAvailableOrders(delivery_id=None):
-	status = orderStatus.READY.name
+def get_available_orders(delivery_id=None):
+	status = OrderStatus.READY.name
 
 	_, rows = run_select("""
 	SELECT  
@@ -221,7 +232,7 @@ def getAvailableOrders(delivery_id=None):
 
 	return available_orders
 
-def getAvailableOrdersFinancial():
+def get_available_orders_financial(payment_id=None):
 	_, rows = run_select("""
 	SELECT  
 	o.order_id,
@@ -240,9 +251,10 @@ def getAvailableOrdersFinancial():
 		SELECT 1
 		FROM CELEBRAR_FINANCIAL_PAYMENTS f
 		WHERE f.order_id = o.order_id
+		AND f.payment_id <> ?
 		AND f.payment_status IN (?, ?))
 	ORDER BY o.order_id;
-	""", (orderStatus.CANCELLED.name, financialStatus.PENDING.name, financialStatus.PAID.name))
+	""", (OrderStatus.CANCELLED.name, payment_id, FinancialStatus.PENDING.name, FinancialStatus.PAID.name))
 
 	available_orders = [
 		{
@@ -251,7 +263,7 @@ def getAvailableOrdersFinancial():
 				f"Pedido #{row[0]}",
 				row[1] or '---',
 				format_date(row[2]),
-				orderStatus[row[4]].value,
+				OrderStatus[row[4]].value,
 			]),
 			"price": str(row[3]) if row[3] is not None else ""
 		}
@@ -260,38 +272,38 @@ def getAvailableOrdersFinancial():
 
 	return available_orders
 
-def getAvailableFinancialStatus():
+def get_available_status_financial():
 	statuses = [
 		{
 			"id": status.name,
 			"title": status.value.replace("_", " ").title()
 		}
-		for status in financialStatus
+		for status in FinancialStatus
 	]
 
 	return statuses
 
-def getAvailableFinancialTypes():
+def get_available_financial_types():
 	types = [
 		{
 			"id": type.name,
 			"title": type.value.replace("_", " ").title()
 		}
-		for type in financialMovementTypes
+		for type in FinancialMovementTypes
 	]
 
 	return types
 
-def getAvailableFinancialCategoriesByType():
+def get_available_financial_categories():
 	categories = {
-		fin_type: [{"id": c.name, "title": c.value.replace("_", " ").title()} for c in cats if c != financialMovementCategories.REFUND]
+		fin_type: [{"id": c.name, "title": c.value.replace("_", " ").title()} for c in cats if c != FinancialMovementCategories.REFUND]
 		for fin_type, cats in CAT_BY_TYPE.items()
 	}
 
 	return categories
 
-def getAvailableMonths():
-	monthName = {
+def get_available_months():
+	month_name = {
 		1: "Janeiro", 2: "Fevereiro", 3: "Março",
 		4: "Abril", 5: "Maio", 6: "Junho",
 		7: "Julho", 8: "Agosto", 9: "Setembro",
@@ -312,14 +324,14 @@ def getAvailableMonths():
 	months = [
 		{
 			"id": row[0] * 100 + row[1],
-			"title": f"{monthName[row[1]]}/{row[0]}"
+			"title": f"{month_name[row[1]]}/{row[0]}"
 		}
 		for row in rows
 	]
 
 	return months
 
-def countRows(table, where_clause="", params=()):
+def count_rows(table, where_clause="", params=()):
 	_, rows = run_select(f"""
 	SELECT COUNT(*)
 	FROM {table.value}

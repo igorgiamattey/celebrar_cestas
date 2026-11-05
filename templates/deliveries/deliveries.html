@@ -12,15 +12,25 @@
 	
 	<div class="actions-col">
 		<div class="search-wrapper">
-			<span class="search-icon" id="search-icon"></span>
+			<span
+				class="search-icon"
+				id="search-icon"
+			>
+			</span>
 			<input
 				class="search-bar"
 				type="text"
 				id="deliveries-search-bar"
 				placeholder="Entregador/Data/Status/#id..."
-				oninput="handleSearch()"
+				oninput="handleSearch();"
 			>
-			<button type="button" class="search-clear" id="search-clear" title="Limpar pesquisa"></button>
+			<button
+				type="button"
+				class="search-clear"
+				id="search-clear"
+				title="Limpar pesquisa"
+			>
+			</button>
 		</div>
 		<div class="checkbox-container">
 			<input
@@ -28,10 +38,23 @@
 				type="checkbox"
 				id="deliveries-checkbox"
 			>
-			<label for="deliveries-checkbox">Mostrar apenas entregas não concluídas</label>
+			<label for="deliveries-checkbox">
+				Mostrar apenas entregas não concluídas
+			</label>
 		</div>
-		<button class="btn-add" onclick="openNewDeliveryModal()">CADASTRAR NOVA ENTREGA</button>
-		<button id="mngCourier-btn" class="btn-add" onclick="openManageCouriersModal()">ENTREGADORES</button>
+		<button
+			class="btn-add"
+			onclick="openNewDeliveryModal();"
+		>
+			CADASTRAR NOVA ENTREGA
+		</button>
+		<button
+			id="mngCourier-btn"
+			class="btn-add"
+			onclick="openManageCouriersModal();"
+		>
+			ENTREGADORES
+		</button>
 	</div>
 
 	<div class="card">
@@ -56,13 +79,19 @@
 			{% if total_pages > 1 %}
 				<div class="pagination">
 					{% if page > 1 %}
-						<a href="{{url_for('deliveries_bp.deliveries', page=page-1, search=search or None, openonly='true' if open_only else None)}}">&laquo;</a>
+						<a href="{{url_for('deliveries_bp.deliveries', page=page-1, search=search or None, openonly='true' if open_only else None)}}">
+							&laquo;
+						</a>
 					{% endif %}
 
-					<span>{{page}} de {{total_pages}}</span>
+					<span>
+						{{page}} de {{total_pages}}
+					</span>
 
 					{% if page < total_pages %}
-						<a href="{{url_for('deliveries_bp.deliveries', page=page+1, search=search or None, openonly='true' if open_only else None)}}">&raquo;</a>
+						<a href="{{url_for('deliveries_bp.deliveries', page=page+1, search=search or None, openonly='true' if open_only else None)}}">
+							&raquo;
+						</a>
 					{% endif %}
 				</div>
 			{% endif %}

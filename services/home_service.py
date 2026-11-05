@@ -1,28 +1,32 @@
 from datetime import date
 
 from db import format_currency, run_select, run_transaction
-from enums.financial_status import financialStatus
-from enums.movement_types import financialMovementTypes
-from enums.order_status import orderStatus, CLOSED_ORDER_STATUS
+from enums.financial_status import FinancialStatus
+from enums.movement_types import FinancialMovementTypes
+from enums.order_status import OrderStatus, CLOSED_ORDER_STATUS
 from services.order_service import get_available_stock
 
 
-def getMissingItems():
+def get_missing_items():
 	with run_transaction() as cursor:
 		available_stock = get_available_stock(cursor)
 
 		cursor.execute("""
 		SELECT
-		item_id, item_min
+		item_id, item_min, item_qty
 		FROM CELEBRAR_STORAGE
 		WHERE isDeleted = 0
 		""")
 
 		rows = cursor.fetchall()
 	
-	return sum(1 for item_id, min_stock in rows if available_stock.get(item_id, 0) <= min_stock)
+	return sum(
+		1
+		for item_id, min_stock, physical_stock in rows
+		if available_stock.get(item_id, physical_stock) <= min_stock
+	)
 
-def getCloseOrders():
+def get_close_orders():
 	placeholders = ",".join("?" * len(CLOSED_ORDER_STATUS))
 	
 	_, rows = run_select(f"""
@@ -38,7 +42,7 @@ def getCloseOrders():
 
 	return rows[0][0]
 
-def getLateOrders():
+def get_late_orders():
 	placeholders = ",".join("?" * len(CLOSED_ORDER_STATUS))
 
 	_, rows = run_select(f"""
@@ -53,26 +57,26 @@ def getLateOrders():
 
 	return rows[0][0]
 
-def getNoDeliveryOrders():
-	status = orderStatus.READY.name
+def get_no_delivery_orders():
+	status = OrderStatus.READY.name
 
-	_, rows = run_select(f"""
+	_, rows = run_select("""
 	SELECT COUNT(*)
 	FROM CELEBRAR_ORDERS
 	WHERE isDeleted = 0
 	AND isDelivery = 1
 	AND delivery_id is NULL
 	AND order_status = ?
-	""", (status))
+	""", (status,))
 
 	return rows[0][0]
 
-def getBalance():
+def get_home_balance():
 	balance = {}
-	IN = financialMovementTypes.INCOME.name
-	OUT = financialMovementTypes.EXPENSE.name
-	PAID = financialStatus.PAID.name
-	PENDING = financialStatus.PENDING.name
+	IN = FinancialMovementTypes.INCOME.name
+	OUT = FinancialMovementTypes.EXPENSE.name
+	PAID = FinancialStatus.PAID.name
+	PENDING = FinancialStatus.PENDING.name
 
 	start = date.today().replace(day=1)
 	end = (

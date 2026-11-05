@@ -1,152 +1,17 @@
+// === GLOBAL CONSTANTS ===
+const REQUIRED_DATE_STATUSES = ['PAID'];
+const EDITABLE_DATE_ORIGINS = ['PENDING'];
+const viewFinancialForm = document.getElementById('viewFinancial-form');
+
+// === GLOBAL VARIABLES ===
 let originalFinancialValues = {};
 let viewFinancialEditing = false;
+let viewFinancialTypeSelector = null;
+let viewFinancialCategorySelector = null;
+let viewFinancialStatusSelector = null;
+let viewFinancialOrderSelector = null;
 
-const REQUIRED_DATE_STATUSES = ['PAID']
-const EDITABLE_DATE_ORIGINS = ['PENDING']
-
-function setPlaceholder(selector, text) {
-	selector.settings.placeholder = text;
-	selector.control_input.setAttribute('placeholder', text);
-	selector.inputState();
-}
-
-function fillViewModal(data) {
-	viewFinancialEditing = false;
-	document.getElementById('viewFinancial-id').value = data.payment_id;
-
-	viewFinancialTypeSelector.setValue(data.payment_type, true);
-	viewFinancialCategorySelector.clear(true);
-	viewFinancialCategorySelector.clearOptions();
-	viewFinancialCategorySelector.addOptions(availableCategories[data.payment_type] || []);
-	viewFinancialCategorySelector.setValue(data.payment_category, true);
-
-	activateExtraField(data.payment_category, 'view');
-
-	viewFinancialStatusSelector.clear(true);
-	viewFinancialStatusSelector.clearOptions();
-	availableFinancialStatuses
-		.filter(s => data.allowed_status.includes(s.id))
-		.forEach(s => viewFinancialStatusSelector.addOption(s));
-	viewFinancialStatusSelector.setValue(data.payment_status, true);
-
-	viewFinancialOrderSelector.setValue(data.order_id ?? '', true);
-	document.getElementById('viewFinancial-supplier').value = data.supplier ?? '';
-
-	document.getElementById('viewFinancial-description').value = data.payment_description;
-
-	const valueInput = document.getElementById('viewFinancial-value');
-	valueInput.value = Number(data.payment_value).toFixed(2);
-	valueInput.readOnly = data.payment_category === 'ORDER_PAYMENT';
-	valueInput.dispatchEvent(new Event('input', {bubbles: true}));
-
-	document.getElementById('viewFinancial-date').value = data.payment_date ?? '';
-	updateDateField(data.payment_status, 'view');
-
-	const canRefund = data.payment_status === 'PAID'
-		&& !data.refunded
-		&& data.payment_category !== 'REFUND';
-	document.getElementById('viewFinancial-refundBtn').style.display = canRefund
-		? 'inline-block'
-		: 'none'
-}
-
-function fillOrderValue(orderId, mode) {
-	const selector = mode === 'new'
-		? newFinancialOrderSelector
-		: viewFinancialOrderSelector;
-
-	const input = document.getElementById(`${mode}Financial-value`);
-	const order = selector.options[orderId];
-
-	const price = order ? Number(order.price) : NaN;
-
-	if (!order || Number.isNaN(price)) {
-		input.value = '';
-		input.readOnly = false;
-	}
-	else {
-		input.value = price.toFixed(2)
-		input.readOnly = true;
-	}
-	
-	input.dispatchEvent(new Event('input', {bubbles: true}));
-}
-
-function updateCategoryOptions(type, mode) {
-	const catSelector = mode === 'new'
-		? newFinancialCategorySelector
-		: viewFinancialCategorySelector;
-
-	const allowedCats = availableCategories[type] || [];
-	catSelector.clear();
-	catSelector.clearOptions();
-	catSelector.addOptions(allowedCats);
-	catSelector.refreshOptions(false);
-
-	if (allowedCats.length) {
-		catSelector.enable();
-		setPlaceholder(catSelector, "Categoria da transação...")
-	}
-	else {
-		catSelector.disable();
-		setPlaceholder(catSelector, "Selecione o tipo primeiro")
-	}
-}
-
-function activateExtraField(cat, mode) {
-	const orderSelector = mode === 'new'
-		? newFinancialOrderSelector
-		: viewFinancialOrderSelector;
-
-	const showOrder = document.getElementById(`${mode}Financial-showOrder`);
-	const showSupplier = document.getElementById(`${mode}Financial-showSupplier`);
-	const supplierInput = document.getElementById(`${mode}Financial-supplier`);
-
-	const orderCat = 'ORDER_PAYMENT';
-	const supplierCat = 'MARKET';
-
-	showOrder.style.display = cat === orderCat ? 'inline-block' : 'none';
-	showSupplier.style.display = cat === supplierCat ? 'inline-block' : 'none';
-
-	if (cat !== orderCat)
-		orderSelector.clear();
-
-	if (cat !== supplierCat)
-		supplierInput.value = '';
-}
-
-function updateDateField(status, mode) {
-	const input = document.getElementById(`${mode}Financial-date`);
-	const label = document.getElementById(`${mode}Financial-dateLbl`);
-	const requiresDate = REQUIRED_DATE_STATUSES.includes(status)
-
-	const canEdit = mode === 'new'
-		|| (
-			viewFinancialEditing &&
-			EDITABLE_DATE_ORIGINS.includes(originalFinancialValues.payment_status)
-		);
-
-	label.textContent = requiresDate ? 'Data de Pagamento*:' : 'Data de Pagamento:';
-	input.disabled = !(requiresDate && canEdit);
-
-	if (!requiresDate && canEdit)
-		input.value = '';
-}
-
-async function refundFinancial() {
-	const id = document.getElementById('viewFinancial-id').value;
-	
-	const confirmed = await openConfirm('Confirmar estorno?', 'Tem certeza que deseja estornar esse lançamento? Será criado um lançamento de estorno com o valor de oposto.');
-	
-	if (!confirmed)
-		return;
-
-	const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-	fetch(`/refund/${id}`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
-		.then(res => handleResponse(res, 'Lançamento estornado com sucesso!'))
-		.catch(handleError);
-}
-
+// === TOMSELECT DATA ===
 const availableTypes = JSON.parse(
 	document.getElementById('newFinancial-type').dataset.types
 );
@@ -167,6 +32,7 @@ const availableMonths = JSON.parse(
 	document.getElementById('filter-month').dataset.months
 );
 
+// === TOMSELECT DEFINITIONS ===
 const monthFilter = new TomSelect('#filter-month', {
 	options: [
 		{id: '', title: 'Todos'},
@@ -223,7 +89,7 @@ const newFinancialStatusSelector = new TomSelect('#newFinancial-status', {
 	create: false,
 	maxItems: 1,
 	maxOptions: null,
-	onChange: (value) => {updateDateField(value, 'new'); saveButton('new')},
+	onChange: (value) => {updateDateField(value, 'new'); toggleSaveFinancialButton('new')},
 	sortField: [
 		{
 			field: 'title',
@@ -248,12 +114,6 @@ const newFinancialOrderSelector = new TomSelect('#newFinancial-order', {
 		}
 	]
 });
-
-let viewFinancialTypeSelector = null;
-let viewFinancialCategorySelector = null;
-let viewFinancialStatusSelector = null;
-let viewFinancialOrderSelector = null;
-const viewFinancialForm = document.getElementById('viewFinancial-form');
 
 if (viewFinancialForm) {
 	viewFinancialTypeSelector = new TomSelect('#viewFinancial-type', {
@@ -297,7 +157,7 @@ if (viewFinancialForm) {
 		create: false,
 		maxItems: 1,
 		maxOptions: null,
-		onChange: (value) => {updateDateField(value, 'view'); saveButton('view')},
+		onChange: (value) => {updateDateField(value, 'view'); toggleSaveFinancialButton('view')},
 		sortField: [
 			{
 				field: 'title',
@@ -329,17 +189,97 @@ if (viewFinancialForm) {
 	viewFinancialOrderSelector.disable();
 }
 
-function saveNewFinancial() {
-	submitModal('newFinancial-form', 'Lançamento criado com sucesso!');
+// === HELPERS ===
+function updateCategoryOptions(type, mode) {
+	const catSelector = mode === 'new'
+		? newFinancialCategorySelector
+		: viewFinancialCategorySelector;
+
+	const allowedCats = availableCategories[type] || [];
+	catSelector.clear();
+	catSelector.clearOptions();
+	catSelector.addOptions(allowedCats);
+	catSelector.refreshOptions(false);
+
+	if (allowedCats.length) {
+		catSelector.enable();
+		setPlaceholder(catSelector, "Categoria da transação...")
+	}
+	else {
+		catSelector.disable();
+		setPlaceholder(catSelector, "Selecione o tipo primeiro")
+	}
 }
 
-function updateFinancial() {
-	const financial_id = document.getElementById('viewFinancial-id').value;
+function updateDateField(status, mode) {
+	const input = document.getElementById(`${mode}Financial-date`);
+	const label = document.getElementById(`${mode}Financial-dateLbl`);
+	const requiresDate = REQUIRED_DATE_STATUSES.includes(status)
 
-	submitModal('viewFinancial-form', `Lançamento #${financial_id} atualizado com sucesso!`);
+	const canEdit = mode === 'new'
+		|| (
+			viewFinancialEditing &&
+			EDITABLE_DATE_ORIGINS.includes(originalFinancialValues.payment_status)
+		);
+
+	label.textContent = requiresDate ? 'Data de Pagamento*:' : 'Data de Pagamento:';
+	input.disabled = !(requiresDate && canEdit);
+
+	if (!requiresDate && canEdit)
+		input.value = '';
 }
 
-function saveButton(mode) {
+function setPlaceholder(selector, text) {
+	selector.settings.placeholder = text;
+	selector.control_input.setAttribute('placeholder', text);
+	selector.inputState();
+}
+
+function fillOrderValue(orderId, mode) {
+	const selector = mode === 'new'
+		? newFinancialOrderSelector
+		: viewFinancialOrderSelector;
+
+	const input = document.getElementById(`${mode}Financial-value`);
+	const order = selector.options[orderId];
+
+	const price = order ? Number(order.price) : NaN;
+
+	if (!order || Number.isNaN(price)) {
+		input.value = '';
+		input.readOnly = false;
+	}
+	else {
+		input.value = price.toFixed(2)
+		input.readOnly = true;
+	}
+	
+	input.dispatchEvent(new Event('input', {bubbles: true}));
+}
+
+function activateExtraField(cat, mode) {
+	const orderSelector = mode === 'new'
+		? newFinancialOrderSelector
+		: viewFinancialOrderSelector;
+
+	const showOrder = document.getElementById(`${mode}Financial-showOrder`);
+	const showSupplier = document.getElementById(`${mode}Financial-showSupplier`);
+	const supplierInput = document.getElementById(`${mode}Financial-supplier`);
+
+	const orderCat = 'ORDER_PAYMENT';
+	const supplierCat = 'MARKET';
+
+	showOrder.style.display = cat === orderCat ? 'inline-block' : 'none';
+	showSupplier.style.display = cat === supplierCat ? 'inline-block' : 'none';
+
+	if (cat !== orderCat)
+		orderSelector.clear();
+
+	if (cat !== supplierCat)
+		supplierInput.value = '';
+}
+
+function toggleSaveFinancialButton(mode) {
 	const statusSelector = mode === 'new'
 		? newFinancialStatusSelector
 		: viewFinancialStatusSelector;
@@ -348,7 +288,7 @@ function saveButton(mode) {
 		? newFinancialCategorySelector
 		: viewFinancialCategorySelector;
 
-	const ids = [
+	const fields = [
 		`${mode}Financial-status`,
 		`${mode}Financial-type`,
 		`${mode}Financial-category`,
@@ -356,15 +296,81 @@ function saveButton(mode) {
 	];
 
 	if (REQUIRED_DATE_STATUSES.includes(statusSelector.getValue()))
-		ids.push(`${mode}Financial-date`);
+		fields.push(`${mode}Financial-date`);
 
 	if (categorySelector.getValue() === 'MARKET')
-		ids.push(`${mode}Financial-supplier`);
+		fields.push(`${mode}Financial-supplier`);
 
 	if (categorySelector.getValue() === 'ORDER_PAYMENT')
-		ids.push(`${mode}Financial-order`);
+		fields.push(`${mode}Financial-order`);
 
-	toggleSaveButton(ids, `${mode}Financial-saveBtn`);
+	toggleSaveButton(fields, `${mode}Financial-saveBtn`);
+}
+
+// === CRUD ===
+async function refundFinancial() {
+	const id = document.getElementById('viewFinancial-id').value;
+	
+	const confirmed = await openConfirm('Confirmar estorno?', 'Tem certeza que deseja estornar esse lançamento? Será criado um lançamento de estorno com o valor de oposto.');
+	
+	if (!confirmed)
+		return;
+
+	const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+	fetch(`/refund/${id}`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
+		.then(res => handleResponse(res, 'Lançamento estornado com sucesso!'))
+		.catch(handleError);
+}
+
+function saveNewFinancial() {
+	submitModal('newFinancial-form', 'Lançamento criado com sucesso!');
+}
+
+function updateFinancial() {
+	const financialId = document.getElementById('viewFinancial-id').value;
+
+	submitModal('viewFinancial-form', `Lançamento #${financialId} atualizado com sucesso!`);
+}
+
+// === OPEN MODAL ===
+function fillFinancialViewModal(data) {
+	viewFinancialEditing = false;
+	document.getElementById('viewFinancial-id').value = data.payment_id;
+
+	viewFinancialTypeSelector.setValue(data.payment_type, true);
+	viewFinancialCategorySelector.clear(true);
+	viewFinancialCategorySelector.clearOptions();
+	viewFinancialCategorySelector.addOptions(availableCategories[data.payment_type] || []);
+	viewFinancialCategorySelector.setValue(data.payment_category, true);
+
+	activateExtraField(data.payment_category, 'view');
+
+	viewFinancialStatusSelector.clear(true);
+	viewFinancialStatusSelector.clearOptions();
+	availableFinancialStatuses
+		.filter(s => data.allowed_status.includes(s.id))
+		.forEach(s => viewFinancialStatusSelector.addOption(s));
+	viewFinancialStatusSelector.setValue(data.payment_status, true);
+
+	viewFinancialOrderSelector.setValue(data.order_id ?? '', true);
+	document.getElementById('viewFinancial-supplier').value = data.supplier ?? '';
+
+	document.getElementById('viewFinancial-description').value = data.payment_description;
+
+	const valueInput = document.getElementById('viewFinancial-value');
+	valueInput.value = Number(data.payment_value).toFixed(2);
+	valueInput.readOnly = data.payment_category === 'ORDER_PAYMENT';
+	valueInput.dispatchEvent(new Event('input', {bubbles: true}));
+
+	document.getElementById('viewFinancial-date').value = data.payment_date ?? '';
+	updateDateField(data.payment_status, 'view');
+
+	const canRefund = data.payment_status === 'PAID'
+		&& !data.refunded
+		&& data.payment_category !== 'REFUND';
+	document.getElementById('viewFinancial-refundBtn').style.display = canRefund
+		? 'inline-block'
+		: 'none'
 }
 
 function openNewFinancialModal() {
@@ -383,7 +389,7 @@ function openNewFinancialModal() {
 	activateExtraField('', 'new');
 	updateDateField('', 'new');
 
-	saveButton("new");
+	toggleSaveFinancialButton("new");
 	document.getElementById('newFinancial-modal').style.display = "flex";
 }
 
@@ -405,15 +411,24 @@ function openViewFinancialModal(id) {
 				refunded: data.refunded
 			};
 
-			fillViewModal(data);
+			fillFinancialViewModal(data);
 			resetViewFinancialModalState();
 
 			document.getElementById('viewFinancial-modal').style.display = "flex";
-			saveButton('view');
+			toggleSaveFinancialButton('view');
 		})
 		.catch(handleError);
 }
 
+function openBalance() {
+	document.getElementById('viewBalance-modal').style.display = 'flex';
+}
+
+function openMonthStatement() {
+	document.getElementById('viewStatement-modal').style.display = 'flex';
+}
+
+// === EDIT VIEW MODAL ===
 function enableEditFinancial() {
 	const status = viewFinancialStatusSelector.getValue();
 	if (status === "CANCELLED" || status === "PAID")
@@ -436,13 +451,13 @@ function enableEditFinancial() {
 	document.getElementById('viewFinancial-saveBtn').style.display = 'inline-block';
 	document.getElementById('viewFinancial-cancelBtn').style.display = 'inline-block';
 
-	saveButton('view');
+	toggleSaveFinancialButton('view');
 }
 
 function cancelEditFinancial() {
-	fillViewModal(originalFinancialValues);
+	fillFinancialViewModal(originalFinancialValues);
 	resetViewFinancialModalState();
-	saveButton('view');
+	toggleSaveFinancialButton('view');
 }
 
 function resetViewFinancialModalState() {
@@ -463,12 +478,4 @@ function resetViewFinancialModalState() {
 	
 	document.getElementById('viewFinancial-saveBtn').style.display = 'none';
 	document.getElementById('viewFinancial-cancelBtn').style.display = 'none';
-}
-
-function openBalance() {
-	document.getElementById('viewBalance-modal').style.display = 'flex';
-}
-
-function openMonthStatement() {
-	document.getElementById('viewStatement-modal').style.display = 'flex';
 }

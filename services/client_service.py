@@ -1,6 +1,6 @@
 from db import run_select
 from flask import request
-from services.routes_service import countRows
+from services.routes_service import count_rows
 from enums.table_names import Table
 
 def client_exists(name, phone, exclude_id=None):
@@ -36,7 +36,7 @@ def get_clients():
 		params.extend([search_param, search_param])
 
 
-	count = countRows(Table.Clients, where_clause, tuple(params))
+	count = count_rows(Table.Clients, where_clause, tuple(params))
 	total_pages = max((count + per_page - 1)//per_page, 1)
 	page = min(page, total_pages)
 	offset = (page - 1) * per_page

@@ -1,52 +1,19 @@
-let searchTimeout;
+const searchBar = document.getElementById('deliveries-search-bar');
 const checkbox = document.getElementById('deliveries-checkbox');
 
-function handleSearch() {
-	clearTimeout(searchTimeout);
-	
-	const query = document.getElementById('deliveries-search-bar').value;
-	const openOnly = checkbox.checked;
+const handleSearch = createSearch({
+	input: '#deliveries-search-bar',
+	url: '/search_delivery',
+	body: '#deliveriesTableBody',
+	pageUrl: '/entregas',
+	label: 'Nenhuma entrega correspondente à pesquisa: ',
+	getFilters: () => {
+		const params = new URLSearchParams();
 
-	const params = new URLSearchParams();
+		if (checkbox.checked)
+			params.set('openonly', 'true');
 
-	if (query)
-		params.set('search', query);
-
-	if (openOnly)
-		params.set('openonly', 'true');
-
-	history.replaceState({}, '', `/entregas${params.toString() ? `?${params.toString()}` : ''}`)
-
-	searchTimeout = setTimeout(() => {
-		fetchText(`/search_delivery?search=${encodeURIComponent(query)}&openonly=${openOnly}`)
-			.then(html => {
-				const tableBody = document.getElementById('deliveriesTableBody');
-
-				tableBody.innerHTML = html;
-
-				if (!html.trim() && query.trim()) {
-					const row = document.createElement('tr');
-					row.classList.add('empty-search-row');
-					
-					const cell = document.createElement('td');
-					
-					cell.colSpan = tableBody.closest('table').querySelectorAll('thead th').length;
-					cell.classList.add('text-center', 'py-4');
-					
-					const queryStyle = document.createElement('span');
-					queryStyle.textContent = query;
-					queryStyle.classList.add('search-query');
-
-					cell.append('Nenhuma entrega correspondente à pesquisa: ', queryStyle);
-
-					row.appendChild(cell);
-					tableBody.appendChild(row);
-				}
-			})
-			.catch(handleError);
-	}, 300);
-}
-
-checkbox.addEventListener('change', () => {
-	handleSearch();
-})
+		return params;
+	}
+});
+checkbox.addEventListener('change', handleSearch)

@@ -468,7 +468,23 @@ body.fit-viewport .dashboard-container {
 	cursor: not-allowed;
 }
 
-/* Tom Select */
+.search-query {
+	font-style: italic;
+	text-decoration: underline;
+}
+
+.home-order-mini-table .empty-search-row td,
+.mini-table .empty-search-row td {
+    display: table-cell;
+    width: auto;
+    text-align: center;
+    white-space: normal;
+	color: var(--text-header);
+	border: none;
+	padding-top: 10%;
+}
+
+/* === Tom Select === */
 .ts-wrapper.single .ts-control,
 .ts-wrapper.multi .ts-control,
 .ts-wrapper .ts-control {
@@ -558,20 +574,4 @@ html .ts-wrapper.single .ts-control::after {
 	opacity: 0;
 	margin: 0 !important;
 	padding: 0 !important;
-}
-
-.search-query {
-	font-style: italic;
-	text-decoration: underline;
-}
-
-.home-order-mini-table .empty-search-row td,
-.mini-table .empty-search-row td {
-    display: table-cell;
-    width: auto;
-    text-align: center;
-    white-space: normal;
-	color: var(--text-header);
-	border: none;
-	padding-top: 10%;
 }

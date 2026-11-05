@@ -6,7 +6,7 @@ from flask import (Blueprint, jsonify, redirect, render_template, request,
 from db import run_select, run_transaction
 from enums.table_names import Table
 from services.catalogue_service import basket_exists, get_catalogue
-from services.routes_service import getAvailableGroups, getAvailableItems
+from services.routes_service import get_available_groups, get_available_items
 from services.validate_service import (basket_has_open_orders,
                                        validate_basket_items, validate_id,
                                        validate_name, validate_price)
@@ -17,8 +17,8 @@ catalogue_bp = Blueprint("catalogue_bp", __name__)
 def catalogue():
 	columns, rows, page, total_pages, search = get_catalogue()
 
-	available_items = getAvailableItems()
-	available_groups = getAvailableGroups()
+	available_items = get_available_items()
+	available_groups = get_available_groups()
 
 	return render_template("catalogue/catalogue.html",
 						columns=columns,
@@ -111,8 +111,10 @@ def basket_data(id):
 		FROM CELEBRAR_BASKET_ITEMS bi
 		LEFT JOIN CELEBRAR_STORAGE s
 		ON bi.item_id = s.item_id
+		AND s.isDeleted = 0
 		LEFT JOIN CELEBRAR_GROUPS g
 		ON bi.group_id = g.group_id
+		AND g.isDeleted = 0
 		WHERE bi.basket_id = ?
 		ORDER BY COALESCE(s.item_name, g.group_name)
 	""", (id,))

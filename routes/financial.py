@@ -1,40 +1,40 @@
 from flask import (Blueprint, jsonify, redirect, render_template, request,
                    session, url_for)
 
-from db import run_select, run_transaction
-from enums.financial_status import financialStatus
-from enums.movement_types import (financialMovementCategories,
-                                  financialMovementTypes)
+from db import get_today, run_select, run_transaction
+from enums.financial_status import FinancialStatus
+from enums.movement_types import (FinancialMovementCategories,
+                                  FinancialMovementTypes)
 from enums.table_names import Table
 from services.errors import StaleDataError
 from services.financial_service import (get_balance, get_financial,
                                         get_monthly_statement, get_order_total)
-from services.order_service import get_today
-from services.routes_service import (getAvailableFinancialCategoriesByType,
-                                     getAvailableFinancialStatus,
-                                     getAvailableFinancialTypes,
-                                     getAvailableMonths,
-                                     getAvailableOrdersFinancial)
+from services.routes_service import (get_available_financial_categories,
+                                     get_available_financial_types,
+                                     get_available_months,
+                                     get_available_orders_financial,
+                                     get_available_status_financial)
 from services.status_transitions import get_allowed_status
 from services.validate_service import (validate_financial_category,
                                        validate_financial_status,
                                        validate_financial_type, validate_id,
                                        validate_name, validate_opt_text,
-                                       validate_pay_date, validate_price,
+                                       validate_paid_order, validate_pay_date,
+                                       validate_price,
                                        validate_status_transition)
 
 financial_bp = Blueprint("financial_bp", __name__)
-financial_mode = "FINANCIAL"
+FINANCIAL_MODE = "FINANCIAL"
 
 @financial_bp.route("/financeiro")
 def financial():
 	columns, rows, page, total_pages, search = get_financial()
 
-	available_orders = getAvailableOrdersFinancial()
-	statuses = getAvailableFinancialStatus()
-	available_types = getAvailableFinancialTypes()
-	cat_by_type = getAvailableFinancialCategoriesByType()
-	available_months = getAvailableMonths()
+	available_orders = get_available_orders_financial()
+	statuses = get_available_status_financial()
+	available_types = get_available_financial_types()
+	cat_by_type = get_available_financial_categories()
+	available_months = get_available_months()
 	balance_values = get_balance()
 	statement_rows = get_monthly_statement()
 
@@ -75,16 +75,18 @@ def new_financial():
 		order_id = None
 		supplier = None
 
-		if category == financialMovementCategories.ORDER_PAYMENT.name:
+		if category == FinancialMovementCategories.ORDER_PAYMENT.name:
 			order_id = request.form.get("order", type=int)
 			if order_id is None:
 				return "Pedido inválido", 400
+			if validate_paid_order(order_id):
+				return "Esse pedido já foi pago", 400
 			value = get_order_total(order_id)
 
-		elif category == financialMovementCategories.MARKET.name:
+		elif category == FinancialMovementCategories.MARKET.name:
 			supplier = validate_name(request.form.get("supplier"))
 
-		backup_desc = str(financialMovementCategories[category].value)
+		backup_desc = str(FinancialMovementCategories[category].value)
 		if order_id:
 			backup_desc += f" [Pedido #{order_id}]"
 		elif supplier:
@@ -133,7 +135,8 @@ def financial_data(id):
 	financial["payment_date"] = pay_date.strftime("%Y-%m-%d") if pay_date else ""
 	financial["payment_value"] = str(financial["payment_value"])
 
-	financial["allowed_status"] = sorted(get_allowed_status(financial["payment_status"], financial_mode))
+	financial["allowed_status"] = sorted(get_allowed_status(financial["payment_status"], FINANCIAL_MODE))
+	financial["available_orders"] = get_available_orders_financial(id)
 
 	_, refund_rows = run_select("""
 	SELECT 1
@@ -172,27 +175,29 @@ def update_financial():
 		current_category = data_rows[0][6]
 			
 
-		if current_status == financialStatus.CANCELLED.name:
+		if current_status == FinancialStatus.CANCELLED.name:
 			return "Um lançamento cancelado não pode ser alterado.", 400
 		
-		if current_status == financialStatus.PENDING.name:
+		if current_status == FinancialStatus.PENDING.name:
 			fin_type = validate_financial_type(request.form["type"])
 			category = validate_financial_category(request.form["category"], fin_type)
 			status = validate_financial_status(request.form["status"])
 			value = validate_price(request.form["value"])
 			pay_date = validate_pay_date(request.form.get("date"), status)
-			validate_status_transition(current_status, status, financial_mode)
+			validate_status_transition(current_status, status, FINANCIAL_MODE)
 
 			order_id = None
 			supplier = None
 
-			if category == financialMovementCategories.ORDER_PAYMENT.name:
+			if category == FinancialMovementCategories.ORDER_PAYMENT.name:
 				order_id = request.form.get("order", type=int)
 				if order_id is None:
 					return "Pedido inválido", 400
+				if validate_paid_order(order_id, id):
+					return "Esse pedido já foi pago", 400
 				value = get_order_total(order_id)
 
-			elif category == financialMovementCategories.MARKET.name:
+			elif category == FinancialMovementCategories.MARKET.name:
 				supplier = validate_name(request.form.get("supplier"))
 
 		else:
@@ -204,7 +209,7 @@ def update_financial():
 			order_id = current_order
 			supplier = current_supplier
 		
-		backup_desc = str(financialMovementCategories[category].value)
+		backup_desc = str(FinancialMovementCategories[category].value)
 		if order_id:
 			backup_desc += f" [Pedido #{order_id}]"
 		elif supplier:
@@ -260,7 +265,7 @@ def refund_financial(id):
 			AND payment_status = ?
 			AND payment_category <> ?
 			AND origin_payment_id IS NULL
-			""", (id, financialStatus.PAID.name, financialMovementCategories.REFUND.name))
+			""", (id, FinancialStatus.PAID.name, FinancialMovementCategories.REFUND.name))
 			
 			original = cursor.fetchone()
 			
@@ -278,9 +283,9 @@ def refund_financial(id):
 				raise StaleDataError("Esse lançamento já foi estornado")
 
 			order_id, fin_type, value, _, supplier = original
-			opposite = (financialMovementTypes.EXPENSE.name
-			            if fin_type == financialMovementTypes.INCOME.name
-						else financialMovementTypes.INCOME.name)
+			opposite = (FinancialMovementTypes.EXPENSE.name
+			            if fin_type == FinancialMovementTypes.INCOME.name
+						else FinancialMovementTypes.INCOME.name)
 
 			desc = f"Estorno do lançamento #{id}"
 			if order_id:
@@ -294,7 +299,7 @@ def refund_financial(id):
 			payment_status, supplier, payment_category, origin_payment_id)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 			""", (order_id, opposite, desc, value,
-			      get_today(), financialStatus.PAID.name, supplier, financialMovementCategories.REFUND.name, id))
+			      get_today(), FinancialStatus.PAID.name, supplier, FinancialMovementCategories.REFUND.name, id))
 
 	except StaleDataError as e:
 		return str(e), 409

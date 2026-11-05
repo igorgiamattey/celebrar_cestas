@@ -1,30 +1,30 @@
 from enum import Enum
 
-class storageMovementTypes(Enum):
+class StorageMovementTypes(Enum):
 	DECREASE = "Saída"
 	INCREASE = "Entrada"
 	DECREASE_ORDER = "Saída (Pedido)"
 	INCREASE_ORDER = "Entrada (Pedido)"
 
-class financialMovementTypes(Enum):
+class FinancialMovementTypes(Enum):
 	EXPENSE = "Saída"
 	INCOME = "Entrada"
 
-class financialMovementCategories(Enum):
+class FinancialMovementCategories(Enum):
 	ORDER_PAYMENT = "Pagamento de pedido"
 	MARKET = "Compras"
 	OTHER = "Outros"
 	REFUND = "Estorno"
 
 CAT_BY_TYPE = {
-	financialMovementTypes.INCOME.name: [
-		financialMovementCategories.ORDER_PAYMENT,
-		financialMovementCategories.REFUND,
-		financialMovementCategories.OTHER
+	FinancialMovementTypes.INCOME.name: [
+		FinancialMovementCategories.ORDER_PAYMENT,
+		FinancialMovementCategories.REFUND,
+		FinancialMovementCategories.OTHER
 	],
-	financialMovementTypes.EXPENSE.name: [
-		financialMovementCategories.MARKET,
-		financialMovementCategories.REFUND,
-		financialMovementCategories.OTHER
+	FinancialMovementTypes.EXPENSE.name: [
+		FinancialMovementCategories.MARKET,
+		FinancialMovementCategories.REFUND,
+		FinancialMovementCategories.OTHER
 	]
 }

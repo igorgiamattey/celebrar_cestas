@@ -1,10 +1,10 @@
 from enum import Enum
 
-class financialStatus(Enum):
+class FinancialStatus(Enum):
 	PENDING = "Pendente"
 	PAID = "Pago"
 	CANCELLED = "Cancelado"
 
 DATE_REQUIRED_STATUSES = [
-	financialStatus.PAID.name,
+	FinancialStatus.PAID.name,
 ]

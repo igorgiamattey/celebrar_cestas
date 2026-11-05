@@ -5,15 +5,15 @@ from flask import (Blueprint, flash, jsonify, redirect, render_template,
                    request, session, url_for)
 
 from db import run_select, run_transaction
-from enums.delivery_status import OPEN_DELIVERY_STATUS, deliveryStatus
-from enums.order_status import orderStatus
+from enums.delivery_status import OPEN_DELIVERY_STATUS, DeliveryStatus
+from enums.order_status import OrderStatus
 from enums.table_names import Table
 from services.deliveries_service import courier_exists, get_deliveries
 from services.errors import StaleDataError
-from services.routes_service import (getAvailableAddresses,
-                                     getAvailableCouriers, getAvailableDates,
-                                     getAvailableDeliveryStatus,
-                                     getAvailableOrders)
+from services.routes_service import (get_available_addresses,
+                                     get_available_couriers, get_available_dates,
+                                     get_available_status_delivery,
+                                     get_available_orders)
 from services.status_transitions import get_allowed_status
 from services.validate_service import (courier_has_open_deliveries,
                                        validate_date_id,
@@ -23,17 +23,17 @@ from services.validate_service import (courier_has_open_deliveries,
                                        validate_status_transition)
 
 deliveries_bp = Blueprint("deliveries_bp", __name__)
-delivery_mode = "DELIVERY"
+DELIVERY_MODE = "DELIVERY"
 
 @deliveries_bp.route("/entregas")
 def deliveries():
 	columns, rows, page, total_pages, search = get_deliveries()
 
-	available_couriers = getAvailableCouriers()
-	available_dates = getAvailableDates()
-	available_orders = getAvailableOrders()
-	statuses = getAvailableDeliveryStatus()
-	available_addresses = getAvailableAddresses()
+	available_couriers = get_available_couriers()
+	available_dates = get_available_dates()
+	available_orders = get_available_orders()
+	statuses = get_available_status_delivery()
+	available_addresses = get_available_addresses()
 
 	return render_template("deliveries/deliveries.html",
 						columns=columns,
@@ -72,7 +72,7 @@ def new_delivery():
 		if not validate_date_id(date_id):
 			return "Data inválida", 400
 		delivery_date = date.fromisoformat(date_id)
-		status = deliveryStatus.PENDING.name
+		status = DeliveryStatus.PENDING.name
 		orders = validate_delivery_orders(orders, delivery_date)
 		
 		with run_transaction() as cursor:			
@@ -95,7 +95,7 @@ def new_delivery():
 				AND delivery_id IS NULL
 				AND order_status = ?
 				AND delivery_date = ?
-				""", (delivery_id, order, orderStatus.READY.name, delivery_date))
+				""", (delivery_id, order, OrderStatus.READY.name, delivery_date))
 
 				if cursor.rowcount != 1:
 					raise StaleDataError("Um ou mais pedidos não estão mais disponíveis para entrega")
@@ -148,10 +148,10 @@ def delivery_data(id):
 		for o_row in order_rows
 	]
 	
-	delivery["allowed_status"] = sorted(get_allowed_status(delivery["delivery_status"], delivery_mode))
+	delivery["allowed_status"] = sorted(get_allowed_status(delivery["delivery_status"], DELIVERY_MODE))
 
-	delivery["available_orders"] = getAvailableOrders(id)
-	delivery["available_dates"] = getAvailableDates(id)
+	delivery["available_orders"] = get_available_orders(id)
+	delivery["available_dates"] = get_available_dates(id)
 
 	return jsonify(delivery)
 
@@ -168,7 +168,7 @@ def update_delivery():
 			if courier is None or not validate_id(Table.Couriers, "courier_id", courier):
 				return "Entregador inválido", 400
 
-		if courier is None and status in (deliveryStatus.TRANSIT.name, deliveryStatus.DELIVERED.name):
+		if courier is None and status in (DeliveryStatus.TRANSIT.name, DeliveryStatus.DELIVERED.name):
 			return "Informe o entregador antes de iniciar a entrega.", 400
 	except KeyError:
 		return "Dados da entrega inválidos", 400
@@ -193,11 +193,11 @@ def update_delivery():
 		return "Uma entrega encerrada não pode ser alterada.", 400
 
 	try:
-		validate_status_transition(current_status, status, delivery_mode)
+		validate_status_transition(current_status, status, DELIVERY_MODE)
 		orders = []
 		delivery_date = current_delivery_date
 
-		if current_status == deliveryStatus.PENDING.name and status != deliveryStatus.CANCELLED.name:
+		if current_status == DeliveryStatus.PENDING.name and status != DeliveryStatus.CANCELLED.name:
 			date_id = request.form["date"]
 			if not validate_date_id(date_id, id):
 				return "Data inválida", 400
@@ -232,8 +232,8 @@ def update_delivery():
 			if cursor.rowcount != 1:
 				raise StaleDataError("A entrega já foi alterada. Recarregue a página.")
 
-			if status == deliveryStatus.CANCELLED.name:
-				cursor.execute(f"""
+			if status == DeliveryStatus.CANCELLED.name:
+				cursor.execute("""
 				UPDATE CELEBRAR_ORDERS
 				SET delivery_id = NULL
 				WHERE delivery_id = ?
@@ -242,19 +242,19 @@ def update_delivery():
 				if cursor.rowcount > 0:
 					notices.append(f"{cursor.rowcount} {'pedido removido' if cursor.rowcount == 1 else 'pedidos removidos'} da entrega")
 
-			elif status == deliveryStatus.DELIVERED.name:
-				cursor.execute(f"""
+			elif status == DeliveryStatus.DELIVERED.name:
+				cursor.execute("""
 				UPDATE CELEBRAR_ORDERS
 				SET order_status = ?
 				WHERE delivery_id = ?
 				AND isDeleted = 0
 				AND order_status = ?
-				""", (orderStatus.DELIVERED.name, id, orderStatus.READY.name))
+				""", (OrderStatus.DELIVERED.name, id, OrderStatus.READY.name))
 
 				if cursor.rowcount > 0:
 					notices.append(f"{cursor.rowcount} {'pedido marcado como entregue' if cursor.rowcount == 1 else 'pedidos marcados como entregues'}")
 				
-			elif current_status == deliveryStatus.PENDING.name:
+			elif current_status == DeliveryStatus.PENDING.name:
 				placeholders = ", ".join("?" * len(orders))
 
 				cursor.execute(f"""
@@ -274,7 +274,7 @@ def update_delivery():
 					AND order_status = ?
 					AND delivery_date = ?
 					AND (delivery_id is NULL OR delivery_id = ?)
-					""", (id, order, orderStatus.READY.name, delivery_date, id))
+					""", (id, order, OrderStatus.READY.name, delivery_date, id))
 
 					if cursor.rowcount != 1:
 						raise StaleDataError("Um ou mais pedidos não estão mais disponíveis para entrega")
@@ -302,6 +302,8 @@ def save_courier():
 	except ValueError as e:
 		return str(e), 400
 
+	courier_id = courier_id or None
+	
 	if courier_exists(name, phone, courier_id):
 		return "Entregador já cadastrado", 400
 

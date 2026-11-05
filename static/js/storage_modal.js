@@ -1,13 +1,13 @@
-let originalItemsValues = {};
-let groupItems = []
+// === GLOBAL VARIABLES ===
+let originalItemValues = {};
+let groupItems = [];
 
-const outMove = "DECREASE"
-const inMove = "INCREASE"
-
+// === TOMSELECT DATA ===
 const availableItems = JSON.parse(
 	document.getElementById('mngGroup-itemSelect').dataset.items
 );
 
+// === TOMSELECT DEFINITIONS ===
 const mngGroupsGroupSelector = new TomSelect('#mngGroup-groupSelect', {
 	allowEmptyOption: true, 
 	create: false,
@@ -31,10 +31,154 @@ const groupItemSelector = new TomSelect('#mngGroup-itemSelect', {
 	]
 });
 
+// === HELPERS ===
+function toggleSaveStorageButton(mode, area='item') {
+	let fields = [];
+	if (area === 'item') {
+		fields = [
+			`${mode}Item-name`,
+			`${mode}Item-amount`,
+			`${mode}Item-unit`,
+			`${mode}Item-minimal`,
+			`${mode}Item-cost`
+		];
+	}
+	else if (area === 'move' && mode === 'new') {
+		fields = [
+			'newMove-type',
+			'newMove-quantity'
+		];
+	}
+	else
+		return;
+	area = area.charAt(0).toUpperCase() + area.slice(1);
+
+	const button = `${mode}${area}-saveBtn`;
+	
+	toggleSaveButton(
+			fields,
+			button
+	)
+}
+
+// === MISSING ITEM ===
+function toggleMissingButton() {
+	fetchJson('/missing_items')
+		.then(data => {
+			const list = data.missing_items;
+			const button = document.getElementById('missItem-btn');
+			button.disabled = list.length === 0;
+			button.title = (list.length === 0) ? "Nenhum item está faltando ou próximo de acabar" : "";
+		})
+		.catch(err => {
+			console.error("Failed to fetch missing items: ", err);
+			showSnackbar('Não foi possível carregar os itens faltantes.', 'error');
+		});		
+}
+
+// === CRUD ===
+async function saveMove() {
+	const id = document.getElementById('stockMovements-modal').dataset.id;
+
+	const moveType = document.getElementById('newMove-type').value;
+	const moveQtyInput = document.getElementById('newMove-quantity').value;
+	const moveObs = document.getElementById('newMove-obs').value;
+
+	const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+	const moveQty = normaliseComma(moveQtyInput);
+	
+	try {
+		await fetchJson(`/new_movement/${id}`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-CSRFToken': csrfToken
+			},
+			body: JSON.stringify({
+				type: moveType,
+				quantity: moveQty,
+				obs: moveObs
+			})
+		});
+	}
+	catch (err) {
+		handleError(err);
+		return;
+	}
+
+	queueSnackbar('Movimentação registrada!', 'success');
+	window.location.reload()
+}
+
+async function deleteItem() {
+	const id = document.getElementById('viewItem-id').value;
+	
+	const confirmed = await openConfirm('Excluir item?', 'Tem certeza que deseja excluir este item?');
+	
+	if (confirmed) {
+		const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+		fetch(`/delete_item/${id}`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
+			.then(res => handleResponse(res, 'Item excluído com sucesso!'))
+			.catch(handleError);
+	}
+}
+
+function saveNewItem() {
+	const amount = document.getElementById('newItem-amount').value;
+	const minimal = document.getElementById('newItem-minimal').value;
+	document.getElementById('newItem-amount').value = normaliseComma(amount);
+	document.getElementById('newItem-minimal').value = normaliseComma(minimal);
+	
+	submitModal('newItem-form', 'Item criado com sucesso!');
+}
+
+function updateItem() {
+	const amount = document.getElementById('viewItem-amount').value;
+	const minimal = document.getElementById('viewItem-minimal').value;
+	document.getElementById('viewItem-amount').value = normaliseComma(amount);
+	document.getElementById('viewItem-minimal').value = normaliseComma(minimal);
+	
+	const itemName = document.getElementById('viewItem-name').value;
+	
+	submitModal('viewItem-form', `Item "${itemName}" atualizado com sucesso`);
+}
+
+// === OPEN MODAL ===
+function fillItemViewModal(data) {
+	document.getElementById('viewItem-id').value = data.item_id;
+	document.getElementById('viewItem-name').value = data.item_name;
+	document.getElementById('viewItem-amount').value = data.item_qty;
+	document.getElementById('viewItem-unit').value = data.item_unit;
+	document.getElementById('viewItem-minimal').value = data.item_min;
+	document.getElementById('viewItem-cost').value = data.item_cost;
+}
+
 function openNewItemModal() {
 	document.getElementById('newItem-form').reset();
 	document.getElementById('newItem-modal').style.display = "flex";
-	toggleSaveButton(['newItem-name','newItem-amount','newItem-unit','newItem-minimal','newItem-cost'], 'newItem-saveBtn');
+	toggleSaveStorageButton('new');
+}
+
+function openViewItemModal(id) {
+	id = parseInt(id, 10);
+	fetchJson(`/item_data/${id}`)
+		.then(data => {
+			originalItemValues = {
+				item_id: data.item_id,
+				item_name: data.item_name,
+				item_qty: data.item_qty,
+				item_unit: data.item_unit,
+				item_min: data.item_min,
+				item_cost: data.item_cost,
+			}
+
+			fillItemViewModal(data);
+			resetViewItemModalState();
+			document.getElementById('viewItem-modal').style.display = "flex";
+
+			toggleSaveStorageButton('view');
+		})
+		.catch(handleError);
 }
 
 function openManageGroupsModal() {
@@ -48,34 +192,7 @@ function openManageGroupsModal() {
 	groupItemSelector.clear();
 
 	document.getElementById('mngGroup-modal').style.display = "flex";
-
-	toggleSaveButton(['newItem-name','newItem-amount','newItem-unit','newItem-minimal','newItem-cost'], 'newItem-saveBtn');
 }
-
-document.getElementById('mngGroup-groupSelect').addEventListener('change', function() {
-	const groupId = this.value;
-
-	if (!groupId) {
-		document.getElementById('mngGroup-name').value = "";
-		document.getElementById('mngGroup-deleteBtn').style.display = 'none';
-		groupItems = [];
-		renderGroupItems();
-		return;
-	}
-
-	fetchJson(`/group_data/${groupId}`)
-		.then(data => {
-			document.getElementById('mngGroup-name').value = data.group_name;
-			document.getElementById('mngGroup-deleteBtn').style.display = 'inline-block';
-
-			groupItems = data.items;
-			renderGroupItems();
-		})
-		.catch(err => {
-			console.error('Failed to load group data:', err);
-			showSnackbar('Não foi possível carregar os dados do grupo.', 'error');
-		});
-});
 
 function openMissingItemModal() {
 	fetchJson('/missing_items')
@@ -89,37 +206,10 @@ function openMissingItemModal() {
 		});		
 }
 
-function openViewItemModal(id) {
-	id = parseInt(id, 10);
-	fetchJson(`/item_data/${id}`)
-		.then(data => {
-			document.getElementById('viewItem-id').value = data.item_id;
-			document.getElementById('viewItem-name').value = data.item_name;
-			document.getElementById('viewItem-amount').value = data.item_qty;
-			document.getElementById('viewItem-unit').value = data.item_unit;
-			document.getElementById('viewItem-minimal').value = data.item_min;
-			document.getElementById('viewItem-cost').value = data.item_cost;
-
-			originalItemsValues = {
-				item_name: data.item_name,
-				item_qty: data.item_qty,
-				item_unit: data.item_unit,
-				item_min: data.item_min,
-				item_cost: data.item_cost,
-			}
-
-			resetViewItemModalState();
-			document.getElementById('viewItem-modal').style.display = "flex";
-			toggleSaveButton(['viewItem-name','viewItem-amount','viewItem-unit','viewItem-minimal','viewItem-cost'], 'viewItem-saveBtn');
-		})
-		.catch(handleError);
-}
-
 async function openMoveModal(id) {
 	document.getElementById('stockMovements-modal').dataset.id = id;
 	
 	resetNewMoveModalState()
-	toggleSaveButton(['newMove-type','newMove-quantity'], 'newMove-saveBtn')
 	document.getElementById('stockMovements-modal').style.display = "flex";
 	
 	const content = document.getElementById('stockMovements-content');
@@ -184,6 +274,7 @@ async function openMoveModal(id) {
 	}
 }
 
+// === EDIT VIEW MODAL ===
 function enableEditItem() {
 	document.getElementById('viewItem-name').disabled = false;
 	document.getElementById('viewItem-unit').disabled = false;
@@ -194,17 +285,13 @@ function enableEditItem() {
 	document.getElementById('viewItem-saveBtn').style.display = 'inline-block';
 	document.getElementById('viewItem-cancelBtn').style.display = 'inline-block';
 
-	toggleSaveButton(['viewItem-name','viewItem-amount','viewItem-unit','viewItem-minimal','viewItem-cost'], 'viewItem-saveBtn');
+	toggleSaveStorageButton('view');
 }
 
 function cancelEditItem() {
-	document.getElementById('viewItem-name').value = originalItemsValues.item_name;
-	document.getElementById('viewItem-amount').value = originalItemsValues.item_qty;
-	document.getElementById('viewItem-unit').value = originalItemsValues.item_unit;
-	document.getElementById('viewItem-minimal').value = originalItemsValues.item_min;
-	document.getElementById('viewItem-cost').value = originalItemsValues.item_cost;
-
+	fillItemViewModal(originalItemValues);
 	resetViewItemModalState();
+	toggleSaveStorageButton('view');
 }
 
 function enableAddMove() {
@@ -214,51 +301,6 @@ function enableAddMove() {
 
 function cancelAddMove() {
 	resetNewMoveModalState()
-}
-
-async function saveMove() {
-	const id = document.getElementById('stockMovements-modal').dataset.id;
-
-	move_type = document.getElementById('newMove-type').value;
-	move_qty = document.getElementById('newMove-quantity').value;
-	move_obs = document.getElementById('newMove-obs').value;
-
-	const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-	
-	try {
-		await fetchJson(`/new_movement/${id}`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				'X-CSRFToken': csrfToken
-			},
-			body: JSON.stringify({
-				type: move_type,
-				quantity: move_qty,
-				obs: move_obs
-			})
-		});
-	}
-	catch (err) {
-		handleError(err);
-		return;
-	}
-
-	queueSnackbar('Movimentação registrada!', 'success');
-	window.location.reload()
-}
-
-async function deleteItem() {
-	const id = document.getElementById('viewItem-id').value;
-	
-	const confirmed = await openConfirm('Excluir item?', 'Tem certeza que deseja excluir este item?');
-	
-	if (confirmed) {
-		const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-		fetch(`/delete_item/${id}`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
-			.then(res => handleResponse(res, 'Item excluído com sucesso!'))
-			.catch(handleError);
-	}
 }
 
 function resetViewItemModalState() {
@@ -280,26 +322,39 @@ function resetNewMoveModalState() {
 
 	document.getElementById('newMove-form').style.display = 'none';
 	document.getElementById('newMove-btn').style.display = 'inline-block';
+	toggleSaveStorageButton('new', 'move');
 }
 
-function toggleMissingButton() {
-	fetchJson('/missing_items')
+// === GROUPS ===
+document.getElementById('mngGroup-groupSelect').addEventListener('change', function() {
+	const groupId = this.value;
+
+	if (!groupId) {
+		document.getElementById('mngGroup-name').value = "";
+		document.getElementById('mngGroup-deleteBtn').style.display = 'none';
+		groupItems = [];
+		renderGroupItems();
+		return;
+	}
+
+	fetchJson(`/group_data/${groupId}`)
 		.then(data => {
-			list = data.missing_items;
-			button = document.getElementById('missItem-btn');
-			button.disabled = list.length === 0;
-			button.title = (list.length === 0) ? "Nenhum item está faltando ou próximo de acabar" : "";
+			document.getElementById('mngGroup-name').value = data.group_name;
+			document.getElementById('mngGroup-deleteBtn').style.display = 'inline-block';
+
+			groupItems = data.items;
+			renderGroupItems();
 		})
 		.catch(err => {
-			console.error("Failed to fetch missing items: ", err);
-			showSnackbar('Não foi possível carregar os itens faltantes.', 'error');
-		});		
-}
+			console.error('Failed to load group data:', err);
+			showSnackbar('Não foi possível carregar os dados do grupo.', 'error');
+		});
+});
 
 function addItemToGroup() {
 	const qtyInput = document.getElementById('mngGroup-itemQty');
 	const itemId = groupItemSelector.getValue();
-	const quantity = parseFloat(qtyInput.value);
+	const quantity = normaliseComma(qtyInput.value);
 
 	if (!itemId) {
 		showSnackbar('Selecione um item.', 'warning');

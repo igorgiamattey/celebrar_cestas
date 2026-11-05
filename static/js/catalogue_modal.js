@@ -1,8 +1,13 @@
-let originalBasketValues = {};
+// === GLOBAL CONSTANTS ===
+const viewBasketForm = document.getElementById('viewBasket-form');
 
+// === GLOBAL VARIABLES ===
+let originalBasketValues = {};
 let newBasketItems = [];
 let viewBasketItems = [];
+let viewBasketItemSelector = null;
 
+// === TOMSELECT DATA ===
 const availableItems = JSON.parse(
 	document.getElementById('newBasket-itemSelect').dataset.items
 );
@@ -29,6 +34,7 @@ const availableList = [
 	}))
 ];
 
+// === TOMSELECT DEFINITIONS ===
 const newBasketItemSelector = new TomSelect('#newBasket-itemSelect', {
 	options: availableList,
 	valueField: 'id',
@@ -57,9 +63,6 @@ const newBasketItemSelector = new TomSelect('#newBasket-itemSelect', {
 	]
 });
 
-let viewBasketItemSelector = null;
-const viewBasketForm = document.getElementById('viewBasket-form');
-
 if (viewBasketForm) {
 	viewBasketItemSelector = new TomSelect('#viewBasket-itemSelect',  {
 		options: availableList,
@@ -70,7 +73,7 @@ if (viewBasketForm) {
 
 		optgroups: [
 			{value: 'groups', label: 'Grupos'},
-			{value: 'items', label: 'Itens independentes'}
+			{value: 'items', label: 'Itens'}
 		],
 
 		create: false,
@@ -91,6 +94,24 @@ if (viewBasketForm) {
 	viewBasketItemSelector.disable();
 }
 
+// === HELPERS ===
+function toggleSaveCatalogueButton(mode) {
+	const fields = [
+		`${mode}Basket-name`,
+		`${mode}Basket-price`,
+	];
+
+	const button = `${mode}Basket-saveBtn`;
+	const array = mode === 'new' ? [newBasketItems] : [viewBasketItems];
+	
+	toggleSaveButton(
+			fields,
+			button,
+			array
+		)
+}
+
+// === CRUD ===
 function saveNewBasket() {
 	document.getElementById('newBasket-items').value = JSON.stringify(newBasketItems);
 
@@ -99,9 +120,33 @@ function saveNewBasket() {
 
 function updateBasket() {
 	document.getElementById('viewBasket-items').value = JSON.stringify(viewBasketItems);
-	const basket_name = document.getElementById('viewBasket-name').value;
+	const basketName = document.getElementById('viewBasket-name').value;
 
-	submitModal('viewBasket-form', `Cesta "${basket_name}" atualizada com sucesso`);
+	submitModal('viewBasket-form', `Cesta "${basketName}" atualizada com sucesso`);
+}
+
+async function deleteBasket() {
+	const id = document.getElementById('viewBasket-id').value;
+
+	const confirmed = await openConfirm('Excluir cesta?', 'Tem certeza que deseja excluir esta cesta?');
+	
+	if (confirmed) {
+		const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+		fetch(`/delete_basket/${id}`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
+			.then(res => handleResponse(res, 'Cesta excluída com sucesso!'))
+			.catch(handleError);
+	}
+}
+
+// === OPEN MODAL ===
+function fillBasketViewModal(data) {
+	document.getElementById('viewBasket-id').value = data.basket_id;
+	document.getElementById('viewBasket-name').value = data.basket_name;
+	document.getElementById('viewBasket-price').value = data.basket_price;
+	viewBasketItems = structuredClone(data.items || []);
+
+	viewBasketItemSelector.clear();
+	document.getElementById('viewBasket-itemQty').value = '';
 }
 
 function openNewBasketModal() {
@@ -114,40 +159,30 @@ function openNewBasketModal() {
 
 	document.getElementById('newBasket-modal').style.display = "flex";
 
-	toggleSaveButton([
-		'newBasket-name',
-		'newBasket-price'
-	], 'newBasket-saveBtn', [newBasketItems])
+	toggleSaveCatalogueButton('new');
 }
 
 function openViewBasketModal(id) {
 	id = parseInt(id, 10);
 	fetchJson(`/basket_data/${id}`)
 		.then(data => {
-			document.getElementById('viewBasket-id').value = data.basket_id;
-			document.getElementById('viewBasket-name').value = data.basket_name;
-			document.getElementById('viewBasket-price').value = data.basket_price;
-
-			viewBasketItems = data.items || [];
-
 			originalBasketValues = {
+				basket_id: data.basket_id,
 				basket_name: data.basket_name,
 				basket_price: data.basket_price,
-				items: structuredClone(viewBasketItems)
+				items: structuredClone(data.items || [])
 			};
-			
+
+			fillBasketViewModal(data);
 			resetViewBasketModalState();
-			renderBasketItems('view');
 
 			document.getElementById('viewBasket-modal').style.display = "flex";
-			toggleSaveButton([
-				'viewBasket-name',
-				'viewBasket-price'
-			], 'viewBasket-saveBtn', [viewBasketItems]);
+			toggleSaveCatalogueButton('view');
 		})
 		.catch(handleError);
 }
 
+// === EDIT VIEW MODAL ===
 function enableEditBasket() {
 	document.getElementById('viewBasket-name').disabled = false;
 	document.getElementById('viewBasket-price').disabled = false;
@@ -163,22 +198,13 @@ function enableEditBasket() {
 
 	renderBasketItems('view');
 
-	toggleSaveButton([
-		'viewBasket-name',
-		'viewBasket-price'
-	], 'viewBasket-saveBtn', [viewBasketItems])
+	toggleSaveCatalogueButton('view');
 }
 
 function cancelEditBasket() {
-	document.getElementById('viewBasket-name').value = originalBasketValues.basket_name;
-	document.getElementById('viewBasket-price').value = originalBasketValues.basket_price;
-
-	viewBasketItems = structuredClone(originalBasketValues.items);
-	renderBasketItems('view');
-	viewBasketItemSelector.clear();
-	document.getElementById('viewBasket-itemQty').value = '';
-
+	fillBasketViewModal(originalBasketValues);
 	resetViewBasketModalState();
+	toggleSaveCatalogueButton('view');	
 }
 
 function resetViewBasketModalState() {
@@ -197,19 +223,7 @@ function resetViewBasketModalState() {
 	renderBasketItems('view');
 }
 
-async function deleteBasket() {
-	const id = document.getElementById('viewBasket-id').value;
-
-	const confirmed = await openConfirm('Excluir cesta?', 'Tem certeza que deseja excluir esta cesta?');
-	
-	if (confirmed) {
-		const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-		fetch(`/delete_basket/${id}`, { method: 'POST', headers: {'X-CSRFToken': csrfToken} })
-			.then(res => handleResponse(res, 'Cesta excluída com sucesso!'))
-			.catch(handleError);
-	}
-}
-
+// === EDIT COMPOSITION ===
 function addItemToBasket(mode) {
 	const qtyInput = document.getElementById(`${mode}Basket-itemQty`);
 
@@ -218,7 +232,7 @@ function addItemToBasket(mode) {
 		: viewBasketItemSelector;
 
 	const itemId = selector.getValue();
-	const quantity = parseFloat(qtyInput.value.replace(',','.'));
+	const quantity = normaliseComma(qtyInput.value);
 
 	if (!itemId) {
 		showSnackbar('Selecione um item.', 'warning');
@@ -231,6 +245,10 @@ function addItemToBasket(mode) {
 	}
 
 	const selectedItem = selector.options[itemId];
+	if (!selectedItem) {
+		showSnackbar('Item selecionado inválido.', 'warning');
+		return;
+	}
 
 	if (
 		(selectedItem.category === 'groups' ||
@@ -269,17 +287,7 @@ function addItemToBasket(mode) {
 
 	renderBasketItems(mode);
 
-	mode === 'new'
-		? toggleSaveButton(
-			['newBasket-name', 'newBasket-price'],
-			'newBasket-saveBtn',
-			[newBasketItems]
-		)
-		: toggleSaveButton(
-			['viewBasket-name','viewBasket-price'],
-			'viewBasket-saveBtn',
-			[viewBasketItems]
-		)
+	toggleSaveCatalogueButton(mode);
 
 	selector.clear();
 	qtyInput.value = '';
@@ -322,9 +330,7 @@ function renderBasketItems(mode) {
 		`;
 
 		row.querySelector('.basket-item-name').textContent = item.item_name;
-		row.querySelector('.basket-item-quantity').textContent = `
-				${item.quantity} ${unitDisplay.toLowerCase()}
-		`;
+		row.querySelector('.basket-item-quantity').textContent = `${item.quantity} ${unitDisplay.toLowerCase()}`;
 
 		if (isEditable) {
 			row.querySelector('.btn-remove-item').onclick = () => removeItemFromBasket(mode, index);
@@ -342,4 +348,5 @@ function removeItemFromBasket(mode, index) {
 	items.splice(index, 1);
 
 	renderBasketItems(mode);
+	toggleSaveCatalogueButton(mode);
 }

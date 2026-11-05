@@ -31,25 +31,6 @@
 	flex: 1;
 }
 
-.home-mini-table {
-	width: 100%;
-	border-collapse: collapse;
-	font-size: 0.85rem;
-	white-space: nowrap;
-}
-
-.home-mini-table th, .home-mini-table td {
-	padding: 8px 10px;
-	text-align: left;
-	border-bottom: 1px solid var(--border-color);
-}
-
-.home-mini-table th {
-	background-color: var(--bg-header);
-	color: var(--text-header);
-	font-weight: bold;
-}
-
 .home-actions-grid {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
@@ -127,22 +108,6 @@
 .no-alert-msg {
 	color: var(--text-header);
 	font-size: 0.85rem;
-}
-
-.home-mini-table td.positive-value {
-	text-align: right;
-	color: var(--btn-green);
-	font-weight: bold;
-}
-
-.home-mini-table td.neutral-value {
-	text-align: right;
-}
-
-.home-mini-table td.total-value {
-	text-align: right;
-	font-weight: bold;
-	color: var(--primary-color);
 }
 
 .home-order-card {

@@ -1,14 +1,21 @@
-let originalDeliveryValues = {};
+// === GLOBAL CONSTANTS ===
+const defaultDeliveryStatus = 'PENDING';
+const mngCouriersModal = document.getElementById('mngCourier-modal');
+const viewDeliveryForm = document.getElementById('viewDelivery-form');
 
+// === GLOBAL VARIABLES ===
+let originalDeliveryValues = {};
 let newDeliveryOrders = [];
 let viewDeliveryOrders = [];
-
 let viewAvailableOrders = [];
+let couriers = [];
+let mngCourierSelector = null;
+let viewDeliveryCourierSelector = null;
+let viewDeliveryOrderSelector = null;
+let viewDeliveryStatusSelector = null;
+let viewDeliveryDateSelector = null;
 
-let defaultDeliveryStatus = 'PENDING';
-
-let couriers = []
-
+// === TOMSELECT DATA ===
 const availableCouriers = JSON.parse(
 	document.getElementById('newDelivery-courier').dataset.couriers
 );
@@ -25,46 +32,7 @@ const availableDates = JSON.parse(
 	document.getElementById('newDelivery-date').dataset.dates
 );
 
-let mngCourierCourierSelector = null;
-const mngCouriersForm = document.getElementById('mngCourier-modal');
-if (mngCouriersForm) {
-	document.getElementById('mngCourier-courierSelect').addEventListener('change', function() {
-		const courierId = this.value;
-
-		if (!courierId) {
-			document.getElementById('mngCourier-name').value = "";
-			document.getElementById('mngCourier-phone').value = "";
-			return;
-		}
-
-		fetchJson(`/courier_data/${courierId}`)
-			.then(data => {
-				document.getElementById('mngCourier-name').value = data.name;
-				document.getElementById('mngCourier-phone').value = data.phone;
-			})
-			.catch(err => {
-				console.error('Failed to load courier:', err);
-				showSnackbar('Não foi possível carregar o entregador.', 'error');
-			});
-	});
-
-	mngCourierCourierSelector = new TomSelect('#mngCourier-courierSelect', {
-		options: availableCouriers,
-		valueField: 'id',
-		labelField: 'name',
-		searchField: 'name',
-		create: false,
-		maxItems: 1,
-		maxOptions: null,
-		sortField: [
-			{
-				field: 'name',
-				direction: 'asc'
-			}
-		]
-	});
-}
-
+// === TOMSELECT DEFINITIONS ===
 const newDeliveryCourierSelector = new TomSelect('#newDelivery-courier', {
 	options: availableCouriers,
 	valueField: 'id',
@@ -124,34 +92,43 @@ const newDeliveryDateSelector = new TomSelect('#newDelivery-date', {
 	onChange: () => onDateChange('new')
 });
 
-function refreshOrderOptions(dateId, mode) {
-	const orderSelector = mode === 'new'
-		? newDeliveryOrderSelector
-		: viewDeliveryOrderSelector
+if (mngCouriersModal) {
+	document.getElementById('mngCourier-courierSelect').addEventListener('change', function() {
+		const courierId = this.value;
 
-	const orders = mode === 'new'
-		? newDeliveryOrders
-		: viewDeliveryOrders;
+		if (!courierId) {
+			document.getElementById('mngCourier-name').value = "";
+			document.getElementById('mngCourier-phone').value = "";
+			return;
+		}
 
-	const orders_source = mode === 'new'
-		? availableOrders
-		: viewAvailableOrders;
+		fetchJson(`/courier_data/${courierId}`)
+			.then(data => {
+				document.getElementById('mngCourier-name').value = data.name;
+				document.getElementById('mngCourier-phone').value = data.phone;
+			})
+			.catch(err => {
+				console.error('Failed to load courier:', err);
+				showSnackbar('Não foi possível carregar o entregador.', 'error');
+			});
+	});
 
-	const taken = new Set(orders.map(ord => ord.id));
-	
-	orderSelector.clear(true);
-	orderSelector.clearOptions();
-
-	orders_source
-		.filter(order => order.date === dateId && !taken.has(order.id))
-		.forEach(order => orderSelector.addOption(order));
+	mngCourierSelector = new TomSelect('#mngCourier-courierSelect', {
+		options: availableCouriers,
+		valueField: 'id',
+		labelField: 'name',
+		searchField: 'name',
+		create: false,
+		maxItems: 1,
+		maxOptions: null,
+		sortField: [
+			{
+				field: 'name',
+				direction: 'asc'
+			}
+		]
+	});
 }
-
-let viewDeliveryCourierSelector = null;
-let viewDeliveryOrderSelector = null;
-let viewDeliveryStatusSelector = null;
-let viewDeliveryDateSelector = null;
-const viewDeliveryForm = document.getElementById('viewDelivery-form');
 
 if (viewDeliveryForm) {
 	viewDeliveryCourierSelector = new TomSelect('#viewDelivery-courier', {
@@ -219,18 +196,102 @@ if (viewDeliveryForm) {
 	viewDeliveryDateSelector.disable();
 }
 
-function saveButton(mode) {
-	mode === 'new'
-		? toggleSaveButton(
-			['newDelivery-date'],
-			'newDelivery-saveBtn',
-			[newDeliveryOrders]
+// === HELPERS ===
+function refreshOrderOptions(dateId, mode) {
+	const orderSelector = mode === 'new'
+		? newDeliveryOrderSelector
+		: viewDeliveryOrderSelector
+
+	const orders = mode === 'new'
+		? newDeliveryOrders
+		: viewDeliveryOrders;
+
+	const ordersSource = mode === 'new'
+		? availableOrders
+		: viewAvailableOrders;
+
+	const taken = new Set(orders.map(ord => ord.id));
+	
+	orderSelector.clear(true);
+	orderSelector.clearOptions();
+
+	ordersSource
+		.filter(order => order.date === dateId && !taken.has(order.id))
+		.forEach(order => orderSelector.addOption(order));
+}
+
+function toggleSaveDeliveryButton(mode) {
+	const fields = [
+		`${mode}Delivery-date`
+	];
+
+	const button = `${mode}Delivery-saveBtn`;
+	const array = mode === 'new' ? [newDeliveryOrders] : [viewDeliveryOrders];
+	
+	toggleSaveButton(
+			fields,
+			button,
+			array
 		)
-		: toggleSaveButton(
-			['viewDelivery-date'],
-			'viewDelivery-saveBtn',
-			[viewDeliveryOrders]
-		)
+}
+
+function onDateChange(mode) {
+	const dateSelector = mode === 'new'
+		? newDeliveryDateSelector
+		: viewDeliveryDateSelector;
+
+	const orders = mode === 'new'
+		? newDeliveryOrders
+		: viewDeliveryOrders;
+
+	orders.length = 0
+	
+	refreshOrderOptions(dateSelector.getValue(), mode);
+	renderDeliveryOrders(mode);
+	toggleSaveDeliveryButton(mode);
+}
+
+// === CRUD ===
+function saveNewDelivery() {
+	document.getElementById('newDelivery-items').value = JSON.stringify(serialiseDeliveryOrders('new'));
+
+	submitModal('newDelivery-form', 'Entrega criada com sucesso!');
+}
+
+function updateDelivery() {
+	document.getElementById('viewDelivery-items').value = JSON.stringify(serialiseDeliveryOrders('view'));
+	
+	submitModal('viewDelivery-form');
+}
+
+// === OPEN MODAL ===
+function fillDeliveryViewModal(data) {
+	document.getElementById('viewDelivery-id').value = data.delivery_id;
+	viewDeliveryCourierSelector.setValue(data.courier_id ?? '', true);
+	
+	viewDeliveryStatusSelector.clear(true);
+	viewDeliveryStatusSelector.clearOptions();
+	const allowedStatuses = [...data.allowed_status];
+	availableDeliveryStatuses
+		.filter(status => allowedStatuses.includes(status.id))
+		.forEach(status => {viewDeliveryStatusSelector.addOption(status)});
+	viewDeliveryStatusSelector.setValue(data.delivery_status, true);
+	
+	viewDeliveryDateSelector.clear(true);
+	viewDeliveryDateSelector.clearOptions()
+	data.available_dates.forEach(date_op => viewDeliveryDateSelector.addOption(date_op));
+	
+	if (data.delivery_date && !viewDeliveryDateSelector.options[data.delivery_date]) {
+		viewDeliveryDateSelector.addOption({
+			id: data.delivery_date,
+			date: data.delivery_date.split('-').reverse().join('/')
+		});
+	}
+	viewDeliveryDateSelector.setValue(data.delivery_date ?? '', true);
+	
+	viewDeliveryOrders = structuredClone(data.orders || []);
+	viewAvailableOrders = data.available_orders;
+	refreshOrderOptions(data.delivery_date, 'view');
 }
 
 function openNewDeliveryModal() {
@@ -246,7 +307,7 @@ function openNewDeliveryModal() {
 	newDeliveryOrders = [];
 
 	renderDeliveryOrders('new');
-	saveButton('new');
+	toggleSaveDeliveryButton('new');
 	document.getElementById('newDelivery-modal').style.display = "flex";
 }
 
@@ -254,60 +315,24 @@ function openViewDeliveryModal(id) {
 	id = parseInt(id, 10);
 	fetchJson(`/delivery_data/${id}`)
 		.then(data => {
-			document.getElementById('viewDelivery-id').value = data.delivery_id;
-			viewDeliveryCourierSelector.setValue(data.courier_id ?? '', true);
-			
-			viewDeliveryStatusSelector.clear(true);
-			viewDeliveryStatusSelector.clearOptions();
-			const allowedStatuses = [...data.allowed_status];
-			availableDeliveryStatuses
-				.filter(status => allowedStatuses.includes(status.id))
-				.forEach(status => {viewDeliveryStatusSelector.addOption(status)});
-			viewDeliveryStatusSelector.setValue(data.delivery_status, true);
-			
-			viewDeliveryDateSelector.clear(true);
-			viewDeliveryDateSelector.clearOptions()
-			data.available_dates.forEach(date_op => viewDeliveryDateSelector.addOption(date_op));
-			
-			if (data.delivery_date && !viewDeliveryDateSelector.options[data.delivery_date]) {
-				viewDeliveryDateSelector.addOption({
-					id: data.delivery_date,
-					date: data.delivery_date.split('-').reverse().join('/')
-				});
-			}
-			viewDeliveryDateSelector.setValue(data.delivery_date ?? '', true);
-			
-			viewDeliveryOrders = data.orders || [];
-			viewAvailableOrders = data.available_orders;
-			refreshOrderOptions(data.delivery_date, 'view');
-
 			originalDeliveryValues = {
+				delivery_id: data.delivery_id,
 				courier_id: data.courier_id,
 				delivery_status: data.delivery_status,
 				delivery_date: data.delivery_date,
-				orders: structuredClone(viewDeliveryOrders)
+				orders: structuredClone(data.orders || [])
 			};
 
+			fillDeliveryViewModal(data);
 			resetViewDeliveryModalState();
 
 			document.getElementById('viewDelivery-modal').style.display = "flex";
-			saveButton('view');
+			toggleSaveDeliveryButton('view');
 		})
 		.catch(handleError);
 }
 
-function saveNewDelivery() {
-	document.getElementById('newDelivery-items').value = JSON.stringify(serialiseDeliveryOrders('new'));
-
-	submitModal('newDelivery-form', 'Entrega criada com sucesso!');
-}
-
-function updateDelivery() {
-	document.getElementById('viewDelivery-items').value = JSON.stringify(serialiseDeliveryOrders('view'));
-	
-	submitModal('viewDelivery-form');
-}
-
+// === EDIT VIEW MODAL ===
 function enableEditDelivery() {
 	const status = viewDeliveryStatusSelector.getValue();
 	if (status === "DELIVERED" || status === "CANCELLED")
@@ -327,18 +352,13 @@ function enableEditDelivery() {
 	document.getElementById('viewDelivery-cancelBtn').style.display = 'inline-block';
 
 	renderDeliveryOrders('view');
-	saveButton('view');
+	toggleSaveDeliveryButton('view');
 }
 
-function cancelEditDelivery() {
-	viewDeliveryCourierSelector.setValue(originalDeliveryValues.courier_id ?? '', true);
-	viewDeliveryStatusSelector.setValue(originalDeliveryValues.delivery_status, true);
-	viewDeliveryDateSelector.setValue(originalDeliveryValues.delivery_date ?? '', true);
-
-	viewDeliveryOrders = structuredClone(originalDeliveryValues.orders);
-	refreshOrderOptions(originalDeliveryValues.delivery_date, 'view');
-	
+function cancelEditDelivery() {	
+	fillDeliveryViewModal(originalDeliveryValues)
 	resetViewDeliveryModalState();
+	toggleSaveDeliveryButton('view');
 }
 
 function resetViewDeliveryModalState() {
@@ -359,6 +379,7 @@ function resetViewDeliveryModalState() {
 	renderDeliveryOrders('view');
 }
 
+// === EDIT COMPOSITION ===
 function addOrderToDelivery(mode) {
 	const orderSelector = mode === 'new'
 		? newDeliveryOrderSelector
@@ -389,7 +410,7 @@ function addOrderToDelivery(mode) {
 
 	renderDeliveryOrders(mode);
 
-	saveButton(mode);
+	toggleSaveDeliveryButton(mode);
 }
 
 function removeOrderFromDelivery(mode, index) {
@@ -406,7 +427,7 @@ function removeOrderFromDelivery(mode, index) {
 
 	renderDeliveryOrders(mode);
 
-	saveButton(mode);
+	toggleSaveDeliveryButton(mode);
 }
 
 function renderDeliveryOrders(mode) {
@@ -458,28 +479,13 @@ function serialiseDeliveryOrders(mode) {
 	return orders.map(order => order.id);
 }
 
-function onDateChange(mode) {
-	const dateSelector = mode === 'new'
-		? newDeliveryDateSelector
-		: viewDeliveryDateSelector;
-
-	const orders = mode === 'new'
-		? newDeliveryOrders
-		: viewDeliveryOrders;
-
-	orders.length = 0
-	
-	refreshOrderOptions(dateSelector.getValue(), mode);
-	renderDeliveryOrders(mode);
-	saveButton(mode);
-}
-
+// === COURIERS ===
 function openManageCouriersModal() {
-	mngCourierCourierSelector.clear();
+	mngCourierSelector.clear();
 	document.getElementById('mngCourier-name').value = "";
 	document.getElementById('mngCourier-phone').value = "";
 
-	couriers = availableCouriers;
+	couriers = [...availableCouriers];
 	renderCouriers();
 
 	document.getElementById('mngCourier-modal').style.display = "flex";
@@ -507,7 +513,7 @@ function renderCouriers() {
 
 		const tbody = container.querySelector('tbody');
 
-		couriers.forEach((courier, index) => {
+		couriers.forEach((courier) => {
 			const row = document.createElement('tr');
 			row.className = 'courier-row';
 
@@ -526,7 +532,7 @@ function renderCouriers() {
 			button.className = 'btn-remove-courier';
 			button.innerHTML = ICON_CLOSE;
 			button.title = 'Excluir entregador';
-			button.onclick = () => deleteCourier(courier, index);
+			button.onclick = () => deleteCourier(courier);
 			
 			remove.appendChild(button);
 			row.append(name, phone, remove);
@@ -541,7 +547,7 @@ function saveCourier() {
 	const name = nameInput.value;
 	const phone = phoneInput.value;
 
-	const courierId = mngCourierCourierSelector.getValue();
+	const courierId = mngCourierSelector.getValue();
 
 	if (!name) {
 		showSnackbar('O entregador precisa de um nome.', 'warning');
@@ -563,29 +569,6 @@ function saveCourier() {
 		body: formData
 	})
 	.then(res => handleResponse(res, 'Entregador salvo com sucesso!'))
-	.then(() => {
-		const courier ={
-			id: courierId ? Number(courierId) : null,
-			name: name,
-			phone: phone
-		};
-
-		if (courierId) {
-			const index = couriers.findIndex(
-				c => String(c.courier_id) === String(courierId)
-			);
-
-			if (index !== -1)
-				couriers[index] = courier;
-		}
-		else
-			couriers.push(courier);
-
-		renderCouriers();
-		nameInput.value = '';
-		phoneInput.value = '';
-		mngCourierCourierSelector.clear();
-	})
 	.catch(handleError);
 }
 
@@ -596,20 +579,8 @@ async function deleteCourier(courier, index) {
 		return;
 	}
 
-	const courierId = courier.id ?? courier.courier_id;
-	
-	
-	if (!courierId) {
-		showSnackbar('Não foi possível identificar o entregador.', 'error');
-		return;
-	}
-	
 	const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-	fetch(`/delete_courier/${courierId}`, {method: 'POST', headers: {'X-CSRFToken': csrfToken}})
+	fetch(`/delete_courier/${courier.id}`, {method: 'POST', headers: {'X-CSRFToken': csrfToken}})
 		.then(res => handleResponse(res, 'Entregador excluído com sucesso!'))
-		.then(() => {
-			couriers.splice(index, 1);
-			renderCouriers()
-		})
 		.catch(handleError);
 }

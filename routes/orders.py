@@ -3,37 +3,38 @@ import json
 from flask import (Blueprint, flash, jsonify, redirect, render_template,
                    request, session, url_for)
 
-from db import run_select, run_transaction
-from enums.delivery_status import deliveryStatus
-from enums.order_status import OPEN_ORDER_STATUS, orderStatus
+from db import get_today, run_select, run_transaction
+from enums.delivery_status import DeliveryStatus
+from enums.order_status import OPEN_ORDER_STATUS, OrderStatus
 from enums.table_names import Table
 from services.errors import StaleDataError
 from services.order_service import (as_date, get_basket_composition,
-                                    get_orders, get_today,
-                                    save_delivery_address, update_order_stock)
-from services.routes_service import (getAvailableAddresses,
-                                     getAvailableBaskets, getAvailableClients,
-                                     getAvailableOrderStatus)
+                                    get_orders, save_delivery_address,
+                                    update_order_stock)
+from services.routes_service import (get_available_addresses,
+                                     get_available_baskets,
+                                     get_available_clients,
+                                     get_available_status_order)
 from services.status_transitions import get_allowed_status
 from services.validate_service import (validate_address_belonging,
                                        validate_date, validate_delivery,
-                                       validate_id, validate_isDelivery_check,
+                                       validate_id, validate_is_delivery_check,
                                        validate_opt_text, validate_order_items,
                                        validate_order_status,
                                        validate_order_stock, validate_price,
                                        validate_status_transition)
 
 orders_bp = Blueprint("orders_bp", __name__)
-order_mode = "ORDER"
+ORDER_MODE = "ORDER"
 
 @orders_bp.route("/pedidos")
 def orders():
 	columns, rows, page, total_pages, search = get_orders()
 
-	available_clients = getAvailableClients()
-	available_baskets = getAvailableBaskets()
-	statuses = getAvailableOrderStatus()
-	available_addresses = getAvailableAddresses()
+	available_clients = get_available_clients()
+	available_baskets = get_available_baskets()
+	statuses = get_available_status_order()
+	available_addresses = get_available_addresses()
 
 	return render_template("orders/orders.html",
 						columns=columns,
@@ -78,12 +79,12 @@ def new_order():
 		if not validate_id(Table.Clients, "client_id", client):
 			return "Cliente inválido", 400
 		date = validate_date(request.form["date"])
-		deliveryDate = validate_date(request.form["deliveryDate"], date, False)
-		orderPrice = validate_price(request.form["orderPrice"])	
-		status = validate_order_status(orderStatus.PENDING.name)
+		delivery_date = validate_date(request.form["deliveryDate"], date, False)
+		order_price = validate_price(request.form["orderPrice"])	
+		status = validate_order_status(OrderStatus.PENDING.name)
 		items_payload = validate_order_items(items_payload)
 		is_delivery = request.form.get("isDelivery")
-		is_delivery = validate_isDelivery_check(is_delivery, delivery_details)
+		is_delivery = validate_is_delivery_check(is_delivery, delivery_details)
 		
 		address_id = None
 		delivery_fee = 0.00
@@ -114,7 +115,7 @@ def new_order():
 			order_items, isDelivery, address_id, delivery_fee)
 			OUTPUT INSERTED.order_id
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			""", (client, date, deliveryDate, status, orderPrice, obs, items, is_delivery, address_id, delivery_fee))
+			""", (client, date, delivery_date, status, order_price, obs, items, is_delivery, address_id, delivery_fee))
 
 			order_id = cursor.fetchone()[0]
 		
@@ -201,9 +202,9 @@ def order_data(id):
 			]
 
 
-	allowed = get_allowed_status(order["order_status"], order_mode)
+	allowed = get_allowed_status(order["order_status"], ORDER_MODE)
 	if order["delivery_id"] is not None:
-		allowed = allowed - {orderStatus.CANCELLED.name, orderStatus.DELIVERED.name}
+		allowed = allowed - {OrderStatus.CANCELLED.name, OrderStatus.DELIVERED.name}
 	order["allowed_status"] = sorted(allowed)
 
 	return jsonify(order)
@@ -236,7 +237,7 @@ def update_order():
 	current_date = data_rows[0][1]
 	current_delivery_date = data_rows[0][2]
 	current_status = data_rows[0][3]
-	current_orderPrice = data_rows[0][4]
+	current_order_price = data_rows[0][4]
 	current_obs = data_rows[0][5]
 	current_items = data_rows[0][6]
 	current_delivery_id = data_rows[0][7]
@@ -245,34 +246,34 @@ def update_order():
 		return "Um pedido encerrado não pode ser alterado.", 400
 
 	try:
-		validate_status_transition(current_status, status, order_mode)
+		validate_status_transition(current_status, status, ORDER_MODE)
 
-		if current_status == orderStatus.PENDING.name:
+		if current_status == OrderStatus.PENDING.name:
 			client = request.form["client"]
 			if not validate_id(Table.Clients, "client_id", client):
 				raise ValueError("Cliente inválido")
 			date = validate_date(request.form["date"])
-			orderPrice = validate_price(request.form["orderPrice"])
+			order_price = validate_price(request.form["orderPrice"])
 			items_payload = validate_order_items(json.loads(request.form["items"]))
 			obs = validate_opt_text(request.form.get('obs', ''), "Observação", 255)
 			items = json.dumps(items_payload)
 		else:
 			client = current_client
 			date = current_date
-			orderPrice = current_orderPrice
+			order_price = current_order_price
 			obs = current_obs
 			items = current_items
 			items_payload = json.loads(current_items)
 		
-		deliveryDate = validate_date(request.form["deliveryDate"], date, False)
+		delivery_date = validate_date(request.form["deliveryDate"], date, False)
 
 		delivery_details = json.loads(request.form["deliveryDetails"])
-		is_delivery = validate_isDelivery_check(request.form.get("isDelivery"), delivery_details)
+		is_delivery = validate_is_delivery_check(request.form.get("isDelivery"), delivery_details)
 
-		if current_delivery_id is not None and status in (orderStatus.CANCELLED.name, orderStatus.DELIVERED.name):
+		if current_delivery_id is not None and status in (OrderStatus.CANCELLED.name, OrderStatus.DELIVERED.name):
 			raise ValueError(f"Remova o pedido da entrega {current_delivery_id} antes de alterar o status.")
 
-		date_change = as_date(deliveryDate) != as_date(current_delivery_date)
+		date_change = as_date(delivery_date) != as_date(current_delivery_date)
 		release = not is_delivery or date_change
 
 		address_id = None
@@ -316,7 +317,7 @@ def update_order():
 			WHERE order_id = ?
 			AND order_status = ?
 			AND isDeleted = 0
-			""", (client, date, deliveryDate, status, orderPrice, obs, items, is_delivery, address_id, delivery_fee, id, current_status))
+			""", (client, date, delivery_date, status, order_price, obs, items, is_delivery, address_id, delivery_fee, id, current_status))
 
 			if cursor.rowcount != 1:
 				raise StaleDataError("O pedido já foi alterado. Recarregue a página.")
@@ -361,7 +362,7 @@ def update_order():
 						SET delivery_status = ?
 						WHERE delivery_id = ?
 						AND isDeleted = 0
-						""", (deliveryStatus.CANCELLED.name, released_delivery_id))
+						""", (DeliveryStatus.CANCELLED.name, released_delivery_id))
 
 						notices.append(f"Entrega #{released_delivery_id} cancelada por ficar sem pedidos.")
 			

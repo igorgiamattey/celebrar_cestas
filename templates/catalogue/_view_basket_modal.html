@@ -1,19 +1,61 @@
 <div id="viewBasket-modal" class="modal-overlay" style="display: none;">
 	<div class="modal-box">
 		<div class="modal-header">
-			<h3>Dados da Cesta</h3>
-			<button type="button" class="btn-close" onclick="closeModal('viewBasket-modal')">&times;</button>
+			<h3>
+				Dados da Cesta
+			</h3>
+			<button
+				type="button"
+				class="btn-close"
+				onclick="closeModal('viewBasket-modal');"
+			>
+				&times;
+			</button>
 		</div>
-		<form id="viewBasket-form" method="post" action="{{url_for('catalogue_bp.update_basket')}}">
-			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-			<input type="hidden" id="viewBasket-id" name="id">
-			<input type="hidden" id="viewBasket-items" name="items">
+		<form
+			id="viewBasket-form"
+			method="post"
+			action="{{url_for('catalogue_bp.update_basket')}}"
+		>
+			<input
+				type="hidden"
+				name="csrf_token"
+				value="{{ csrf_token() }}"
+			>
+			<input
+				type="hidden"
+				id="viewBasket-id"
+				name="id"
+			>
+			<input
+				type="hidden"
+				id="viewBasket-items"
+				name="items"
+			>
 
-			<label>Nome*:</label>
-			<input type="text" id="viewBasket-name" name="name" placeholder="---" disabled oninput="toggleSaveButton(['viewBasket-name', 'viewBasket-price'], 'viewBasket-saveBtn', [viewBasketItems])">
+			<label>
+				Nome*:
+			</label>
+			<input
+				type="text"
+				id="viewBasket-name"
+				name="name"
+				placeholder="---"
+				disabled
+				oninput="toggleSaveCatalogueButton('view');"
+			>
 			
-			<label id="viewBasket-addItemLbl" style="display: none;">Adicionar Item*:</label>
-			<div id="viewBasket-addItemRow" class="item-selection" style="display: none;">
+			<label
+				id="viewBasket-addItemLbl"
+				style="display: none;"
+			>
+				Adicionar Item*:
+			</label>
+			<div
+				id="viewBasket-addItemRow"
+				class="item-selection"
+				style="display: none;"
+			>
 				<input
 					id="viewBasket-itemSelect"
 					data-items='{{available_items|tojson}}'
@@ -23,18 +65,40 @@
 					id="viewBasket-itemQty"
 					placeholder="Qtd"
 					disabled
-					oninput="inputNumber(this)"
+					oninput="inputNumber(this);"
 				>
-				<button type="button" class="btn-modal btn-edit" onclick="addItemToBasket('view')">
+				<button
+					type="button"
+					class="btn-modal btn-edit"
+					onclick="addItemToBasket('view');"
+				>
 					+ Adicionar
 				</button>
 			</div>
 
-			<label>Itens presentes*:</label>
-			<div id="viewBasket-itemsList" class="basket-items-list"></div>
+			<label>
+				Itens presentes*:
+			</label>
+			<div
+				id="viewBasket-itemsList"
+				class="basket-items-list"
+			>
+			</div>
 			
-			<label>Preço*:</label>
-			<input type="text" id="viewBasket-price" name="price" placeholder="---" disabled oninput="inputPrice(this);toggleSaveButton(['viewBasket-name', 'viewBasket-price'], 'viewBasket-saveBtn', [viewBasketItems])">
+			<label>
+				Preço*:
+			</label>
+			<input
+				type="text"
+				id="viewBasket-price"
+				name="price"
+				placeholder="---"
+				disabled
+				oninput="
+					inputPrice(this);
+					toggleSaveCatalogueButton('view');
+				"
+			>
 			
 			<div class="modal-actions">
 				<div>

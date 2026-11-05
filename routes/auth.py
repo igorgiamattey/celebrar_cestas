@@ -13,6 +13,8 @@ def login():
 
 	login_id = request.form.get("login_id", "")
 	password = request.form.get("password", "")
+
+	login_id = login_id.lower()
 	
 	query = """
 	SELECT user_id, username, hash_pwd

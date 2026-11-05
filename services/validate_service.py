@@ -4,11 +4,11 @@ from datetime import date, datetime
 import phonenumbers
 
 from db import parse_price, run_select
-from enums.delivery_status import OPEN_DELIVERY_STATUS, deliveryStatus
-from enums.financial_status import financialStatus, DATE_REQUIRED_STATUSES
-from enums.movement_types import (CAT_BY_TYPE, financialMovementCategories,
-                                  financialMovementTypes, storageMovementTypes)
-from enums.order_status import OPEN_ORDER_STATUS, orderStatus
+from enums.delivery_status import OPEN_DELIVERY_STATUS, DeliveryStatus
+from enums.financial_status import DATE_REQUIRED_STATUSES, FinancialStatus
+from enums.movement_types import (CAT_BY_TYPE, FinancialMovementCategories,
+                                  FinancialMovementTypes, StorageMovementTypes)
+from enums.order_status import OPEN_ORDER_STATUS, OrderStatus
 from enums.table_names import Table
 from enums.unit_measurement import Unit
 from services.order_service import (get_available_stock,
@@ -18,6 +18,7 @@ from services.status_transitions import is_valid_transition
 
 MAX_DECIMAL = 100_000_000
 
+# === FIELDS VALIDATION === #
 def validate_qty(qty, allow_zero=False, integer=False):
 	try:
 		qty = float(qty)
@@ -80,10 +81,10 @@ def validate_date(value, min_date=None, required=True):
 		parsed_date = datetime.strptime(value, "%Y-%m-%d").date()
 	except (TypeError, ValueError):
 		if required:
-			raise ValueError(f"Data do pedido inválida")
+			raise ValueError("Data do pedido inválida")
 		
 		else:
-			raise ValueError(f"Data de entrega inválida")
+			raise ValueError("Data de entrega inválida")
 
 	if min_date is not None and parsed_date < min_date:
 		raise ValueError("Data de entrega não pode ser anterior à data do pedido")
@@ -113,7 +114,7 @@ def validate_date_id(value, delivery_id=None):
 	except (TypeError, ValueError):
 		return False
 
-	_, rows = run_select(f"""
+	_, rows = run_select("""
 	SELECT 1
 	FROM CELEBRAR_ORDERS
 	WHERE isDeleted = 0
@@ -121,38 +122,38 @@ def validate_date_id(value, delivery_id=None):
 	AND (delivery_id IS NULL OR delivery_id = ?)
 	AND order_status = ?
 	AND delivery_date = ?
-	""", (delivery_id, orderStatus.READY.name, value))
+	""", (delivery_id, OrderStatus.READY.name, value))
 
 	return bool(rows)
 	
 def validate_order_status(status):
 	try:
-		return orderStatus[status].name
+		return OrderStatus[status].name
 	except KeyError:
 		raise ValueError("Status inválido")
 
 def validate_delivery_status(status):
 	try:
-		return deliveryStatus[status].name
+		return DeliveryStatus[status].name
 	except KeyError:
 		raise ValueError("Status inválido")
 
 def validate_financial_status(status):
 	try:
-		return financialStatus[status].name
+		return FinancialStatus[status].name
 	except KeyError:
 		raise ValueError("Status inválido")
 
 def validate_financial_type(fin_type):
 	try:
-		return financialMovementTypes[fin_type].name
+		return FinancialMovementTypes[fin_type].name
 	except KeyError:
 		raise ValueError("Tipo de lançamento inválido")
 
 def validate_financial_category(category, fin_type):
 	try:
-		category = financialMovementCategories[category]
-		if category == financialMovementCategories.REFUND:
+		category = FinancialMovementCategories[category]
+		if category == FinancialMovementCategories.REFUND:
 			raise ValueError("Estornos só podem ser criados pela opção de estorno")
 	except KeyError:
 		raise ValueError("Categoria inválida")
@@ -164,7 +165,7 @@ def validate_financial_category(category, fin_type):
 
 def validate_move(move):
 	try:
-		return storageMovementTypes[move].name
+		return StorageMovementTypes[move].name
 	except KeyError:
 		raise ValueError("Tipo de Movimentação inválida")
 
@@ -210,7 +211,7 @@ def validate_status_transition(current, new, mode):
 	if not is_valid_transition(current, new, mode):
 		raise ValueError(
 			f"Não é possível alterar o status de "
-			f"{current.title} para {new.title}"
+			f"{current.title()} para {new.title()}"
 		)
 	return new
 
@@ -265,7 +266,7 @@ def validate_address_belonging(client, address):
 	if not rows:
 		raise ValueError("Esse endereço não pertence ao cliente selecionado")
 
-def validate_isDelivery_check(is_delivery, details):
+def validate_is_delivery_check(is_delivery, details):
 	if not isinstance(details, dict):
 		raise ValueError("Detalhes de entrega inválidos")
 	
@@ -296,8 +297,25 @@ def validate_opt_text(value, field_name, max_len):
 
 	return value
 
-# ---------------------------
+def validate_paid_order(order_id, payment_id=None):
+	query = """
+	SELECT 1
+	FROM CELEBRAR_FINANCIAL_PAYMENTS
+	WHERE order_id = ?
+	AND payment_status IN (?, ?)
+	"""
+	params = [order_id, FinancialStatus.PAID.name, FinancialStatus.PENDING.name]
 
+	if payment_id is not None:
+		query += " AND payment_id <> ?"
+		params.append(payment_id)
+
+
+	_, rows = run_select(query, tuple(params))
+
+	return bool(rows)
+
+# === COMPOSITION VALIDATION === #
 def validate_basket_choices(basket_id, quantity, choices):
 	composition = get_basket_composition(basket_id)
 	groups_by_id = {g["group_id"]: g for g in composition["groups"]}
@@ -499,7 +517,7 @@ def validate_delivery_orders(orders, delivery_date, delivery_id=None):
 	AND order_status = ?
 	AND delivery_date = ?
 	AND order_id IN ({placeholders})
-	""", (delivery_id, orderStatus.READY.name, delivery_date, *orders))
+	""", (delivery_id, OrderStatus.READY.name, delivery_date, *orders))
 
 	valid_ids = {row[0] for row in rows}
 	if valid_ids != set(orders):
@@ -507,8 +525,7 @@ def validate_delivery_orders(orders, delivery_date, delivery_id=None):
 
 	return orders
 
-# ---------------------------
-
+# === HAS OPEN ORDER/DELIVERY === #
 OPEN_ORDERS_PLACEHOLDERS = ",".join("?" for _ in OPEN_ORDER_STATUS)
 OPEN_DELIVERIES_PLACEHOLDERS = ",".join("?" for _ in OPEN_DELIVERY_STATUS)
 
@@ -588,5 +605,44 @@ def courier_has_open_deliveries(id):
 	AND c.isDeleted = 0
 	AND d.delivery_status IN ({OPEN_DELIVERIES_PLACEHOLDERS})
 	""", (id, *OPEN_DELIVERY_STATUS))
+
+	return bool(rows)
+
+# === BELONGS TO ANOTHER SERVICE === #
+def item_belongs_to_basket(id):
+	_, rows = run_select(f"""
+	SELECT 1
+	FROM CELEBRAR_BASKET_ITEMS bi
+	JOIN CELEBRAR_BASKETS b
+	ON b.basket_id = bi.basket_id
+	AND b.isDeleted = 0
+	WHERE bi.isDeleted = 0
+	AND (
+		bi.item_id = ?
+		OR EXISTS (
+			SELECT 1
+			FROM CELEBRAR_GROUP_MEMBERS m
+			WHERE m.group_id = bi.group_id
+			AND m.item_id = ?
+			AND m.isDeleted = 0
+		)
+	)
+	""", (id, id))
+
+	return bool(rows)
+
+def group_belongs_to_basket(id):
+	_, rows = run_select(f"""
+	SELECT 1
+	FROM CELEBRAR_BASKET_ITEMS bi
+	JOIN CELEBRAR_BASKETS b
+	ON b.basket_id = bi.basket_id
+	AND b.isDeleted = 0
+	JOIN CELEBRAR_GROUP_MEMBERS m
+	ON m.group_id = bi.group_id
+	AND m.isDeleted = 0
+	WHERE bi.isDeleted = 0
+	AND m.group_id = ?
+	""", (id,))
 
 	return bool(rows)

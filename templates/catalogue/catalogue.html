@@ -12,17 +12,31 @@
 	
 	<div class="actions-col">
 		<div class="search-wrapper">
-			<span class="search-icon" id="search-icon"></span>
+			<span
+				class="search-icon"
+				id="search-icon">
+			</span>
 			<input
 				class="search-bar"
 				type="text"
 				id="catalogue-search-bar"
 				placeholder="Cesta..."
-				oninput="handleSearch()"
+				oninput="handleSearch();"
 			>
-			<button type="button" class="search-clear" id="search-clear" title="Limpar pesquisa"></button>
+			<button
+				type="button"
+				class="search-clear"
+				id="search-clear"
+				title="Limpar pesquisa"
+			>
+			</button>
 		</div>
-		<button class="btn-add" onclick="openNewBasketModal()">CADASTRAR NOVA CESTA</button>
+		<button
+			class="btn-add"
+			onclick="openNewBasketModal();"
+		>
+			CADASTRAR NOVA CESTA
+		</button>
 	</div>
 
 	<div class="card">
@@ -47,13 +61,19 @@
 			{% if total_pages > 1 %}
 				<div class="pagination">
 					{% if page > 1 %}
-						<a href="{{url_for('catalogue_bp.catalogue', page=page-1, search=search or None)}}">&laquo;</a>
+						<a href="{{url_for('catalogue_bp.catalogue', page=page-1, search=search or None)}}">
+							&laquo;
+						</a>
 					{% endif %}
 
-					<span>{{page}} de {{total_pages}}</span>
+					<span>
+						{{page}} de {{total_pages}}
+					</span>
 
 					{% if page < total_pages %}
-						<a href="{{url_for('catalogue_bp.catalogue', page=page+1, search=search or None)}}">&raquo;</a>
+						<a href="{{url_for('catalogue_bp.catalogue', page=page+1, search=search or None)}}">
+							&raquo;
+						</a>
 					{% endif %}
 				</div>
 			{% endif %}

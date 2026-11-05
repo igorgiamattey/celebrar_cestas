@@ -1,7 +1,7 @@
 from flask import request
 
 from db import format_date_year, run_select
-from enums.delivery_status import deliveryStatus, OPEN_DELIVERY_STATUS
+from enums.delivery_status import DeliveryStatus, OPEN_DELIVERY_STATUS
 
 
 def get_deliveries():
@@ -27,7 +27,7 @@ def get_deliveries():
 			]
 			params.extend([search_param, search_param])
 
-			matching_status = [s.name for s in deliveryStatus if search.lower() in s.value.lower()]
+			matching_status = [s.name for s in DeliveryStatus if search.lower() in s.value.lower()]
 			if matching_status:
 				conditions.append(f"d.delivery_status IN ({','.join('?' * len(matching_status))})")
 				params.extend(matching_status)
@@ -83,7 +83,7 @@ def get_deliveries():
 			format_date_year(row[1]),
 			row[2].title() if row[2] else "---",
 			row[3],
-			deliveryStatus[row[4]].value,
+			DeliveryStatus[row[4]].value,
 		)
 		for row in rows
 	]

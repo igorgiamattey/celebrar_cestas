@@ -7,7 +7,7 @@
 		<form id="newItem-form" method="post" action="{{url_for('storage_bp.new_item')}}">
 			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 			<label>Item*:</label>
-			<input type="text" id="newItem-name" name="name" oninput="toggleSaveButton(['newItem-name','newItem-amount','newItem-unit','newItem-minimal','newItem-cost'], 'newItem-saveBtn')">
+			<input type="text" id="newItem-name" name="name" oninput="toggleSaveStorageButton('new');">
 			
 			<div class="quantity-row">
 				<div class="form-group">
@@ -18,31 +18,27 @@
 						inputmode="numeric"
 						name="amount"
 						oninput="
-							inputNumber(this)
-							toggleSaveButton(
-								['newItem-name','newItem-amount',
-								'newItem-unit','newItem-minimal',
-								'newItem-cost'],
-								'newItem-saveBtn')
+							inputNumber(this);
+							toggleSaveStorageButton('new');
 							"
 						>
 				</div>
 				
 				<div class="form-group">
 					<label>Quantidade para Alerta*:</label>
-					<input type="text" id="newItem-minimal" name="minimal" oninput="inputNumber(this);toggleSaveButton(['newItem-name','newItem-amount','newItem-unit','newItem-minimal','newItem-cost'], 'newItem-saveBtn')">
+					<input type="text" id="newItem-minimal" name="minimal" oninput="inputNumber(this);toggleSaveStorageButton('new');">
 				</div>
 			</div>
 			
 			<div class="quantity-row">
 				<div class="form-group">
 					<label>Custo unitário*:</label>
-					<input type="text" id="newItem-cost" name="cost" oninput="inputPrice(this);toggleSaveButton(['newItem-name','newItem-amount','newItem-unit','newItem-minimal','newItem-cost'], 'newItem-saveBtn')">
+					<input type="text" id="newItem-cost" name="cost" oninput="inputPrice(this);toggleSaveStorageButton('new');">
 				</div>
 
 				<div class="form-group">
 					<label>Unidade de Medida*:</label>
-					<select id="newItem-unit" name="unit" onchange="toggleSaveButton(['newItem-name','newItem-amount','newItem-unit','newItem-minimal','newItem-cost'], 'newItem-saveBtn')">
+					<select id="newItem-unit" name="unit" onchange="toggleSaveStorageButton('new');">
 						<option value="">Selecione a unidade</option>
 						{% for unit in units %}
 						<option value="{{unit.id}}">{{unit.title}}</option>
@@ -57,7 +53,7 @@
 					id="newItem-saveBtn"
 					class="btn-modal btn-save push-right"
 					disabled
-					onclick="submitModal('newItem-form')"
+					onclick="saveNewItem()"
 				>
 					Salvar
 				</button>

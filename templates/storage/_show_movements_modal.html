@@ -13,17 +13,17 @@
 				<div class="form-row">
 					<div class="form-group">
 						<label for="newMove-type">Tipo de Movimentação*:</label>
-						<select id="newMove-type" name="type" onchange="toggleSaveButton(['newMove-type','newMove-quantity'], 'newMove-saveBtn')">
+						<select id="newMove-type" name="type" onchange="toggleSaveStorageButton('new', 'move');">
 							<option value="">Selecione a movimentação</option>
 							{% for move in available_movements %}
-								<option value="{{move.name}}">{{move.value}}</option>
+								<option value="{{move.id}}">{{move.title}}</option>
 							{% endfor %}
 						</select>
 					</div>
 					
 					<div class="form-group">
 						<label for="newMove-quantity">Quantidade*:</label>
-						<input type="text" id="newMove-quantity" name="quantity" oninput="inputNumber(this);toggleSaveButton(['newMove-type','newMove-quantity'], 'newMove-saveBtn')">
+						<input type="text" id="newMove-quantity" name="quantity" oninput="inputNumber(this);toggleSaveStorageButton('new', 'move');">
 					</div>
 				</div>
 
